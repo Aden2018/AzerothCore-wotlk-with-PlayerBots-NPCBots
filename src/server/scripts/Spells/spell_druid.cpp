@@ -29,6 +29,13 @@
  * Scriptnames of files in this file should be prefixed with "spell_dru_".
  */
 
+ #ifdef MOD_NPCERBOTS
+//npcbot
+#include "Creature.h"
+#include "Group.h"
+//end npcbot
+#endif
+ 
 enum DruidSpells
 {
     SPELL_DRUID_GLYPH_OF_WILD_GROWTH        = 62970,
@@ -791,6 +798,12 @@ class spell_dru_rip : public AuraScript
     bool Load() override
     {
         Unit* caster = GetCaster();
+#ifdef MOD_NPCERBOTS
+        //npcbot
+        if (caster && caster->IsNPCBot())
+            return true;
+        //end npcbot
+#endif
         return caster && caster->IsPlayer();
     }
 
@@ -800,6 +813,24 @@ class spell_dru_rip : public AuraScript
 
         if (Unit* caster = GetCaster())
         {
+
+#ifdef MOD_NPCERBOTS
+            //npcbot
+            if (caster && caster->IsNPCBot())
+            {
+                uint8 botcp = caster->ToCreature()->GetCreatureComboPoints();
+                // Idol of Feral Shadows. Can't be handled as SpellMod due its dependency from CPs
+                if (AuraEffect const* auraEffIdolOfFeralShadows = caster->GetAuraEffect(SPELL_DRUID_IDOL_OF_FERAL_SHADOWS, EFFECT_0))
+                    amount += botcp * auraEffIdolOfFeralShadows->GetAmount();
+                // Idol of Worship. Can't be handled as SpellMod due its dependency from CPs
+                else if (AuraEffect const* auraEffIdolOfWorship = caster->GetAuraEffect(SPELL_DRUID_IDOL_OF_WORSHIP, EFFECT_0))
+                    amount += botcp * auraEffIdolOfWorship->GetAmount();
+
+                amount += int32(CalculatePct(caster->GetTotalAttackPowerValue(BASE_ATTACK), botcp));
+                return;
+            }
+            //end npcbot
+#endif
             // 0.01 * $AP * cp
             uint8 cp = caster->ToPlayer()->GetComboPoints();
 
@@ -1063,11 +1094,53 @@ class spell_dru_t10_restoration_4p_bonus : public SpellScript
 
     bool Load() override
     {
+#ifdef MOD_NPCERBOTS
+        //npcbot
+        if (GetCaster()->IsNPCBot())
+            return true;
+        //end npcbot
+#endif
         return GetCaster()->IsPlayer();
     }
 
     void FilterTargets(std::list<WorldObject*>& targets)
     {
+#ifdef MOD_NPCERBOTS
+        //npcbot
+        if (Creature* bot = GetCaster()->ToCreature())
+        {
+            if (bot->IsFreeBot())
+            {
+                targets.clear();
+                targets.push_back(bot);
+                return;
+            }
+
+            targets.remove(GetExplTargetUnit());
+            std::list<Unit*> tempTargets;
+            Group const* gr = bot->GetBotOwner()->GetGroup();
+            if (gr && !gr->IsMember(bot->GetGUID()))
+                gr = nullptr;
+
+            if (gr)
+                for (std::list<WorldObject*>::const_iterator itr = targets.begin(); itr != targets.end(); ++itr)
+                    if (gr->IsMember((*itr)->GetGUID()))
+                        tempTargets.push_back((*itr)->ToUnit());
+
+            if (tempTargets.empty())
+            {
+                targets.clear();
+                FinishCast(SPELL_FAILED_DONT_REPORT);
+                return;
+            }
+
+            tempTargets.sort(Acore::HealthPctOrderPred());
+            targets.clear();
+            targets.push_back(tempTargets.front());
+            return;
+        }
+        //end npcbot
+#endif
         if (!GetCaster()->ToPlayer()->GetGroup())
         {
             targets.clear();

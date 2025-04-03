@@ -56,6 +56,18 @@ protected:
     void UpdateArenaWorldState();
 
     void HandleKillPlayer(Player* player, Player* killer) override;
+#ifdef MOD_NPCERBOTS
+
+    //npcbot
+    void AddBot(Creature* bot) override;
+    void RemoveBotAtLeave(ObjectGuid guid) override;
+    void RemoveBot(ObjectGuid /*guid*/) override;
+    void HandleBotKillPlayer(Creature* killer, Player* victim) override;
+    void HandleBotKillBot(Creature* killer, Creature* victim) override;
+    void HandlePlayerKillBot(Creature* victim, Player* killer) override;
+    //end npcbot
+
+#endif
 
 private:
     void RemovePlayerAtLeave(Player* player) override;

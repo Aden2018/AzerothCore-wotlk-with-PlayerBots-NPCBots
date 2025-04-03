@@ -77,6 +77,11 @@ struct DefaultTargetSelector : public Acore::unary_function<Unit*, bool>
             return false;
 
         if (m_playerOnly && (!target->IsPlayer()))
+#ifdef MOD_NPCERBOTS
+            //npcbot: allow to target bots
+            //if (!(target->IsNPCBot()))
+            //end npcbot
+#endif        
             return false;
 
         if (m_dist > 0.0f && !me->IsWithinCombatRange(target, m_dist))

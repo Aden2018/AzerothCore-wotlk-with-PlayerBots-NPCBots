@@ -393,6 +393,15 @@ public:
 
         void PassengerBoarded(Unit* passenger, int8 /*seatid*/, bool add) override
         {
+#ifdef MOD_NPCERBOTS
+            //npcbot
+            if (passenger->IsNPCBot() && add)
+            {
+                despawnTimer = 0;
+                return;
+            }
+            //end npcbot
+#endif
             if (!passenger->IsPlayer())
                 return;
 
@@ -432,6 +441,14 @@ public:
             if (JustSummoned)
             {
                 despawnTimer = 1;
+#ifdef MOD_NPCERBOTS
+                //npcbot
+                if (Vehicle const* v = me->GetVehicleKit())
+                    if (Unit const* passenger = v->GetPassenger(0))
+                        if (passenger->IsNPCBot())
+                            despawnTimer = 0;
+                //end npcbot
+#endif
                 JustSummoned = false;
                 if (m_pInstance)
                 {

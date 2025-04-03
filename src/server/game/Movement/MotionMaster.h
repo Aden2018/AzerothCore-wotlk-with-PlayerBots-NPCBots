@@ -249,6 +249,12 @@ public:
     void ReinitializeMovement();
 
     bool GetDestination(float& x, float& y, float& z);
+
+#ifdef MOD_NPCERBOTS
+    //npcbot: add an accessor for Mutate
+    void Add(MovementGenerator* m, MovementSlot slot = MOTION_SLOT_ACTIVE) { Mutate(m, slot); }
+    //end npcbot
+#endif
 private:
     void Mutate(MovementGenerator* m, MovementSlot slot);                  // use Move* functions instead
 

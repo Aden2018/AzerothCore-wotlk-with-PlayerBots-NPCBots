@@ -64,6 +64,12 @@ class PlayerSocial;
 class SpellCastTargets;
 class UpdateMask;
 
+#ifdef MOD_NPCERBOTS
+// NpcBot mod
+class BotMgr;
+// end NpcBot mod
+#endif
+
 typedef std::deque<Mail*> PlayerMails;
 typedef void(*bgZoneRef)(Battleground*, WorldPackets::WorldState::InitWorldStates&);
 
@@ -2633,6 +2639,20 @@ public:
 
     std::string GetDebugInfo() const override;
 
+#ifdef MOD_NPCERBOTS
+    /*****************************************************************/
+    /***                        NPCBOT SYSTEM                      ***/
+    /*****************************************************************/
+    BotMgr* GetBotMgr() const { return _botMgr; }
+    bool HaveBot() const;
+    uint8 GetNpcBotsCount() const;
+    void RemoveAllBots(uint8 removetype = 0);
+    void UpdatePhaseForBots();
+    /*****************************************************************/
+    /***                      END NPCBOT SYSTEM                    ***/
+    /*****************************************************************/
+#endif
+
     /*********************************************************/
     /***               SPELL QUEUE SYSTEM                  ***/
     /*********************************************************/
@@ -2924,6 +2944,16 @@ protected:
     bool m_needZoneUpdate;
 
 private:
+#ifdef MOD_NPCERBOTS
+    /*****************************************************************/
+    /***                        NPCBOT SYSTEM                      ***/
+    /*****************************************************************/
+    BotMgr* _botMgr;
+    /*****************************************************************/
+    /***                      END NPCBOT SYSTEM                    ***/
+    /*****************************************************************/
+#endif
+
     // internal common parts for CanStore/StoreItem functions
     InventoryResult CanStoreItem_InSpecificSlot(uint8 bag, uint8 slot, ItemPosCountVec& dest, ItemTemplate const* pProto, uint32& count, bool swap, Item* pSrcItem) const;
     InventoryResult CanStoreItem_InBag(uint8 bag, ItemPosCountVec& dest, ItemTemplate const* pProto, uint32& count, bool merge, bool non_specialized, Item* pSrcItem, uint8 skip_bag, uint8 skip_slot) const;

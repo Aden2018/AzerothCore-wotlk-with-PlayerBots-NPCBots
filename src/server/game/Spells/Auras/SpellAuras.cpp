@@ -35,6 +35,12 @@
 #include "Vehicle.h"
 #include "WorldPacket.h"
 
+#ifdef MOD_NPCERBOTS
+//npcbot
+#include "botspell.h"
+//end npcbot
+#endif
+
 /// @todo: this import is not necessary for compilation and marked as unused by the IDE
 //  however, for some reasons removing it would cause a damn linking issue
 //  there is probably some underlying problem with imports which should properly addressed
@@ -509,6 +515,13 @@ void Aura::_ApplyForTarget(Unit* target, Unit* caster, AuraApplication* auraApp)
         {
             caster->ToCreature()->AddSpellCooldown(m_spellInfo->Id, 0, infinityCooldownDelay);
         }
+
+#ifdef MOD_NPCERBOTS
+        //npcbot: infinity cd for bots
+        if (caster && m_spellInfo->IsCooldownStartedOnEvent() && caster->IsNPCBot())
+            caster->ToCreature()->AddBotSpellCooldown(m_spellInfo->Id, std::numeric_limits<uint32>::max());
+        //end npcbot
+#endif
     }
 }
 
@@ -567,6 +580,12 @@ void Aura::_UnapplyForTarget(Unit* target, Unit* caster, AuraApplication* auraAp
             caster->ToPlayer()->SendCooldownEvent(GetSpellInfo());
         }
     }
+#ifdef MOD_NPCERBOTS
+    //npcbot: release cd state for bots
+    if (caster && m_spellInfo->IsCooldownStartedOnEvent() && caster->IsNPCBot())
+        caster->ToCreature()->ReleaseBotSpellCooldown(m_spellInfo->Id);
+    //end npcbot
+#endif
 }
 
 // removes aura from all targets
@@ -963,6 +982,16 @@ uint8 Aura::CalcMaxCharges(Unit* caster) const
     uint32 maxProcCharges = m_spellInfo->ProcCharges;
     if (SpellProcEntry const* procEntry = sSpellMgr->GetSpellProcEntry(GetId()))
         maxProcCharges = procEntry->Charges;
+
+#ifdef MOD_NPCERBOTS
+    //npcbot: override spell proc
+    if (caster && caster->IsNPCBot())
+    {
+        if (SpellProcEntry const* procOverride = GetBotSpellProceEntryOverride(GetId()))
+            maxProcCharges = procOverride->Charges;
+    }
+    //end npcbot
+#endif
 
     if (caster)
         if (Player* modOwner = caster->GetSpellModOwner())
@@ -1789,6 +1818,21 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
                     {
                         if (removeMode != AURA_REMOVE_BY_EXPIRE)
                             break;
+
+#ifdef MOD_NPCERBOTS
+                        //npcbot: handle Glyph of Guardian Spirit proc for bots
+                        if (Creature* bot = caster->ToCreature())
+                        {
+                            if (bot->IsNPCBot() && bot->HasSpellCooldown(47788))
+                            {
+                                bot->AddBotSpellCooldown(47788, 60000);
+                                //bot->GetSpellHistory()->ResetCooldown(GetSpellInfo()->Id, true);
+                                //bot->GetSpellHistory()->AddCooldown(GetSpellInfo()->Id, 0, std::chrono::seconds(60));
+                                break;
+                            }
+                        }
+                        //end npcbot
+#endif
                         if (!caster->IsPlayer())
                             break;
 
@@ -2218,6 +2262,17 @@ void Aura::PrepareProcToTrigger(AuraApplication* aurApp, ProcEventInfo& eventInf
 
     SpellProcEntry const* procEntry = sSpellMgr->GetSpellProcEntry(GetId());
 
+#ifdef MOD_NPCERBOTS
+    //npcbot: override spell proc
+    Unit const* caster = aurApp && aurApp->GetBase()->GetCasterGUID().IsCreature() ? aurApp->GetBase()->GetCaster() : nullptr;
+    if (caster && caster->IsNPCBot())
+    {
+        if (SpellProcEntry const* procOverride = GetBotSpellProceEntryOverride(GetId()))
+            procEntry = procOverride;
+    }
+    //end npcbot
+#endif
+
     ASSERT(procEntry);
 
     // cooldowns should be added to the whole aura (see 51698 area aura)
@@ -2227,6 +2282,17 @@ void Aura::PrepareProcToTrigger(AuraApplication* aurApp, ProcEventInfo& eventInf
 bool Aura::IsProcTriggeredOnEvent(AuraApplication* aurApp, ProcEventInfo& eventInfo) const
 {
     SpellProcEntry const* procEntry = sSpellMgr->GetSpellProcEntry(GetId());
+
+#ifdef MOD_NPCERBOTS
+    //npcbot: override spell proc
+    Unit const* caster = aurApp && aurApp->GetBase()->GetCasterGUID().IsCreature() ? aurApp->GetBase()->GetCaster() : nullptr;
+    if (caster && caster->IsNPCBot())
+    {
+        if (SpellProcEntry const* procOverride = GetBotSpellProceEntryOverride(GetId()))
+            procEntry = procOverride;
+    }
+    //end npcbot
+#endif
     // only auras with spell proc entry can trigger proc
     if (!procEntry)
         return false;

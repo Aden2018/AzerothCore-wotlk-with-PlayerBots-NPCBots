@@ -56,6 +56,9 @@ class BasicEvent
         // Aborts the event at the next update tick
         void ScheduleAbort();
 
+        #ifdef MOD_NPCERBOTS
+        bool IsActive() const { return m_abortState == AbortState::STATE_RUNNING; }
+        #endif
     private:
         void SetAborted();
         [[nodiscard]] bool IsRunning() const { return (m_abortState == AbortState::STATE_RUNNING); }

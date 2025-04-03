@@ -70,6 +70,13 @@
 //  see: https://github.com/azerothcore/azerothcore-wotlk/issues/9766
 #include "GridNotifiersImpl.h"
 
+#ifdef MOD_NPCERBOTS
+//npcbot
+#include "botdatamgr.h"
+#include "botmgr.h"
+//end npcbot
+#endif
+
 /*********************************************************/
 /***                    STORAGE SYSTEM                 ***/
 /*********************************************************/
@@ -5614,6 +5621,11 @@ bool Player::LoadFromDB(ObjectGuid playerGuid, CharacterDatabaseQueryHolder cons
         if (!HasAuraState((AuraStateType)m_spellInfo->CasterAuraState))
             aura->HandleAllEffects(itr->second, AURA_EFFECT_HANDLE_REAL, false);
     }
+#ifdef MOD_NPCERBOTS
+    //npcbots: load BotManager data
+    _botMgr->LoadData();
+    //end npcbots
+#endif
     return true;
 }
 
@@ -7115,6 +7127,13 @@ void Player::SaveToDB(CharacterDatabaseTransaction trans, bool create, bool logo
     // save pet (hunter pet level and experience and all type pets health/mana).
     if (Pet* pet = GetPet())
         pet->SavePetToDB(PET_SAVE_AS_CURRENT);
+#ifdef MOD_NPCERBOTS
+    //npcbot: save player-related npcbot data
+    BotDataMgr::SaveNpcBotStoredGear(GetGUID(), trans);
+    BotDataMgr::SaveNpcBotItemSets(GetGUID(), trans);
+    BotDataMgr::SaveNpcBotMgrData(GetGUID(), trans);
+    //end npcbot
+#endif
 }
 
 // fast save function for item/money cheating preventing - save only inventory and money state

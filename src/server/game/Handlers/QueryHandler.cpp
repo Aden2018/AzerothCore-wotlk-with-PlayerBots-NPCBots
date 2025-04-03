@@ -28,8 +28,51 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 
+#ifdef MOD_NPCERBOTS
+//npcbot
+#include "CreatureData.h"
+#include "botdatamgr.h"
+#include "botmgr.h"
+//end npcbot
+#endif
+
 void WorldSession::SendNameQueryOpcode(ObjectGuid guid)
 {
+#ifdef MOD_NPCERBOTS
+    //npcbot: try query bot info
+    if (guid.IsCreature())
+    {
+        uint32 creatureId = guid.GetEntry();
+        CreatureTemplate const* creatureTemplate = sObjectMgr->GetCreatureTemplate(creatureId);
+        if (creatureTemplate && creatureTemplate->IsNPCBot())
+        {
+            std::string creatureName = creatureTemplate->Name;
+            if (CreatureLocale const* creatureInfo = sObjectMgr->GetCreatureLocale(creatureId))
+            {
+                uint32 loc = GetSessionDbLocaleIndex();
+                if (creatureInfo->Name.size() > loc && !creatureInfo->Name[loc].empty() && Utf8FitTo(creatureInfo->Name[loc], {}))
+                    creatureName = creatureInfo->Name[loc];
+            }
+
+            NpcBotExtras const* extData = ASSERT_NOTNULL(BotDataMgr::SelectNpcBotExtras(creatureId));
+            NpcBotAppearanceData const* appData = BotDataMgr::SelectNpcBotAppearance(creatureId);
+
+            WorldPacket bpdata(SMSG_NAME_QUERY_RESPONSE, (8+1+1+1+1+1+10));
+            bpdata << guid.WriteAsPacked();
+            bpdata << uint8(0);
+            bpdata << creatureName;
+            bpdata << uint8(0);
+            bpdata << uint8(BotMgr::GetBotPlayerRace(extData->bclass, extData->race));
+            bpdata << uint8(appData ? appData->gender : uint8(GENDER_MALE));
+            bpdata << uint8(BotMgr::GetBotPlayerClass(extData->bclass));
+            bpdata << uint8(0);
+            SendPacket(&bpdata);
+            return;
+        }
+    }
+    //end npcbot
+#endif
+
     CharacterCacheEntry const* playerData = sCharacterCache->GetCharacterCacheByGuid(guid);
 
     WorldPacket data(SMSG_NAME_QUERY_RESPONSE, (8 + 1 + 1 + 1 + 1 + 1 + 10));
@@ -106,7 +149,12 @@ void WorldSession::HandleCreatureQueryOpcode(WorldPacket& recvData)
         Title = ci->SubName;
 
         LocaleConstant loc_idx = GetSessionDbLocaleIndex();
+#ifdef MOD_NPCERBOTS
+        //npcbot: pointless check, see AccountInfo()
+        //end npcbot
+#else
         if (loc_idx >= 0)
+#endif
         {
             if (CreatureLocale const* cl = sObjectMgr->GetCreatureLocale(entry))
             {

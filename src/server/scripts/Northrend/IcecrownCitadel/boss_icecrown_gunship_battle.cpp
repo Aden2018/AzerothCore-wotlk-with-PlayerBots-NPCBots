@@ -31,6 +31,12 @@
 #include "PassiveAI.h"
 #include "SpellAuraEffects.h"
 
+#ifdef MOD_NPCERBOTS
+//npcbot
+#include "botmgr.h"
+//end npcbot
+#endif
+
 enum Texts
 {
     // High Overlord Saurfang
@@ -608,6 +614,16 @@ public:
                         continue;
                     (*itr)->ToCreature()->CastSpell((*itr)->ToCreature(), explosionSpell, true);
                 }
+#ifdef MOD_NPCERBOTS
+                //npcbot: kill bots
+                Transport::PassengerSet const& allpassengers = t->GetPassengers();
+                for (Transport::PassengerSet::const_iterator citr = allpassengers.begin(); citr != allpassengers.end(); ++citr)
+                {
+                    if ((*citr)->GetTypeId() == TYPEID_PLAYER && (*citr)->ToPlayer()->HaveBot())
+                        (*citr)->ToPlayer()->GetBotMgr()->KillAllBots();
+                }
+                //end npcbot
+#endif
             }
 
             uint32 cannonEntry = _teamIdInInstance == TEAM_HORDE ? NPC_HORDE_GUNSHIP_CANNON : NPC_ALLIANCE_GUNSHIP_CANNON;
@@ -1651,6 +1667,24 @@ struct npc_gunship_boarding_addAI : public ScriptedAI
                         p->SetInCombatWith(me);
                         me->AddThreat(p, 0.0f);
                     }
+#ifdef MOD_NPCERBOTS
+                    //npcbot: check bots
+                    else if (p->HaveBot())
+                    {
+                        BotMap const* bmap = p->GetBotMgr()->GetBotMap();
+                        for (BotMap::const_iterator citr = bmap->begin(); citr != bmap->end(); ++citr)
+                        {
+                            if (citr->second && CanAIAttack(citr->second) && me->IsValidAttackTarget(citr->second))
+                            {
+                                anyValid = true;
+                                me->SetInCombatWith(citr->second);
+                                citr->second->SetInCombatWith(me);
+                                me->AddThreat(citr->second, 0.0f);
+                            }
+                        }
+                    }
+                    //end npcbot
+#endif
         }
         else
             checkTimer -= diff;
@@ -1893,6 +1927,24 @@ public:
                             p->SetInCombatWith(me);
                             me->AddThreat(p, 0.0f);
                         }
+#ifdef MOD_NPCERBOTS
+                        //npcbot: check bots
+                        else if (p->HaveBot())
+                        {
+                            BotMap const* bmap = p->GetBotMgr()->GetBotMap();
+                            for (BotMap::const_iterator citr = bmap->begin(); citr != bmap->end(); ++citr)
+                            {
+                                if (citr->second && CanAIAttack(citr->second) && me->IsValidAttackTarget(citr->second))
+                                {
+                                    anyValid = true;
+                                    me->SetInCombatWith(citr->second);
+                                    citr->second->SetInCombatWith(me);
+                                    me->AddThreat(citr->second, 0.0f);
+                                }
+                            }
+                        }
+                        //end npcbot
+#endif
             }
             else
                 checkTimer -= diff;

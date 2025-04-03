@@ -39,6 +39,12 @@
 #include "Vehicle.h"
 #include "WorldPacket.h"
 
+#ifdef MOD_NPCERBOTS
+//npcbot
+#include "botmgr.h"
+//end npcbot
+#endif
+
 /// @todo: this import is not necessary for compilation and marked as unused by the IDE
 //  however, for some reasons removing it would cause a damn linking issue
 //  there is probably some underlying problem with imports which should properly addressed
@@ -956,6 +962,22 @@ void AuraEffect::UpdatePeriodic(Unit* caster)
                         case 49472: // Drink Coffee
                         case 57073:
                         case 61830:
+#ifdef MOD_NPCERBOTS
+                            //npcbot
+                            if (caster && caster->IsNPCBot())
+                            {
+                                if (AuraEffect* aurEff = GetBase()->GetEffect(EFFECT_0))
+                                {
+                                    if (aurEff->GetAuraType() == SPELL_AURA_MOD_POWER_REGEN)
+                                    {
+                                        aurEff->ChangeAmount(GetAmount());
+                                        m_isPeriodic = false;
+                                    }
+                                }
+                                break;
+                            }
+                            //end npcbot
+#endif
                             if (!caster || !caster->IsPlayer())
                                 return;
                             // Get SPELL_AURA_MOD_POWER_REGEN aura from spell
@@ -1051,6 +1073,31 @@ float AuraEffect::CalcPeriodicCritChance(Unit const* caster, Unit const* target)
     float critChance = 0.0f;
     if (caster)
     {
+#ifdef MOD_NPCERBOTS
+        //npcbot
+        if (caster->IsNPCBotOrPet())
+        {
+            Unit::AuraEffectList const& mPeriodicCritAuras = caster->GetAuraEffectsByType(SPELL_AURA_ABILITY_PERIODIC_CRIT);
+            for (Unit::AuraEffectList::const_iterator itr = mPeriodicCritAuras.begin(); itr != mPeriodicCritAuras.end(); ++itr)
+            {
+                if ((*itr)->IsAffectedOnSpell(GetSpellInfo()))
+                {
+                    critChance = caster->SpellDoneCritChance(nullptr, GetSpellInfo(), GetSpellInfo()->GetSchoolMask(), (GetSpellInfo()->DmgClass == SPELL_DAMAGE_CLASS_RANGED ? RANGED_ATTACK : BASE_ATTACK), true);
+                    break;
+                }
+            }
+
+            switch(GetSpellInfo()->SpellFamilyName)
+            {
+                // Rupture - since 3.3.3 can crit
+                case SPELLFAMILY_ROGUE:
+                    if (GetSpellInfo()->SpellFamilyFlags[0] & 0x100000)
+                        critChance = caster->SpellDoneCritChance(nullptr, GetSpellInfo(), GetSpellInfo()->GetSchoolMask(), BASE_ATTACK, true);
+                    break;
+            }
+        }
+        //end npcbot
+#endif
         if (Player* modOwner = caster->GetSpellModOwner())
         {
             Unit::AuraEffectList const& mPeriodicCritAuras = modOwner->GetAuraEffectsByType(SPELL_AURA_ABILITY_PERIODIC_CRIT);
@@ -1664,6 +1711,11 @@ void AuraEffect::HandleModStealth(AuraApplication const* aurApp, uint8 mode, boo
         if (target->GetCurrentSpell(CURRENT_AUTOREPEAT_SPELL))
         {
             target->FinishSpell(CURRENT_AUTOREPEAT_SPELL);
+#ifdef MOD_NPCERBOTS
+            //npcbot: do not try with npcbot target
+            if (target->IsPlayer())
+            //end npcbot
+#endif
             target->ToPlayer()->SendAutoRepeatCancel(target);
         }
     }
@@ -2062,6 +2114,12 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
             case FORM_DEFENSIVESTANCE:
             case FORM_BERSERKERSTANCE:
                 {
+#ifdef MOD_NPCERBOTS
+                    //npcbot: skip this, handled inside class ai
+                    if (target->IsNPCBot())
+                        break;
+                    //end npcbot
+#endif
                     uint32 Rage_val = 0;
                     // Defensive Tactics
                     if (form == FORM_DEFENSIVESTANCE)
@@ -2123,6 +2181,13 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
         // and also HandleAuraModDisarm is not triggered
         if (!target->CanUseAttackType(BASE_ATTACK))
         {
+#ifdef MOD_NPCERBOTS
+            //npcbot: skip bots (handled inside AI)
+            if (target->IsNPCBotOrPet())
+            {}
+            else
+            //end npcbot
+#endif
             if (Item* pItem = target->ToPlayer()->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND))
             {
                 target->ToPlayer()->_ApplyWeaponDamage(EQUIPMENT_SLOT_MAINHAND, pItem->GetTemplate(), nullptr, apply);
@@ -2130,6 +2195,13 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
         }
 
         // Update crit chance for feral forms
+#ifdef MOD_NPCERBOTS
+        //npcbot: skip bots (handled inside AI)
+        if (target->IsNPCBotOrPet())
+        {}
+        else
+        //end npcbot
+#endif
         switch (form)
         {
             case FORM_CAT:
@@ -3449,6 +3521,18 @@ void AuraEffect::HandleAuraModTotalThreat(AuraApplication const* aurApp, uint8 m
 
     Unit* target = aurApp->GetTarget();
 
+#ifdef MOD_NPCERBOTS
+    //npcbot: handle for bots
+    if (target->IsAlive() && target->IsNPCBotOrPet())
+    {
+        Unit* caster = GetCaster();
+        if (caster && caster->IsAlive())
+            target->getHostileRefMgr().addTempThreat((float)GetAmount(), apply);
+        return;
+    }
+    //end npcbot
+#endif
+
     if (!target->IsAlive() || !target->IsPlayer())
         return;
 
@@ -4214,6 +4298,18 @@ void AuraEffect::HandleAuraModEffectImmunity(AuraApplication const* aurApp, uint
         else
             sOutdoorPvPMgr->HandleDropFlag(player, GetSpellInfo()->Id);
     }
+#ifdef MOD_NPCERBOTS
+    //npcbot
+    if (Creature* bot = target->ToCreature())
+    {
+        if (!apply && bot->IsNPCBot() && (GetSpellInfo()->AuraInterruptFlags & AURA_INTERRUPT_FLAG_IMMUNE_OR_LOST_SELECTION))
+        {
+            if (Battleground* botbg = bot->GetBotBG())
+                botbg->EventBotDroppedFlag(bot);
+        }
+    }
+    //end npcbot
+#endif
 }
 
 void AuraEffect::HandleAuraModStateImmunity(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -6536,6 +6632,11 @@ void AuraEffect::HandlePeriodicTriggerSpellAuraTick(Unit* target, Unit* caster) 
 
     if (triggeredSpellInfo)
     {
+#ifdef MOD_NPCERBOTS
+        //npcbot: override spellInfo
+        triggeredSpellInfo = triggeredSpellInfo->TryGetSpellInfoOverride(caster);
+        //end npcbot
+#endif
         if (Unit* triggerCaster = triggeredSpellInfo->NeedsToBeTriggeredByCaster(m_spellInfo, GetEffIndex()) ? caster : target)
         {
             SpellCastTargets targets;
@@ -6562,6 +6663,11 @@ void AuraEffect::HandlePeriodicTriggerSpellWithValueAuraTick(Unit* target, Unit*
     uint32 triggerSpellId = GetSpellInfo()->Effects[m_effIndex].TriggerSpell;
     if (SpellInfo const* triggeredSpellInfo = sSpellMgr->GetSpellInfo(triggerSpellId))
     {
+#ifdef MOD_NPCERBOTS
+        //npcbot: override spellInfo
+        triggeredSpellInfo = triggeredSpellInfo->TryGetSpellInfoOverride(caster);
+        //end npcbot
+#endif
         if (Unit* triggerCaster = triggeredSpellInfo->NeedsToBeTriggeredByCaster(m_spellInfo, GetEffIndex()) ? caster : target)
         {
             SpellCastTargets targets;
@@ -6659,6 +6765,15 @@ void AuraEffect::HandlePeriodicDamageAurasTick(Unit* target, Unit* caster) const
 
     if (GetAuraType() == SPELL_AURA_PERIODIC_DAMAGE)
     {
+#ifdef MOD_NPCERBOTS
+        //npcbot: Black Arrow damage on targets below 20%
+        if (GetSpellInfo()->SpellFamilyName == SPELLFAMILY_WARLOCK && (GetSpellInfo()->SpellFamilyFlags[1] & 0x4) &&
+            target->HasAuraState(AURA_STATE_HEALTHLESS_20_PERCENT))
+        {
+            damage *= 5;
+        }
+        //end npcbot
+#endif
         // xinef: leave only target depending bonuses, rest is handled in calculate amount
         if (GetBase()->GetType() == DYNOBJ_AURA_TYPE && caster)
             damage = caster->SpellDamageBonusDone(target, GetSpellInfo(), damage, DOT, GetEffIndex(), 0.0f, GetBase()->GetStackAmount());
@@ -6690,6 +6805,22 @@ void AuraEffect::HandlePeriodicDamageAurasTick(Unit* target, Unit* caster) const
     bool crit = false;
     if ((crit = roll_chance_f(GetCritChance())))
         damage = Unit::SpellCriticalDamageBonus(caster, m_spellInfo, damage, target);
+
+#ifdef MOD_NPCERBOTS
+    //NpcBot mod: apply bot damage mods
+    if (caster && caster->IsNPCBotOrPet())
+    {
+        SpellNonMeleeDamage damageInfo(caster, target, m_spellInfo, m_spellInfo->GetSchoolMask());
+        int32 idamage = damage;
+        caster->ToCreature()->ApplyBotDamageMultiplierSpell(idamage, damageInfo, m_spellInfo, BASE_ATTACK, crit);
+        damage = std::max<int32>(idamage, 0);
+        if (GetSpellInfo()->GetSchoolMask() & SPELL_SCHOOL_MASK_NORMAL)
+            damage *= BotMgr::IsWanderingWorldBot(caster->ToCreature()) ? BotMgr::GetBotWandererDamageMod() : BotMgr::GetBotDamageModPhysical();
+        else if (GetSpellInfo()->GetSchoolMask() & SPELL_SCHOOL_MASK_MAGIC)
+            damage *= BotMgr::IsWanderingWorldBot(caster->ToCreature()) ? BotMgr::GetBotWandererDamageMod() : BotMgr::GetBotDamageModSpell();
+    }
+    //End NpcBot
+#endif
 
     // Auras reducing damage from AOE spells
     if (!GetSpellInfo()->HasAttribute(SPELL_ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS))
@@ -7233,6 +7364,49 @@ void AuraEffect::HandleProcTriggerSpellAuraProc(AuraApplication* aurApp, ProcEve
     if (SpellInfo const* triggeredSpellInfo = sSpellMgr->GetSpellInfo(triggerSpellId))
     {
         LOG_DEBUG("spells.aura", "AuraEffect::HandleProcTriggerSpellAuraProc: Triggering spell {} from aura {} proc", triggeredSpellInfo->Id, GetId());
+
+#ifdef MOD_NPCERBOTS
+        //npcbot: override spellInfo
+        triggeredSpellInfo = triggeredSpellInfo->TryGetSpellInfoOverride(aurApp->GetBase()->GetCaster());
+        //end npcbot
+
+        //npcbot
+        Aura const* triggeredByAura = aurApp->GetBase();
+        int32 basepoints0 = 0;
+        switch (triggerSpellId)
+        {
+            // Quest - Self Healing from resurrect (invisible in log)
+            case 25155:
+            {
+                switch (GetId())
+                {
+                    //Vampiric Aura
+                    case 20810:
+                    {
+                        DamageInfo const* dinfo = eventInfo.GetDamageInfo();
+                        uint32 damage = dinfo->GetDamage();
+                        if (!damage)
+                            return;
+
+                        // 100% / 25%
+                        if (triggerTarget->GetGUID() == triggeredByAura->GetCasterGUID())
+                            basepoints0 = int32(damage);
+                        else
+                            basepoints0 = int32(damage / 4);
+
+                        triggerCaster->CastCustomSpell(triggerTarget, triggerSpellId, &basepoints0, nullptr, nullptr, true, nullptr);
+                        return;
+                    }
+                    default:
+                        break;
+                }
+                break;
+            }
+            default:
+                break;
+        }
+        //end npcbot
+#endif
         triggerCaster->CastSpell(triggerTarget, triggeredSpellInfo, true, nullptr, this);
     }
     else
@@ -7251,6 +7425,12 @@ void AuraEffect::HandleProcTriggerSpellWithValueAuraProc(AuraApplication* aurApp
     {
         // used only with EXTRA_LOGS
         (void)triggeredSpellInfo;
+
+#ifdef MOD_NPCERBOTS
+        //npcbot: override spellInfo
+        triggeredSpellInfo = triggeredSpellInfo->TryGetSpellInfoOverride(aurApp->GetBase()->GetCaster());
+        //end npcbot
+#endif
 
         int32 basepoints0 = GetAmount();
         LOG_DEBUG("spells.aura", "AuraEffect::HandleProcTriggerSpellWithValueAuraProc: Triggering spell {} with value {} from aura {} proc", triggeredSpellInfo->Id, basepoints0, GetId());

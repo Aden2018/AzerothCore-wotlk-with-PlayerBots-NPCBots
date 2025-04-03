@@ -28,6 +28,12 @@
 #include "WorldSession.h"
 #include "WorldStatePackets.h"
 
+#ifdef MOD_NPCERBOTS
+//npcbot
+#include "botdatamgr.h"
+//end npcbot
+#endif
+
 void BattlegroundEYScore::BuildObjectivesBlock(WorldPacket& data)
 {
     data << uint32(1); // Objectives Count
@@ -135,6 +141,31 @@ void BattlegroundEY::UpdatePointsState()
         _capturePointInfo[point]._playersCount[TEAM_HORDE] = 0;
     }
 
+#ifdef MOD_NPCERBOTS
+    //npcbot
+    for (decltype(m_Bots)::value_type const& p : m_Bots)
+    {
+        if (Creature const* bot = BotDataMgr::FindBot(p.first.GetEntry()))
+        {
+            for (uint8 point = 0; point < EY_POINTS_MAX; ++point)
+            {
+                if (GameObject* pointObject = pointsVec[point])
+                {
+                    if (bot->IsAlive() && !bot->HasInvisibilityAura() && !bot->HasStealthAura() && bot->IsWithinDistInMap(pointObject, BG_EY_POINT_RADIUS))
+                    {
+                        ++_capturePointInfo[point]._playersCount[GetBotTeamId(p.first)];
+                        _capturePointInfo[point].player = nullptr;
+                        _capturePointInfo[point].bot = const_cast<Creature*>(bot);
+                        if (pointObject->GetEntry() == BG_OBJECT_FR_TOWER_CAP_EY_ENTRY && bot->GetDistance2d(2043.96f, 1729.68f) < 3.0f)
+                            HandleBotAreaTrigger(_capturePointInfo[point].bot, AT_FEL_REAVER_POINT);
+                    }
+                }
+            }
+        }
+    }
+    //end npcbot
+#endif
+
     const BattlegroundPlayerMap& bgPlayerMap = GetPlayers();
     for (BattlegroundPlayerMap::const_iterator itr = bgPlayerMap.begin(); itr != bgPlayerMap.end(); ++itr)
     {
@@ -147,6 +178,11 @@ void BattlegroundEY::UpdatePointsState()
                     itr->second->SendUpdateWorldState(PROGRESS_BAR_PERCENT_GREY, BG_EY_PROGRESS_BAR_PERCENT_GREY);
                     itr->second->SendUpdateWorldState(PROGRESS_BAR_STATUS, _capturePointInfo[point]._barStatus);
                     ++_capturePointInfo[point]._playersCount[itr->second->GetTeamId()];
+#ifdef MOD_NPCERBOTS
+                    //npcbot
+                    _capturePointInfo[point].bot = nullptr;
+                    //end npcbot
+#endif
                     _capturePointInfo[point].player = itr->second;
 
                     // Xinef: ugly hax... area trigger is no longer called by client...
@@ -165,6 +201,20 @@ void BattlegroundEY::UpdatePointsState()
             pointOwnerTeamId = TEAM_HORDE;
         else if (_capturePointInfo[point]._barStatus >= BG_EY_PROGRESS_BAR_NEUTRAL_HIGH)
             pointOwnerTeamId = TEAM_ALLIANCE;
+
+#ifdef MOD_NPCERBOTS
+        //npcbot
+        if (pointOwnerTeamId != _capturePointInfo[point]._ownerTeamId && !_capturePointInfo[point].player)
+        {
+            if (_capturePointInfo[point].IsUncontrolled())
+                EventBotTeamCapturedPoint(_capturePointInfo[point].bot, pointOwnerTeamId, point);
+
+            if (pointOwnerTeamId == TEAM_NEUTRAL && _capturePointInfo[point].IsUnderControl())
+                EventBotTeamLostPoint(_capturePointInfo[point].bot, point);
+            continue;
+        }
+        //end npcbot
+#endif
 
         if (pointOwnerTeamId != _capturePointInfo[point]._ownerTeamId)
         {
@@ -213,11 +263,32 @@ void BattlegroundEY::AddPlayer(Player* player)
     PlayerScores.emplace(player->GetGUID().GetCounter(), new BattlegroundEYScore(player->GetGUID()));
 }
 
+#ifdef MOD_NPCERBOTS
+//npcbot
+void BattlegroundEY::AddBot(Creature* bot)
+{
+    Battleground::AddBot(bot);
+    BotScores.emplace(bot->GetEntry(), new BattlegroundEYScore(bot->GetGUID()));
+}
+//end npcbot
+#endif // MOD_NPCERBOTS
+
 void BattlegroundEY::RemovePlayer(Player* player)
 {
     if (GetFlagPickerGUID() == player->GetGUID())
         EventPlayerDroppedFlag(player);
 }
+
+#ifdef MOD_NPCERBOTS
+//npcbot
+void BattlegroundEY::RemoveBot(ObjectGuid guid)
+{
+    if (GetFlagPickerGUID() == guid)
+        if (Creature const* bot = BotDataMgr::FindBot(guid.GetEntry()))
+            EventBotDroppedFlag(const_cast<Creature*>(bot));
+}
+//end npcbot
+#endif // MOD_NPCERBOTS
 
 void BattlegroundEY::HandleAreaTrigger(Player* player, uint32 trigger)
 {
@@ -260,6 +331,55 @@ void BattlegroundEY::HandleAreaTrigger(Player* player, uint32 trigger)
             break;
     }
 }
+
+#ifdef MOD_NPCERBOTS
+//npcbot
+void BattlegroundEY::HandleBotAreaTrigger(Creature* bot, uint32 trigger)
+{
+    if (GetStatus() != STATUS_IN_PROGRESS || !bot->IsAlive())
+        return;
+
+    TeamId botteamid = GetBotTeamId(bot->GetGUID());
+
+    switch (trigger)
+    {
+    case AT_BLOOD_ELF_POINT:
+        if (_capturePointInfo[POINT_BLOOD_ELF].IsUnderControl(botteamid))
+            if (_flagState == BG_EY_FLAG_STATE_ON_PLAYER && GetFlagPickerGUID() == bot->GetGUID())
+                EventBotCapturedFlag(bot, BG_EY_OBJECT_FLAG_BLOOD_ELF);
+        break;
+    case AT_FEL_REAVER_POINT:
+        if (_capturePointInfo[POINT_FEL_REAVER].IsUnderControl(botteamid))
+            if (_flagState == BG_EY_FLAG_STATE_ON_PLAYER && GetFlagPickerGUID() == bot->GetGUID())
+                EventBotCapturedFlag(bot, BG_EY_OBJECT_FLAG_FEL_REAVER);
+        break;
+    case AT_MAGE_TOWER_POINT:
+        if (_capturePointInfo[POINT_MAGE_TOWER].IsUnderControl(botteamid))
+            if (_flagState == BG_EY_FLAG_STATE_ON_PLAYER && GetFlagPickerGUID() == bot->GetGUID())
+                EventBotCapturedFlag(bot, BG_EY_OBJECT_FLAG_MAGE_TOWER);
+        break;
+    case AT_DRAENEI_RUINS_POINT:
+        if (_capturePointInfo[POINT_DRAENEI_RUINS].IsUnderControl(botteamid))
+            if (_flagState == BG_EY_FLAG_STATE_ON_PLAYER && GetFlagPickerGUID() == bot->GetGUID())
+                EventBotCapturedFlag(bot, BG_EY_OBJECT_FLAG_DRAENEI_RUINS);
+        break;
+    case 4512:
+    case 4515:
+    case 4517:
+    case 4519:
+    case 4530:
+    case 4531:
+    case 5866:
+        //break;
+    case AT_BLOOD_ELF_BUFF:
+    case AT_FEL_REAVER_BUFF:
+    case AT_MAGE_TOWER_BUFF:
+    case AT_DRAENEI_RUINS_BUFF:
+        break;
+    }
+}
+//end npcbot
+#endif // MOD_NPCERBOTS
 
 bool BattlegroundEY::SetupBattleground()
 {
@@ -406,6 +526,35 @@ void BattlegroundEY::HandleKillPlayer(Player* player, Player* killer)
     EventPlayerDroppedFlag(player);
 }
 
+#ifdef MOD_NPCERBOTS
+//npcbot
+void BattlegroundEY::HandleBotKillPlayer(Creature* killer, Player* victim)
+{
+    if (GetStatus() != STATUS_IN_PROGRESS)
+        return;
+
+    Battleground::HandleBotKillPlayer(killer, victim);
+    EventPlayerDroppedFlag(victim);
+}
+void BattlegroundEY::HandleBotKillBot(Creature* killer, Creature* victim)
+{
+    if (GetStatus() != STATUS_IN_PROGRESS)
+        return;
+
+    Battleground::HandleBotKillBot(killer, victim);
+    EventBotDroppedFlag(victim);
+}
+void BattlegroundEY::HandlePlayerKillBot(Creature* victim, Player* killer)
+{
+    if (GetStatus() != STATUS_IN_PROGRESS)
+        return;
+
+    Battleground::HandlePlayerKillBot(victim, killer);
+    EventBotDroppedFlag(victim);
+}
+//end npcbot
+#endif // MOD_NPCERBOTS
+
 void BattlegroundEY::EventPlayerDroppedFlag(Player* player)
 {
     if (GetFlagPickerGUID() != player->GetGUID())
@@ -428,6 +577,32 @@ void BattlegroundEY::EventPlayerDroppedFlag(Player* player)
         SendBroadcastText(BG_EY_TEXT_FLAG_DROPPED, CHAT_MSG_BG_SYSTEM_HORDE);
 }
 
+#ifdef MOD_NPCERBOTS
+//npcbot
+void BattlegroundEY::EventBotDroppedFlag(Creature* bot)
+{
+    if (GetFlagPickerGUID() != bot->GetGUID())
+        return;
+
+    SetFlagPicker(ObjectGuid::Empty);
+    bot->RemoveAurasDueToSpell(BG_EY_NETHERSTORM_FLAG_SPELL);
+    if (GetStatus() != STATUS_IN_PROGRESS)
+        return;
+
+    _flagState = BG_EY_FLAG_STATE_ON_GROUND;
+    _bgEvents.RescheduleEvent(BG_EY_EVENT_FLAG_ON_GROUND, BG_EY_FLAG_ON_GROUND_TIME);
+
+    bot->CastSpell(bot, SPELL_RECENTLY_DROPPED_FLAG, true);
+    bot->CastSpell(bot, BG_EY_PLAYER_DROPPED_FLAG_SPELL, true);
+
+    if (GetBotTeamId(bot->GetGUID()) == TEAM_ALLIANCE)
+        SendBroadcastText(BG_EY_TEXT_FLAG_DROPPED, CHAT_MSG_BG_SYSTEM_ALLIANCE);
+    else
+        SendBroadcastText(BG_EY_TEXT_FLAG_DROPPED, CHAT_MSG_BG_SYSTEM_HORDE);
+}
+//end npcbot
+#endif // MOD_NPCERBOTS
+
 void BattlegroundEY::EventPlayerClickedOnFlag(Player* player, GameObject* gameObject)
 {
     if (GetStatus() != STATUS_IN_PROGRESS || GetFlagPickerGUID() || !player->IsWithinDistInMap(gameObject, 10.0f))
@@ -449,6 +624,34 @@ void BattlegroundEY::EventPlayerClickedOnFlag(Player* player, GameObject* gameOb
     else
         SendBroadcastText(BG_EY_TEXT_TAKEN_FLAG, CHAT_MSG_BG_SYSTEM_HORDE, player);
 }
+
+#ifdef MOD_NPCERBOTS
+//npcbot
+void BattlegroundEY::EventBotClickedOnFlag(Creature* bot, GameObject* target_obj)
+{
+    if (GetStatus() != STATUS_IN_PROGRESS || GetFlagPickerGUID() || !bot->IsWithinDistInMap(target_obj, 10.0f))
+        return;
+
+    TeamId botteamid = GetBotTeamId(bot->GetGUID());
+
+    _flagState = BG_EY_FLAG_STATE_ON_PLAYER;
+    SpawnBGObject(BG_EY_OBJECT_FLAG_NETHERSTORM, RESPAWN_ONE_DAY);
+    SetFlagPicker(bot->GetGUID());
+    SetDroppedFlagGUID(ObjectGuid::Empty);
+
+    bot->CastSpell(bot, BG_EY_NETHERSTORM_FLAG_SPELL, true);
+    bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_ENTER_PVP_COMBAT);
+
+    PlaySoundToAll(botteamid == TEAM_ALLIANCE ? BG_EY_SOUND_FLAG_PICKED_UP_ALLIANCE : BG_EY_SOUND_FLAG_PICKED_UP_HORDE);
+    UpdateWorldState(NETHERSTORM_FLAG, 0);
+
+    if (botteamid == TEAM_ALLIANCE)
+        SendBroadcastText(BG_EY_TEXT_TAKEN_FLAG, CHAT_MSG_BG_SYSTEM_ALLIANCE, bot);
+    else
+        SendBroadcastText(BG_EY_TEXT_TAKEN_FLAG, CHAT_MSG_BG_SYSTEM_HORDE, bot);
+}
+//end npcbot
+#endif // MOD_NPCERBOTS
 
 void BattlegroundEY::EventTeamLostPoint(Player* player, uint32 point)
 {
@@ -486,6 +689,48 @@ void BattlegroundEY::EventTeamLostPoint(Player* player, uint32 point)
         DelCreature(point);
     }, 500ms);
 }
+
+#ifdef MOD_NPCERBOTS
+//npcbot
+void BattlegroundEY::EventBotTeamLostPoint(Creature const* bot, uint32 point)
+{
+    TeamId oldTeamId = _capturePointInfo[point]._ownerTeamId;
+
+    if (oldTeamId == TEAM_ALLIANCE)
+    {
+        _ownedPointsCount[TEAM_ALLIANCE]--;
+        SpawnBGObject(m_LosingPointTypes[point].DespawnObjectTypeAlliance, RESPAWN_ONE_DAY);
+        SpawnBGObject(m_LosingPointTypes[point].DespawnObjectTypeAlliance + 1, RESPAWN_ONE_DAY);
+        SpawnBGObject(m_LosingPointTypes[point].DespawnObjectTypeAlliance + 2, RESPAWN_ONE_DAY);
+        SendBroadcastText(m_LosingPointTypes[point].MessageIdAlliance, CHAT_MSG_BG_SYSTEM_ALLIANCE, bot);
+    }
+    else
+    {
+        _ownedPointsCount[TEAM_HORDE]--;
+        SpawnBGObject(m_LosingPointTypes[point].DespawnObjectTypeHorde, RESPAWN_ONE_DAY);
+        SpawnBGObject(m_LosingPointTypes[point].DespawnObjectTypeHorde + 1, RESPAWN_ONE_DAY);
+        SpawnBGObject(m_LosingPointTypes[point].DespawnObjectTypeHorde + 2, RESPAWN_ONE_DAY);
+        SendBroadcastText(m_LosingPointTypes[point].MessageIdHorde, CHAT_MSG_BG_SYSTEM_HORDE, bot);
+    }
+
+    SpawnBGObject(m_LosingPointTypes[point].SpawnNeutralObjectType, RESPAWN_IMMEDIATELY);
+    SpawnBGObject(m_LosingPointTypes[point].SpawnNeutralObjectType + 1, RESPAWN_IMMEDIATELY);
+    SpawnBGObject(m_LosingPointTypes[point].SpawnNeutralObjectType + 2, RESPAWN_IMMEDIATELY);
+
+    _capturePointInfo[point]._ownerTeamId = TEAM_NEUTRAL;
+
+    UpdatePointsIcons(point);
+    UpdatePointsCount();
+    DelCreature(BG_EY_TRIGGER_FEL_REAVER + point);
+
+    _reviveEvents.AddEventAtOffset([this, point]()
+        {
+            RelocateDeadPlayers(BgCreatures[point]);
+            DelCreature(point);
+        }, 500ms);
+}
+//end npcbot
+#endif // MOD_NPCERBOTS
 
 void BattlegroundEY::EventTeamCapturedPoint(Player* player, TeamId teamId, uint32 point)
 {
@@ -530,6 +775,53 @@ void BattlegroundEY::EventTeamCapturedPoint(Player* player, TeamId teamId, uint3
     }
 }
 
+#ifdef MOD_NPCERBOTS
+//npcbot
+void BattlegroundEY::EventBotTeamCapturedPoint(Creature const* bot, TeamId teamId, uint32 point)
+{
+    SpawnBGObject(m_CapturingPointTypes[point].DespawnNeutralObjectType, RESPAWN_ONE_DAY);
+    SpawnBGObject(m_CapturingPointTypes[point].DespawnNeutralObjectType + 1, RESPAWN_ONE_DAY);
+    SpawnBGObject(m_CapturingPointTypes[point].DespawnNeutralObjectType + 2, RESPAWN_ONE_DAY);
+
+    if (teamId == TEAM_ALLIANCE)
+    {
+        _ownedPointsCount[TEAM_ALLIANCE]++;
+        SpawnBGObject(m_CapturingPointTypes[point].SpawnObjectTypeAlliance, RESPAWN_IMMEDIATELY);
+        SpawnBGObject(m_CapturingPointTypes[point].SpawnObjectTypeAlliance + 1, RESPAWN_IMMEDIATELY);
+        SpawnBGObject(m_CapturingPointTypes[point].SpawnObjectTypeAlliance + 2, RESPAWN_IMMEDIATELY);
+        SendBroadcastText(m_CapturingPointTypes[point].MessageIdAlliance, CHAT_MSG_BG_SYSTEM_ALLIANCE, bot);
+    }
+    else
+    {
+        _ownedPointsCount[TEAM_HORDE]++;
+        SpawnBGObject(m_CapturingPointTypes[point].SpawnObjectTypeHorde, RESPAWN_IMMEDIATELY);
+        SpawnBGObject(m_CapturingPointTypes[point].SpawnObjectTypeHorde + 1, RESPAWN_IMMEDIATELY);
+        SpawnBGObject(m_CapturingPointTypes[point].SpawnObjectTypeHorde + 2, RESPAWN_IMMEDIATELY);
+        SendBroadcastText(m_CapturingPointTypes[point].MessageIdHorde, CHAT_MSG_BG_SYSTEM_HORDE, bot);
+    }
+
+    _capturePointInfo[point]._ownerTeamId = teamId;
+
+    GraveyardStruct const* sg = sGraveyard->GetGraveyard(m_CapturingPointTypes[point].GraveyardId);
+    AddSpiritGuide(point, sg->x, sg->y, sg->z, 3.124139f, teamId);
+
+    UpdatePointsIcons(point);
+    UpdatePointsCount();
+
+    // Xinef: done this way to avoid errors in console
+    Creature* trigger = GetBgMap()->GetCreature(BgCreatures[std::size_t(BG_EY_TRIGGER_FEL_REAVER) + point]);
+    if (!trigger)
+        trigger = AddCreature(WORLD_TRIGGER, BG_EY_TRIGGER_FEL_REAVER + point, BG_EY_TriggerPositions[point][0], BG_EY_TriggerPositions[point][1], BG_EY_TriggerPositions[point][2], BG_EY_TriggerPositions[point][3]);
+
+    if (trigger)
+    {
+        trigger->SetFaction(teamId == TEAM_ALLIANCE ? FACTION_ALLIANCE_GENERIC : FACTION_HORDE_GENERIC);
+        trigger->CastSpell(trigger, SPELL_HONORABLE_DEFENDER_25Y, true);
+    }
+}
+//end npcbot
+#endif // MOD_NPCERBOTS
+
 void BattlegroundEY::EventPlayerCapturedFlag(Player* player, uint32 BgObjectType)
 {
     SetFlagPicker(ObjectGuid::Empty);
@@ -557,6 +849,39 @@ void BattlegroundEY::EventPlayerCapturedFlag(Player* player, uint32 BgObjectType
         AddPoints(player->GetTeamId(), BG_EY_FlagPoints[_ownedPointsCount[player->GetTeamId()] - 1]);
 }
 
+#ifdef MOD_NPCERBOTS
+//npcbot
+void BattlegroundEY::EventBotCapturedFlag(Creature* bot, uint32 bgObjectType)
+{
+    TeamId botteamid = GetBotTeamId(bot->GetGUID());
+
+    SetFlagPicker(ObjectGuid::Empty);
+    _flagState = BG_EY_FLAG_STATE_ON_BASE;
+    bot->RemoveAurasDueToSpell(BG_EY_NETHERSTORM_FLAG_SPELL);
+    bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_ENTER_PVP_COMBAT);
+
+    SpawnBGObject(bgObjectType, RESPAWN_IMMEDIATELY);
+    _bgEvents.RescheduleEvent(BG_EY_EVENT_RESPAWN_FLAG, BG_EY_FLAG_RESPAWN_TIME);
+    _flagCapturedObject = bgObjectType;
+
+    if (botteamid == TEAM_ALLIANCE)
+    {
+        PlaySoundToAll(BG_EY_SOUND_FLAG_CAPTURED_ALLIANCE);
+        SendBroadcastText(BG_EY_TEXT_ALLIANCE_CAPTURED_FLAG, CHAT_MSG_BG_SYSTEM_ALLIANCE, bot);
+    }
+    else
+    {
+        PlaySoundToAll(BG_EY_SOUND_FLAG_CAPTURED_HORDE);
+        SendBroadcastText(BG_EY_TEXT_HORDE_CAPTURED_FLAG, CHAT_MSG_BG_SYSTEM_HORDE, bot);
+    }
+
+    UpdateBotScore(bot, SCORE_FLAG_CAPTURES, 1);
+    if (_ownedPointsCount[botteamid] > 0)
+        AddPoints(botteamid, BG_EY_FlagPoints[_ownedPointsCount[botteamid] - 1]);
+}
+//end npcbot
+#endif // MOD_NPCERBOTS
+
 bool BattlegroundEY::UpdatePlayerScore(Player* player, uint32 type, uint32 value, bool doAddHonor)
 {
     if (!Battleground::UpdatePlayerScore(player, type, value, doAddHonor))
@@ -573,6 +898,17 @@ bool BattlegroundEY::UpdatePlayerScore(Player* player, uint32 type, uint32 value
 
     return true;
 }
+
+#ifdef MOD_NPCERBOTS
+//npcbot
+bool BattlegroundEY::UpdateBotScore(Creature const* bot, uint32 type, uint32 value)
+{
+    if (!Battleground::UpdateBotScore(bot, type, value))
+        return false;
+    return true;
+}
+//end npcbot
+#endif // MOD_NPCERBOTS
 
 void BattlegroundEY::FillInitialWorldStates(WorldPackets::WorldState::InitWorldStates& packet)
 {
@@ -626,6 +962,38 @@ GraveyardStruct const* BattlegroundEY::GetClosestGraveyard(Player* player)
 
     return nearestEntry;
 }
+
+#ifdef MOD_NPCERBOTS
+//npcbot
+GraveyardStruct const* BattlegroundEY::GetClosestGraveyardForBot(Creature* bot) const
+{
+    GraveyardStruct const* entry = sGraveyard->GetGraveyard(static_cast<uint16>(BG_EY_GRAVEYARD_MAIN_ALLIANCE) + GetBotTeamId(bot->GetGUID()));
+    GraveyardStruct const* myEntry = entry;
+
+    float x = bot->GetPositionX();
+    float y = bot->GetPositionY();
+    float z = bot->GetPositionZ();
+    float dist = (entry->x - x) * (entry->x - x) + (entry->y - y) * (entry->y - y) + (entry->z - z) * (entry->z - z);
+    float minDist = dist;
+
+    for (uint8 i = 0; i < EY_POINTS_MAX; ++i)
+    {
+        if (_capturePointInfo[i].IsUnderControl(GetBotTeamId(bot->GetGUID())))
+        {
+            entry = sGraveyard->GetGraveyard(m_CapturingPointTypes[i].GraveyardId);
+            dist = (entry->x - x) * (entry->x - x) + (entry->y - y) * (entry->y - y) + (entry->z - z) * (entry->z - z);
+            if (dist < minDist)
+            {
+                minDist = dist;
+                myEntry = entry;
+            }
+        }
+    }
+
+    return myEntry;
+}
+//end npcbot
+#endif
 
 bool BattlegroundEY::AllNodesConrolledByTeam(TeamId teamId) const
 {

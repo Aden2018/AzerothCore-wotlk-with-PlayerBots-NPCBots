@@ -547,6 +547,12 @@ public:
 
     UsedSpellMods m_appliedMods;
 
+#ifdef MOD_NPCERBOTS
+    //npcbot
+    int32 GetTimer() const { return m_timer; }
+    //end npcbot
+#endif
+
     int32 GetCastTime() const { return m_casttime; }
     bool IsAutoRepeat() const { return m_autoRepeat; }
     void SetAutoRepeat(bool rep) { m_autoRepeat = rep; }

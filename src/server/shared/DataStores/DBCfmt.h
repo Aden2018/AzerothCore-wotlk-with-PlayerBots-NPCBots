@@ -23,7 +23,11 @@ char constexpr AchievementCategoryfmt[] = "nixxxxxxxxxxxxxxxxxx";
 char constexpr AchievementCriteriafmt[] = "niiiiiiiixxxxxxxxxxxxxxxxxiiiix";
 char constexpr AreaTableEntryfmt[] = "niiiixxxxxissssssssssssssssxiiiiixxx";
 char constexpr AreaGroupEntryfmt[] = "niiiiiii";
+#ifdef MOD_NPCERBOTS
+char constexpr AreaPOIEntryfmt[] = "niiiiiiiiiiifffixisxxxxxxxxxxxxxxxxsxxxxxxxxxxxxxxxxix";
+#else
 char constexpr AreaPOIEntryfmt[] = "niiiiiiiiiiifffixixxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxix";
+#endif
 char constexpr AuctionHouseEntryfmt[] = "niiixxxxxxxxxxxxxxxxx";
 char constexpr BankBagSlotPricesEntryfmt[] = "ni";
 char constexpr BarberShopStyleEntryfmt[] = "nixxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxiii";

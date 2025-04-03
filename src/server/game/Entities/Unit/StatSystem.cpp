@@ -1053,6 +1053,12 @@ void Creature::UpdateMaxPower(Powers power)
     UnitMods unitMod = UnitMods(static_cast<uint16>(UNIT_MOD_POWER_START) + power);
 
     float value  = GetTotalAuraModValue(unitMod);
+#ifdef MOD_NPCERBOTS
+    //npcbot
+    if (IsNPCBotOrPet())
+        value += GetCreatePowers(power);
+    //end npcbot
+#endif
     SetMaxPower(power, uint32(value));
 }
 
@@ -1128,17 +1134,72 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
     float weaponMinDamage = GetWeaponDamageRange(attType, MINDAMAGE);
     float weaponMaxDamage = GetWeaponDamageRange(attType, MAXDAMAGE);
 
+#ifdef MOD_NPCERBOTS
+    //npcbot: support for feral form
+    if (IsNPCBot() && IsInFeralForm())
+    {
+        float att_speed = GetAPMultiplier(attType, false);
+        uint8 lvl = GetLevel();
+        if (lvl > 60)
+            lvl = 60;
+
+        weaponMinDamage = lvl*0.85f*att_speed;
+        weaponMaxDamage = lvl*1.25f*att_speed;
+    }
+    else
+    //end npcbot
+#endif
     // Disarm for creatures
     if (HasWeapon(attType) && !HasWeaponForAttack(attType))
     {
+#ifdef MOD_NPCERBOTS
+        //npcbot: mimic player-like disarm (retain damage)
+        if (IsNPCBot())
+        {
+            // Main hand melee is always usable, but disarm reduces damage drastically
+            if (attType == BASE_ATTACK)
+            {
+                weaponMinDamage *= 0.25f;
+                weaponMaxDamage *= 0.25f;
+            }
+            else
+            {
+                weaponMinDamage = 0.0f;
+                weaponMaxDamage = 0.0f;
+            }
+        }
+        else
+        {
+        //end npcbot
+#endif
         minDamage *= 0.5f;
         maxDamage *= 0.5f;
+#ifdef MOD_NPCERBOTS
+        //npcbot
+        }
+    }
+    //end npcbot
+    //npcbot: support for ammo
+    else if (attType == RANGED_ATTACK)
+    {
+        float att_speed = GetAPMultiplier(attType, false);
+        weaponMinDamage += GetCreatureAmmoDPS() * att_speed;
+        weaponMaxDamage += GetCreatureAmmoDPS() * att_speed;
+    //end npcbot
+#endif
     }
 
     float attackPower      = GetTotalAttackPowerValue(attType);
     float attackSpeedMulti = GetAPMultiplier(attType, normalized);
+#ifdef MOD_NPCERBOTS
+    //npcbot
+    float baseValue        = GetModifierValue(unitMod, BASE_VALUE) + (attackPower / 14.0f) * variance * (IsNPCBot() ? attackSpeedMulti : 1.0f);
+    float basePct          = GetModifierValue(unitMod, BASE_PCT) * (!IsNPCBot() ? attackSpeedMulti : 1.0f);
+    //end npcbot
+#else
     float baseValue        = GetModifierValue(unitMod, BASE_VALUE) + (attackPower / 14.0f) * variance;
     float basePct          = GetModifierValue(unitMod, BASE_PCT) * attackSpeedMulti;
+#endif
     float totalValue       = GetModifierValue(unitMod, TOTAL_VALUE);
     float totalPct         = addTotalPct ? GetModifierValue(unitMod, TOTAL_PCT) : 1.0f;
     float dmgMultiplier    = GetCreatureTemplate()->DamageModifier; // = DamageModifier * _GetDamageMod(rank);
