@@ -1123,17 +1123,6 @@ PreventAFKLogout = 0
 ###################################################################################################
 # PACKET SPOOF PROTECTION SETTINGS
 #
-# These settings determine which action to take when harmful packet spoofing is detected.
-#
-#    PacketSpoof.Policy
-#        Description: Determines the course of action when packet spoofing is detected.
-#        Values:     0 - Log only
-#                    1 - Log + kick
-#                    2 - Log + kick + ban
-
-PacketSpoof.Policy = 1
-
-#
 #    PacketSpoof.BanMode
 #        Description: If PacketSpoof.Policy equals 2, this will determine the ban mode.
 #        Values:     0 - Ban Account
@@ -3837,21 +3826,6 @@ Arena.QueueAnnouncer.PlayerOnly = 0
 #
 
 Arena.QueueAnnouncer.Detail = 3
-
-#
-#    Arena.ArenaSeason.ID
-#        Description: Current arena season id shown in clients.
-#        Default:     8
-
-Arena.ArenaSeason.ID = 8
-
-#
-#    Arena.ArenaSeason.InProgress
-#        Description: State of current arena season.
-#        Default:     1 - (Active)
-#                     0 - (Finished)
-
-Arena.ArenaSeason.InProgress = 1
 
 #
 #    Arena.ArenaStartRating

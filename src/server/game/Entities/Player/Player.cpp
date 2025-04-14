@@ -12941,13 +12941,12 @@ bool Player::isHonorOrXPTarget(Unit* victim) const
         return false;
 
     if (victim->IsCreature())
+        if (victim->IsTotem() || victim->IsCritter() || victim->IsPet() || victim->ToCreature()->HasFlagsExtra(CREATURE_FLAG_EXTRA_NO_XP))
 #ifdef MOD_NPCERBOTS
         //npcbot: count npcbots at xp targets (DEPRECATED)
         if (victim->ToCreature()->IsNPCBotOrPet())
-            return true;
         //end npcbots
 #endif
-        if (victim->IsTotem() || victim->IsCritter() || victim->IsPet() || victim->ToCreature()->HasFlagsExtra(CREATURE_FLAG_EXTRA_NO_XP))
             return false;
 
     return true;
