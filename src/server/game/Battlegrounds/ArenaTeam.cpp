@@ -1102,6 +1102,7 @@ std::unordered_map<uint8, uint8> ArenaTeam::ArenaReqPlayersForType =
     { ARENA_TYPE_5v5, 10}
 };
 
+#ifdef MOD_PLAYERBOTS
 void ArenaTeam::SetEmblem(uint32 backgroundColor, uint8 emblemStyle, uint32 emblemColor, uint8 borderStyle, uint32 borderColor)
 {
     BackgroundColor = backgroundColor;
@@ -1120,3 +1121,4 @@ void ArenaTeam::SetRatingForAll(uint32 rating)
         itr->PersonalRating = rating;
     }
 }
+#endif

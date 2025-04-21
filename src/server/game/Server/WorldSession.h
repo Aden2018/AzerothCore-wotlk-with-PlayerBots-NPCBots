@@ -29,7 +29,9 @@
 #include "Common.h"
 #include "DatabaseEnv.h"
 #include "GossipDef.h"
+#ifdef MOD_PLAYERBOTS
 #include "QueryHolder.h"
+#endif
 #include "Packet.h"
 #include "SharedDefines.h"
 #include "World.h"
@@ -41,6 +43,9 @@ class Creature;
 class GameObject;
 class InstanceSave;
 class Item;
+#ifndef MOD_PLAYERBOTS
+class LoginQueryHolder;
+#endif
 class LoadPetFromDBQueryHolder;
 class Object;
 class Pet;
@@ -225,6 +230,7 @@ enum CharterTypes
     ARENA_TEAM_CHARTER_5v5_TYPE                   = 5
 };
 
+#ifdef MOD_PLAYERBOTS
 class LoginQueryHolder : public CharacterDatabaseQueryHolder
 {
     private:
@@ -238,6 +244,7 @@ class LoginQueryHolder : public CharacterDatabaseQueryHolder
         uint32 GetAccountId() const { return m_accountId; }
         bool Initialize();
 };
+#endif
 
 //class to deal with packet processing
 //allows to determine if next packet is safe to be processed
@@ -283,10 +290,12 @@ class CharacterCreateInfo
     friend class WorldSession;
     friend class Player;
 
+#ifdef MOD_PLAYERBOTS
 public:
     CharacterCreateInfo(std::string const name = "", uint8 _race = 0, uint8 _class = 0, uint8 gender = 0, uint8 skin = 0, uint8 face = 0,
         uint8 hairStyle = 0, uint8 hairColor = 0, uint8 facialHair = 0)
         : Name(name), Race(_race), Class(_class), Gender(gender), Skin(skin), Face(face), HairStyle(hairStyle), HairColor(hairColor), FacialHair(facialHair) { }
+#endif
 
 protected:
     /// User specified variables
@@ -348,8 +357,12 @@ struct PacketCounter
 class WorldSession
 {
 public:
+#ifdef MOD_PLAYERBOTS
     WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldSocket> sock, AccountTypes sec, uint8 expansion, time_t mute_time, LocaleConstant locale,
         uint32 recruiter, bool isARecruiter, bool skipQueue, uint32 TotalTime, bool isBot = false);
+#else
+    WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldSocket> sock, AccountTypes sec, uint8 expansion, time_t mute_time, LocaleConstant locale, uint32 recruiter, bool isARecruiter, bool skipQueue, uint32 TotalTime);
+#endif
     ~WorldSession();
 
     bool IsGMAccount() const;
@@ -1101,7 +1114,9 @@ public:                                                 // opcodes handlers
     void SetKicked(bool val) { _kicked = val; }
     bool IsSocketClosed() const;
 
+#ifdef MOD_PLAYERBOTS
     void SetAddress(std::string const& address) { m_Address = address; }
+#endif
 
     /*
      * CALLBACKS
@@ -1114,12 +1129,14 @@ public:                                                 // opcodes handlers
     void InitializeSession();
     void InitializeSessionCallback(CharacterDatabaseQueryHolder const& realmHolder, uint32 clientCacheVersion);
 
+#ifdef MOD_PLAYERBOTS
     LockedQueue<WorldPacket*>& GetPacketQueue();
 
     [[nodiscard]] bool IsBot() const
     {
         return _isBot;
     }
+#endif
 
 private:
     void ProcessQueryCallbacks();
@@ -1230,7 +1247,9 @@ private:
     uint32 _timeSyncNextCounter;
     uint32 _timeSyncTimer;
 
+#ifdef MOD_PLAYERBOTS
     bool _isBot;
+#endif
 
     WorldSession(WorldSession const& right) = delete;
     WorldSession& operator=(WorldSession const& right) = delete;

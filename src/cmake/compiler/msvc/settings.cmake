@@ -119,6 +119,12 @@ target_compile_definitions(acore-compile-option-interface
     -DMOD_NPCERBOTS)
 message(STATUS "MSVC: Enable MOD_NPCERBOTS")
 
+# Define MOD_PLAYERBOTS
+target_compile_definitions(acore-compile-option-interface
+  INTERFACE
+    -DMOD_PLAYERBOTS)
+message(STATUS "MSVC: Enable MOD_PLAYERBOTS")
+
 if(NOT WITH_WARNINGS)
   target_compile_options(acore-warning-interface
     INTERFACE

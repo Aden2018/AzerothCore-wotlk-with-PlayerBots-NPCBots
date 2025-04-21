@@ -11006,11 +11006,13 @@ ReputationRank Unit::GetFactionReactionTo(FactionTemplateEntry const* factionTem
     //end npcbot
 #endif
 
+#ifdef MOD_PLAYERBOTS
     return GetFactionReactionTo(factionTemplateEntry, targetFactionTemplateEntry);
 }
 
 ReputationRank Unit::GetFactionReactionTo(FactionTemplateEntry const* factionTemplateEntry, FactionTemplateEntry const* targetFactionTemplateEntry)
 {
+#endif
     // common faction based check
     if (factionTemplateEntry->IsHostileTo(*targetFactionTemplateEntry))
     {
@@ -19451,7 +19453,9 @@ void Unit::Kill(Unit* killer, Unit* victim, bool durabilityLoss, WeaponAttackTyp
             }
         }
 
+#ifdef MOD_PLAYERBOTS
         sScriptMgr->OnPlayerbotCheckKillTask(player, victim);
+#endif
 
         // Dungeon specific stuff, only applies to players killing creatures
         if (creature->GetInstanceId())
@@ -20488,6 +20492,7 @@ void Unit::SendPlaySpellVisual(uint32 id)
     SendMessageToSet(&data, true);
 }
 
+#ifdef MOD_PLAYERBOTS
 void Unit::SendPlaySpellVisual(ObjectGuid guid, uint32 id)
 {
     WorldPacket data(SMSG_PLAY_SPELL_VISUAL, 8 + 4);
@@ -20495,6 +20500,7 @@ void Unit::SendPlaySpellVisual(ObjectGuid guid, uint32 id)
     data << uint32(id); // SpellVisualKit.dbc index
     SendMessageToSet(&data, true);
 }
+#endif
 
 void Unit::SendPlaySpellImpact(ObjectGuid guid, uint32 id)
 {
@@ -20502,9 +20508,11 @@ void Unit::SendPlaySpellImpact(ObjectGuid guid, uint32 id)
     data << guid;       // target
     data << uint32(id); // SpellVisualKit.dbc index
 
+#ifdef MOD_PLAYERBOTS
     if (IsPlayer())
         ToPlayer()->SendDirectMessage(&data);
     else
+#endif
     SendMessageToSet(&data, true);
 }
 
@@ -23244,6 +23252,7 @@ std::string Unit::GetDebugInfo() const
     return sstr.str();
 }
 
+#ifdef MOD_PLAYERBOTS
 void Unit::SetCannotReachTargetUnit(bool cannotReach, bool isChase)
 {
     if (cannotReach == m_cannotReachTarget)
@@ -23258,3 +23267,4 @@ bool Unit::CanNotReachTarget() const
 {
     return m_cannotReachTarget;
 }
+#endif

@@ -219,7 +219,11 @@ bool ItemCanGoIntoBag(ItemTemplate const* proto, ItemTemplate const* pBagProto);
 class Item : public Object
 {
 public:
+#ifdef MOD_PLAYERBOTS
     static Item* CreateItem(uint32 item, uint32 count, Player const* player = nullptr, bool clone = false, uint32 randomPropertyId = 0, bool temp = false);
+#else
+    static Item* CreateItem(uint32 item, uint32 count, Player const* player = nullptr, bool clone = false, uint32 randomPropertyId = 0);
+#endif
     Item* CloneItem(uint32 count, Player const* player = nullptr) const;
 
     Item();

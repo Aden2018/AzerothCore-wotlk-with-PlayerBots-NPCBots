@@ -15,6 +15,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef MOD_PLAYERBOTS
 #include "ScriptMgr.h"
 #include "ScriptMgrMacros.h"
 
@@ -103,3 +104,4 @@ void ScriptMgr::OnPlayerbotLogoutBots()
         script->OnPlayerbotLogoutBots();
     });
 }
+#endif

@@ -67,7 +67,9 @@
 #include "ObjectMgr.h"
 #include "Opcodes.h"
 #include "OutdoorPvPMgr.h"
+#ifdef MOD_PLAYERBOTS
 #include "QueryHolder.h"
+#endif
 #include "PetitionMgr.h"
 #include "Player.h"
 #include "PlayerDump.h"
@@ -2129,7 +2131,9 @@ void World::Update(uint32 diff)
         ResetGuildCap();
     }
 
+#ifdef MOD_PLAYERBOTS
     sScriptMgr->OnPlayerbotUpdate(diff);
+#endif
 
     {
         // pussywizard: handle expired auctions, auctions expired when realm was offline are also handled here (not during loading when many required things aren't loaded yet)
@@ -2269,7 +2273,9 @@ void World::Update(uint32 diff)
         CharacterDatabase.KeepAlive();
         LoginDatabase.KeepAlive();
         WorldDatabase.KeepAlive();
+#ifdef MOD_PLAYERBOTS
         sScriptMgr->OnDatabasesKeepAlive();
+#endif
     }
 
     {
@@ -2783,13 +2789,17 @@ uint64 World::getWorldState(uint32 index) const
 void World::ProcessQueryCallbacks()
 {
     _queryProcessor.ProcessReadyCallbacks();
+#ifdef MOD_PLAYERBOTS
     _queryHolderProcessor.ProcessReadyCallbacks();
+#endif
 }
 
+#ifdef MOD_PLAYERBOTS
 SQLQueryHolderCallback& World::AddQueryHolderCallback(SQLQueryHolderCallback&& callback)
 {
     return _queryHolderProcessor.AddCallback(std::move(callback));
 }
+#endif
 
 void World::RemoveOldCorpses()
 {

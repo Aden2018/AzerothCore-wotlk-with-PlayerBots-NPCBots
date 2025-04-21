@@ -64,10 +64,12 @@ ScriptMgr* ScriptMgr::instance()
     return &instance;
 }
 
+#ifdef MOD_PLAYERBOTS
 PlayerbotScript::PlayerbotScript(const char* name) : ScriptObject(name)
 {
     ScriptRegistry<PlayerbotScript>::AddScript(this);
 }
+#endif
 
 void ScriptMgr::Initialize()
 {
@@ -160,7 +162,9 @@ void ScriptMgr::Unload()
     SCR_CLEAR<OutdoorPvPScript>();
     SCR_CLEAR<PetScript>();
     SCR_CLEAR<PlayerScript>();
+#ifdef MOD_PLAYERBOTS
     SCR_CLEAR<PlayerbotScript>();
+#endif
     SCR_CLEAR<ServerScript>();
     SCR_CLEAR<SpellSC>();
     SCR_CLEAR<SpellScriptLoader>();
@@ -245,7 +249,9 @@ void ScriptMgr::CheckIfScriptsInDatabaseExist()
                 !ScriptRegistry<ArenaScript>::GetScriptById(sid) &&
                 !ScriptRegistry<GroupScript>::GetScriptById(sid) &&
                 !ScriptRegistry<DatabaseScript>::GetScriptById(sid) &&
+#ifdef MOD_PLAYERBOTS
                 !ScriptRegistry<PlayerbotScript>::GetScriptById(sid) &&
+#endif
                 !ScriptRegistry<TicketScript>::GetScriptById(sid))
                 {
                     LOG_ERROR("sql.sql", "Script named '{}' is assigned in the database, but has no code!", scriptName);

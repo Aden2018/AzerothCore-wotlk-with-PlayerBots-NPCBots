@@ -280,7 +280,9 @@ enum CharacterDatabaseStatements : uint32
     CHAR_UPD_PETITION_NAME,
     CHAR_INS_PETITION_SIGNATURE,
     CHAR_UPD_ACCOUNT_ONLINE,
+#ifdef MOD_PLAYERBOTS
     CHAR_UPD_CHAR_OFFLINE,
+#endif
     CHAR_INS_GROUP,
     CHAR_REP_GROUP_MEMBER,
     CHAR_DEL_GROUP_MEMBER,
@@ -529,7 +531,7 @@ enum CharacterDatabaseStatements : uint32
     CHAR_DELETE_INSTANCE_SAVED_DATA,
     CHAR_SANITIZE_INSTANCE_SAVED_DATA,
 
-    #ifdef MOD_NPCERBOTS
+#ifdef MOD_NPCERBOTS
     // NPCBot
     CHAR_UPD_NPCBOT_OWNER,
     CHAR_UPD_NPCBOT_OWNER_ALL,
@@ -554,7 +556,7 @@ enum CharacterDatabaseStatements : uint32
     CHAR_INS_NPCBOT_LOG,
     CHAR_SEL_NPCBOT_ACC_BOT_COUNT,
     // End NPCBot
-   #endif
+#endif
 
     MAX_CHARACTERDATABASE_STATEMENTS
 };

@@ -214,10 +214,12 @@ void ScriptMgr::OnPlayerBeforeUpdate(Player* player, uint32 p_time)
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_BEFORE_UPDATE, script->OnPlayerBeforeUpdate(player, p_time));
 }
 
+#ifdef MOD_PLAYERBOTS
 void ScriptMgr::OnPlayerAfterUpdate(Player* player, uint32 p_time)
 {
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_AFTER_UPDATE, script->OnPlayerAfterUpdate(player, p_time));
 }
+#endif
 
 void ScriptMgr::OnPlayerUpdate(Player* player, uint32 p_time)
 {

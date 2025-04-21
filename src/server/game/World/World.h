@@ -314,7 +314,9 @@ protected:
     void CalendarDeleteOldEvents();
     void ResetGuildCap();
 
+#ifdef MOD_PLAYERBOTS
     SQLQueryHolderCallback& AddQueryHolderCallback(SQLQueryHolderCallback&& callback) override;
+#endif
 
 private:
     static std::atomic_long _stopEvent;
@@ -371,7 +373,9 @@ private:
 
     void ProcessQueryCallbacks();
     QueryCallbackProcessor _queryProcessor;
+#ifdef MOD_PLAYERBOTS
     AsyncCallbackProcessor<SQLQueryHolderCallback> _queryHolderProcessor;
+#endif
 
     /**
      * @brief Executed when a World Session is being finalized. Be it from a normal login or via queue popping.

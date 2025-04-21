@@ -432,10 +432,12 @@ bool StartDB()
     if (!loader.Load())
         return false;
 
+#ifdef MOD_PLAYERBOTS
     if (!sScriptMgr->OnDatabasesLoading())
     {
         return false;
     }
+#endif
 
     ///- Get the realm Id from the configuration file
     realm.Id.Realm = sConfigMgr->GetOption<uint32>("RealmID", 0);
@@ -482,7 +484,9 @@ void StopDB()
     WorldDatabase.Close();
     LoginDatabase.Close();
 
+#ifdef MOD_PLAYERBOTS
     sScriptMgr->OnDatabasesClosing();
+#endif
 
     MySQL::Library_End();
 }
@@ -573,9 +577,9 @@ void WorldUpdateLoop()
     LoginDatabase.WarnAboutSyncQueries(true);
     CharacterDatabase.WarnAboutSyncQueries(true);
     WorldDatabase.WarnAboutSyncQueries(true);
-
+#ifdef MOD_PLAYERBOTS
     sScriptMgr->OnDatabaseWarnAboutSyncQueries(true);
-
+#endif
     ///- While we have not World::m_stopEvent, update the world
     while (!World::IsStopped())
     {
@@ -604,9 +608,9 @@ void WorldUpdateLoop()
             Sleep(1000);
 #endif
     }
-
+#ifdef MOD_PLAYERBOTS
     sScriptMgr->OnDatabaseWarnAboutSyncQueries(false);
-
+#endif
     LoginDatabase.WarnAboutSyncQueries(false);
     CharacterDatabase.WarnAboutSyncQueries(false);
     WorldDatabase.WarnAboutSyncQueries(false);

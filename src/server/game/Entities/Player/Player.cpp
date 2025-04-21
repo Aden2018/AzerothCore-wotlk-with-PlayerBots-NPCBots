@@ -5162,6 +5162,7 @@ void Player::CleanupChannels()
     }
 }
 
+#ifdef MOD_PLAYERBOTS
 // Playerbot helper if bot talks in a different locale
 bool Player::IsInChannel(const Channel* c)
 {
@@ -5170,6 +5171,7 @@ bool Player::IsInChannel(const Channel* c)
         return c->GetChannelId() == chan->GetChannelId();
     });
 }
+#endif
 
 void Player::ClearChannelWatch()
 {

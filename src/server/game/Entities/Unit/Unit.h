@@ -1848,7 +1848,9 @@ public:
     // Reputations system
     ReputationRank GetReactionTo(Unit const* target, bool checkOriginalFaction = false) const;
     ReputationRank GetFactionReactionTo(FactionTemplateEntry const* factionTemplateEntry, Unit const* target) const;
+#ifdef MOD_PLAYERBOTS
     static ReputationRank GetFactionReactionTo(FactionTemplateEntry const* factionTemplateEntry, FactionTemplateEntry const* targetFactionTemplateEntry);
+#endif
 
     // Shared vision
     SharedVisionList const& GetSharedVisionList() { return m_sharedVision; }
@@ -2006,7 +2008,9 @@ public:
     void SendComboPoints();
 
     void SendPlaySpellVisual(uint32 id);
+#ifdef MOD_PLAYERBOTS
     void SendPlaySpellVisual(ObjectGuid guid, uint32 id);
+#endif
     void SendPlaySpellImpact(ObjectGuid guid, uint32 id);
 
     void SendPetActionFeedback (uint8 msg);
@@ -2053,10 +2057,12 @@ public:
     // Debug
     void OutDebugInfo() const;
     std::string GetDebugInfo() const override;
+#ifdef MOD_PLAYERBOTS
     void SetCannotReachTargetUnit(bool target, bool isChase);
     [[nodiscard]] bool CanNotReachTarget() const;
 
     bool m_cannotReachTarget;
+#endif
 
 #ifdef MOD_NPCERBOTS
     //npcbot

@@ -45,7 +45,9 @@ enum PlayerHook
     PLAYERHOOK_ON_AFTER_SPEC_SLOT_CHANGED,
     PLAYERHOOK_ON_BEFORE_UPDATE,
     PLAYERHOOK_ON_UPDATE,
+#ifdef MOD_PLAYERBOTS
     PLAYERHOOK_ON_AFTER_UPDATE,
+#endif
     PLAYERHOOK_ON_MONEY_CHANGED,
     PLAYERHOOK_ON_BEFORE_LOOT_MONEY,
     PLAYERHOOK_ON_GIVE_EXP,
@@ -267,7 +269,9 @@ public:
 
     // Called for player::update
     virtual void OnPlayerBeforeUpdate(Player* /*player*/, uint32 /*p_time*/) { }
+#ifdef MOD_PLAYERBOTS
     virtual void OnPlayerAfterUpdate(Player* /*player*/, uint32 /*p_time*/) { }
+#endif
     virtual void OnPlayerUpdate(Player* /*player*/, uint32 /*p_time*/) { }
 
     // Called when a player's money is modified (before the modification is done)

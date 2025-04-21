@@ -371,6 +371,7 @@ std::size_t ChatHandler::BuildChatPacket(WorldPacket& data, ChatMsg chatType, La
     return BuildChatPacket(data, chatType, language, senderGUID, receiverGUID, message, chatTag, senderName, receiverName, achievementId, gmMessage, channelName);
 }
 
+#ifdef MOD_PLAYERBOTS
 void ChatHandler::BuildChatPacket(WorldPacket& data, ChatMsg msgtype, std::string_view message, Language language /*= LANG_UNIVERSAL*/, PlayerChatTag chatTag /*= CHAT_TAG_NONE*/,
                                   ObjectGuid const& senderGuid /*= ObjectGuid()*/, std::string_view senderName /*= nullptr*/,
                                   ObjectGuid const& targetGuid /*= ObjectGuid()*/, std::string_view targetName /*= nullptr*/,
@@ -441,6 +442,7 @@ void ChatHandler::BuildChatPacket(WorldPacket& data, ChatMsg msgtype, std::strin
     if (isAchievement)
         data << uint32(achievementId);
 }
+#endif
 
 
 Player* ChatHandler::getSelectedPlayer() const

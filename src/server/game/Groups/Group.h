@@ -272,7 +272,9 @@ public:
     void SetGroupMemberFlag(ObjectGuid guid, bool apply, GroupMemberFlags flag);
     void RemoveUniqueGroupMemberFlag(GroupMemberFlags flag);
 
+#ifdef MOD_PLAYERBOTS
     ObjectGuid const GetTargetIcon(uint8 id) const { return m_targetIcons[id]; }
+#endif
 
     Difficulty GetDifficulty(bool isRaid) const;
     Difficulty GetDungeonDifficulty() const;
@@ -312,7 +314,9 @@ public:
     bool CountRollVote(ObjectGuid playerGUID, ObjectGuid Guid, uint8 Choise);
     void EndRoll(Loot* loot, Map* allowedMap);
 
+#ifdef MOD_PLAYERBOTS
     Rolls GetRolls() const { return RollId; }
+#endif
 
     // related to disenchant rolls
     void ResetMaxEnchantingLevel();

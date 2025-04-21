@@ -579,7 +579,9 @@ namespace lfg
         [[nodiscard]] bool IsTesting() const { return m_Testing; }
 
         void SetDungeon(ObjectGuid guid, uint32 dungeon);
+#ifdef MOD_PLAYERBOTS
         LFGDungeonData const* GetLFGDungeon(uint32 id);
+#endif
 
     private:
         TeamId GetTeam(ObjectGuid guid);
@@ -592,6 +594,9 @@ namespace lfg
         void SetCanOverrideRBState(ObjectGuid guid, bool val);
         void GetCompatibleDungeons(LfgDungeonSet& dungeons, LfgGuidSet const& players, LfgLockPartyMap& lockMap);
         void _SaveToDB(ObjectGuid guid);
+#ifndef MOD_PLAYERBOTS
+        LFGDungeonData const* GetLFGDungeon(uint32 id);
+#endif
 
         // Proposals
         void RemoveProposal(LfgProposalContainer::iterator itProposal, LfgUpdateType type);

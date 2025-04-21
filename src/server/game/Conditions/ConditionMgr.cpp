@@ -30,11 +30,9 @@
 #include "SpellMgr.h"
 #include "WorldState.h"
 
-#ifdef MOD_NPCERBOTS
-//npcbot
+#ifdef MOD_NPCERBOTS//npcbot
 #include "bot_ai.h"
-//end npcbot
-#endif
+#endif//end npcbot
 
 // Checks if object meets the condition
 // Can have CONDITION_SOURCE_TYPE_NONE && !mReferenceId if called from a special event (ie: eventAI)
@@ -91,7 +89,7 @@ bool Condition::Meets(ConditionSourceInfo& sourceInfo)
     {
         if (Unit* unit = object->ToUnit())
         {
-            #ifdef MOD_NPCERBOTS
+#ifdef MOD_NPCERBOTS
             //npcbot
             if (object->IsNPCBot())
                 condMeets = true; //for now

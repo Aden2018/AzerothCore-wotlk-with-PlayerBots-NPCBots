@@ -29,7 +29,12 @@ DBCDatabaseLoader::DBCDatabaseLoader(char const* tableName, char const* dbcForma
       _stringPool(stringPool)
 {
     // Get sql index position
+#ifdef MOD_PLAYERBOTS
     _recordSize = DBCFileLoader::GetFormatRecordSize(_dbcFormat, &_sqlIndexPos);
+#else
+    int32 indexPos = -1;
+    _recordSize = DBCFileLoader::GetFormatRecordSize(_dbcFormat, &indexPos);
+#endif
 
     ASSERT(_recordSize);
 }
@@ -71,11 +76,19 @@ char* DBCDatabaseLoader::Load(uint32& records, char**& indexTable)
     {
         Field* fields = result->Fetch();
         uint32 indexValue = fields[_sqlIndexPos].Get<uint32>();
+#ifdef MOD_PLAYERBOTS
         char* oldDataValue = indexTable[indexValue];
+#else
+        char* DataValue = indexTable[indexValue];
+#endif
 
         // If exist in DBC file override from DB
         newIndexes[newRecords] = indexValue;
+#ifdef MOD_PLAYERBOTS
         char* dataValue = &dataTable[newRecords++ * _recordSize];
+#else
+        dataValue = &dataTable[newRecords++ * _recordSize];
+#endif
 
         uint32 dataOffset = 0;
         uint32 sqlColumnNumber = 0;
@@ -99,12 +112,14 @@ char* DBCDatabaseLoader::Load(uint32& records, char**& indexTable)
                     dataOffset += sizeof(uint8);
                     break;
                 case FT_STRING:
+#ifdef MOD_PLAYERBOTS
                     // not override string if new string is empty
                     if (fields[sqlColumnNumber].Get<std::string>().empty() && oldDataValue)
                     {
                         *reinterpret_cast<char**>(&dataValue[dataOffset]) = *reinterpret_cast<char**>(&oldDataValue[dataOffset]);
                     }
                     else
+#endif
                     {
                         *reinterpret_cast<char**>(&dataValue[dataOffset]) = CloneStringToPool(fields[sqlColumnNumber].Get<std::string>());
                     }

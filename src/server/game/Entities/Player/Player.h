@@ -851,6 +851,18 @@ enum EnviromentalDamage
     DAMAGE_FALL_TO_VOID = 6                                 // custom case for fall without durability loss
 };
 
+#ifndef MOD_PLAYERBOTS
+enum PlayerChatTag
+{
+    CHAT_TAG_NONE       = 0x00,
+    CHAT_TAG_AFK        = 0x01,
+    CHAT_TAG_DND        = 0x02,
+    CHAT_TAG_GM         = 0x04,
+    CHAT_TAG_COM        = 0x08, // Commentator tag. Do not exist in clean client
+    CHAT_TAG_DEV        = 0x10,
+};
+#endif
+
 enum PlayedTimeIndex
 {
     PLAYED_TIME_TOTAL = 0,
@@ -2069,7 +2081,9 @@ public:
 
     void JoinedChannel(Channel* c);
     void LeftChannel(Channel* c);
+#ifdef MOD_PLAYERBOTS
     bool IsInChannel(const Channel* c);
+#endif
     void CleanupChannels();
     void ClearChannelWatch();
     void UpdateLFGChannel();
@@ -2635,7 +2649,9 @@ public:
 
     void SendSystemMessage(std::string_view msg, bool escapeCharacters = false);
 
+#ifdef MOD_PLAYERBOTS
     void ResetSpeakTimers();
+#endif
 
     std::string GetDebugInfo() const override;
 

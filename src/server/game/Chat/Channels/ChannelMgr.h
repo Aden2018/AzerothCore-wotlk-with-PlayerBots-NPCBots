@@ -40,7 +40,9 @@ public:
 
     Channel* GetJoinChannel(std::string const& name, uint32 channel_id);
     Channel* GetChannel(std::string const& name, Player* p, bool pkt = true);
+#ifdef MOD_PLAYERBOTS
     const ChannelMap& GetChannels() const { return channels; }
+#endif
     static void LoadChannels();
 
     static void LoadChannelRights();

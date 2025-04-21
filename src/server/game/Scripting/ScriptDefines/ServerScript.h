@@ -71,7 +71,9 @@ public:
      */
     [[nodiscard]] virtual bool CanPacketReceive(WorldSession* /*session*/, WorldPacket& /*packet*/) { return true; }
 
+#ifdef MOD_PLAYERBOTS
     virtual void OnPacketReceived(WorldSession* /*session*/, WorldPacket const& /*packet*/) { }
+#endif
 };
 
 #endif

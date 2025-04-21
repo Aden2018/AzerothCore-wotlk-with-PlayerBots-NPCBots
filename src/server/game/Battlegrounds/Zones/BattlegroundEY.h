@@ -375,6 +375,7 @@ protected:
     uint32 FlagCaptures = 0;
 };
 
+#ifdef MOD_PLAYERBOTS
 struct CaptureEYPointInfo
 {
     CaptureEYPointInfo() : _ownerTeamId(TEAM_NEUTRAL), _barStatus(BG_EY_PROGRESS_BAR_STATE_MIDDLE), _areaTrigger(0)
@@ -384,11 +385,10 @@ struct CaptureEYPointInfo
     }
 
     Player* player = nullptr;
-#ifdef MOD_NPCERBOTS
-    //npcbot
+#ifdef MOD_NPCERBOTS    //npcbot
     Creature* bot = nullptr;
-    //end npcbot
-#endif
+#endif    //end npcbot
+
     TeamId _ownerTeamId;
     int8 _barStatus;
     uint32 _areaTrigger;
@@ -398,6 +398,7 @@ struct CaptureEYPointInfo
     bool IsUnderControl() const { return _ownerTeamId != TEAM_NEUTRAL; }
     bool IsUncontrolled() const { return _ownerTeamId == TEAM_NEUTRAL; }
 };
+#endif
 
 class AC_GAME_API BattlegroundEY : public Battleground
 {
@@ -458,7 +459,9 @@ public:
     bool AllNodesConrolledByTeam(TeamId teamId) const override;
     TeamId GetPrematureWinner() override;
 
+#ifdef MOD_PLAYERBOTS
     [[nodiscard]] CaptureEYPointInfo const& GetCapturePointInfo(uint32 node) const { return _capturePointInfo[node]; }
+#endif
 
 private:
     void PostUpdateImpl(uint32 diff) override;
@@ -475,7 +478,32 @@ private:
     /* Scorekeeping */
     void AddPoints(TeamId teamId, uint32 points);
 
+#ifdef MOD_PLAYERBOTS
     CaptureEYPointInfo _capturePointInfo[EY_POINTS_MAX];
+#else
+    struct CapturePointInfo
+    {
+        CapturePointInfo() : _ownerTeamId(TEAM_NEUTRAL), _barStatus(BG_EY_PROGRESS_BAR_STATE_MIDDLE), _areaTrigger(0)
+        {
+            _playersCount[TEAM_ALLIANCE] = 0;
+            _playersCount[TEAM_HORDE] = 0;
+        }
+
+        TeamId _ownerTeamId;
+        int8 _barStatus;
+        uint32 _areaTrigger;
+        int8 _playersCount[PVP_TEAMS_COUNT];
+        Player* player = nullptr;
+#ifdef MOD_NPCERBOTS
+        Creature* bot = nullptr;
+#endif
+        bool IsUnderControl(TeamId teamId) const { return _ownerTeamId == teamId; }
+        bool IsUnderControl() const { return _ownerTeamId != TEAM_NEUTRAL; }
+        bool IsUncontrolled() const { return _ownerTeamId == TEAM_NEUTRAL; }
+    };
+
+    CapturePointInfo _capturePointInfo[EY_POINTS_MAX];
+#endif
     EventMap _bgEvents;
     uint32 _honorTics;
     uint8 _ownedPointsCount[PVP_TEAMS_COUNT];

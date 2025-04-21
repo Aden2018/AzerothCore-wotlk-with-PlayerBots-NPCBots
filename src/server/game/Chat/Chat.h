@@ -33,6 +33,7 @@ class WorldObject;
 
 struct GameTele;
 
+#ifdef MOD_PLAYERBOTS
 enum PlayerChatTag
 {
     CHAT_TAG_NONE               = 0x00,
@@ -43,6 +44,7 @@ enum PlayerChatTag
     CHAT_TAG_DEV                = 0x10,                     // Developer
 };
 typedef uint32 ChatTagFlags;
+#endif
 
 class AC_GAME_API ChatHandler
 {
@@ -58,12 +60,14 @@ public:
     // Builds chat packet and returns receiver guid position in the packet to substitute in whisper builders
     static std::size_t BuildChatPacket(WorldPacket& data, ChatMsg chatType, Language language, WorldObject const* sender, WorldObject const* receiver, std::string_view message, uint32 achievementId = 0, std::string const& channelName = "", LocaleConstant locale = DEFAULT_LOCALE);
 
+#ifdef MOD_PLAYERBOTS
     // All in one chat message builder
     static void BuildChatPacket(
             WorldPacket& data, ChatMsg msgtype, std::string_view message, Language language = LANG_UNIVERSAL, PlayerChatTag chatTag = CHAT_TAG_NONE,
             ObjectGuid const& senderGuid = ObjectGuid(), std::string_view senderName = {},
             ObjectGuid const& targetGuid = ObjectGuid(), std::string_view targetName = {},
             std::string_view channelName = {}, uint32 achievementId = 0);
+#endif
 
     static char* LineFromMessage(char*& pos) { char* start = strtok(pos, "\n"); pos = nullptr; return start; }
 

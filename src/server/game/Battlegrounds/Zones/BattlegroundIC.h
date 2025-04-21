@@ -984,7 +984,9 @@ public:
     bool IsResourceGlutAllowed(TeamId teamId) const;
     void DoAction(uint32 action, ObjectGuid guid) override;
 
+#ifdef MOD_PLAYERBOTS
     [[nodiscard]] ICNodePoint const& GetICNodePoint(uint8 index) { return nodePoint[index]; }
+#endif
 
 private:
     uint32 closeFortressDoorsTimer;

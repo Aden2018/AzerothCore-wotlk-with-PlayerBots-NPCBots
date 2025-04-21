@@ -72,7 +72,9 @@ public:
 
     static inline std::string GetConfigEntry();
     static inline std::string GetTableName();
+#ifdef MOD_PLAYERBOTS
     static std::string GetSourceDirectory();
+#endif
     static std::string GetBaseFilesDirectory();
     static bool IsEnabled(uint32 const updateMask);
     static BaseLocation GetBaseLocationType();

@@ -20,7 +20,9 @@
 #include "GameTime.h"
 #include "Metric.h"
 #include "Player.h"
+#ifdef MOD_PLAYERBOTS
 #include "ScriptMgr.h"
+#endif
 #include "World.h"
 #include "WorldSession.h"
 #include "WorldSessionMgr.h"
