@@ -287,6 +287,14 @@ void TempSummon::InitSummon()
 
         if (IsAIEnabled)
             AI()->IsSummonedBy(owner);
+
+#ifdef MOD_NPCERBOTS        //npcbot
+        if (IsTempBot())
+        {
+            m_summonerGUID = ObjectGuid::Empty;
+            SetCreatorGUID(m_summonerGUID);
+        }
+#endif        //end npcbot
     }
 }
 
