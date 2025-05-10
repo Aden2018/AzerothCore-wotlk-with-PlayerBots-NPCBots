@@ -206,8 +206,7 @@ public:
         if (!sObjectMgr->GetCreatureTemplate(id))
             return false;
 
-#ifdef MOD_NPCERBOTS
-        //npcbot
+#ifdef MOD_NPCERBOTS        //npcbot
         CreatureTemplate const* cinfo = sObjectMgr->GetCreatureTemplate(id);
         if (cinfo && cinfo->IsNPCBotOrPet())
         {
@@ -215,8 +214,7 @@ public:
             handler->SetSentErrorMessage(true);
             return false;
         }
-        //end npcbot
-#endif
+#endif        //end npcbot
 
         Player* chr = handler->GetSession()->GetPlayer();
         float x = chr->GetPositionX();
@@ -402,16 +400,14 @@ public:
             return false;
         }
 
-#ifdef MOD_NPCERBOTS
-        //npcbot
+#ifdef MOD_NPCERBOTS        //npcbot
         if (creature->IsNPCBotOrPet())
         {
             handler->SendSysMessage("Selected creature has botAI assigned, use '.npcbot delete' instead");
             handler->SetSentErrorMessage(true);
             return false;
         }
-        //end npcbot
-#endif
+#endif        //end npcbot
 
         // Delete the creature
         creature->CombatStop();

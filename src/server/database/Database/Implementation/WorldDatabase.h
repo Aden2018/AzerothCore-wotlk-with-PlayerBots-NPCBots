@@ -118,6 +118,12 @@ enum WorldDatabaseStatements : uint32
     WORLD_INS_GAMEOBJECT_ADDON,
     WORLD_UPD_VERSION,
 
+#ifdef MOD_NPCERBOTS
+    //npcbot
+    WORLD_UPD_NPCBOT_NAME,
+    WORLD_REP_NPCBOT_APPEARANCE,
+    //end npcbot
+#endif
     MAX_WORLDDATABASE_STATEMENTS
 };
 
