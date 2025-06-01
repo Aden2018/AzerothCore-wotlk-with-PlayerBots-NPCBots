@@ -695,6 +695,7 @@ void WorldSession::LogoutPlayer(bool save)
         for (int i = 0; i < PLAYER_MAX_BATTLEGROUND_QUEUES; ++i)
             if (BattlegroundQueueTypeId bgQueueTypeId = _player->GetBattlegroundQueueTypeId(i))
             {
+                sScriptMgr->OnPlayerBattlegroundDesertion(_player, BG_DESERTION_TYPE_INVITE_LOGOUT);//Aden2008增加的
                 // track if player logs out after invited to join BG
                 if (_player->IsInvitedForBattlegroundInstance())
                 {

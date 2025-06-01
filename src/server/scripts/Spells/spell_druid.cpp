@@ -219,6 +219,12 @@ class spell_dru_omen_of_clarity : public AuraScript
             return false;
         }
 
+        // 禁止从兽群领袖触发
+        if (spellInfo->SpellIconID == 312)
+        {
+            return false;
+        }
+
         if (eventInfo.GetTypeMask() & PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS)
         {
             return spellInfo->HasAttribute(SPELL_ATTR0_ON_NEXT_SWING) || spellInfo->HasAttribute(SPELL_ATTR0_ON_NEXT_SWING_NO_DAMAGE);
