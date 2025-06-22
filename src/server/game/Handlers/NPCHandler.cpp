@@ -921,7 +921,7 @@ void WorldSession::HandleRepairItemOpcode(WorldPacket& recvData)
     }
 }
 
-#ifndef DIY_ADEN2008
+#ifdef DIY_ADEN2008
 
 void WorldSession::SendTrainerList(ObjectGuid guid, uint32 npcspellid)
 {

@@ -6983,8 +6983,10 @@ void AuraEffect::HandlePeriodicHealthLeechAuraTick(Unit* target, Unit* caster) c
     heal = uint32(caster->SpellHealingBonusTaken(caster, GetSpellInfo(), heal, DOT, GetBase()->GetStackAmount()));
 
     HealInfo healInfo(caster, caster, heal, GetSpellInfo(), GetSpellInfo()->GetSchoolMask());
-    int32 gain = caster->HealBySpell(healInfo);
-    caster->getHostileRefMgr().threatAssist(caster, gain * 0.5f, GetSpellInfo());
+    float threat = float(caster->HealBySpell(healInfo)) * 0.5f;
+    if (caster->IsClass(CLASS_PALADIN))
+        threat *= 0.5f;
+    caster->getHostileRefMgr().threatAssist(caster, threat, GetSpellInfo());
 }
 
 void AuraEffect::HandlePeriodicHealthFunnelAuraTick(Unit* target, Unit* caster) const
@@ -7131,7 +7133,13 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
     target->SendPeriodicAuraLog(&pInfo);
 
     if (caster)
-        target->getHostileRefMgr().threatAssist(caster, float(gain) * 0.5f, GetSpellInfo());
+    {
+        float threat = float(gain) * 0.5f;
+        if (caster->IsClass(CLASS_PALADIN))
+            threat *= 0.5f;
+
+        target->getHostileRefMgr().threatAssist(caster, threat, GetSpellInfo());
+    }
 
     bool haveCastItem = GetBase()->GetCastItemGUID();
 

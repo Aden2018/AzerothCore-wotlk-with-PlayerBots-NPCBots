@@ -17,10 +17,12 @@
 
 // This is where scripts' loading functions should be declared:
 // void MyExampleScript()
+void AddSC_TeleportBook();   //传送宝典
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
 void AddCustomScripts()
 {
     // MyExampleScript()
+    AddSC_TeleportBook();//传送宝典
 }

@@ -32,6 +32,11 @@ public:
     // Called when a player uses the item.
     [[nodiscard]] virtual bool CanItemUse(Player* /*player*/, Item* /*item*/, SpellCastTargets const& /*targets*/) { return false; }
 
+#ifdef DIY_ADEN2008
+    // Called when a player uses the item.
+    [[nodiscard]] virtual bool CanItemGossipHello(Player* /*player*/, Item* /*item*/) { return false; }
+#endif // DIY_ADEN2008
+
     // Called when the item is destroyed.
     [[nodiscard]] virtual bool CanItemRemove(Player* /*player*/, Item* /*item*/) { return true; }
 

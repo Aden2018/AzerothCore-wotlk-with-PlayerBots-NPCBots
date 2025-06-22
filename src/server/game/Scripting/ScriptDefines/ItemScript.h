@@ -43,6 +43,11 @@ public:
     // Called when the item expires (is destroyed).
     [[nodiscard]] virtual bool OnExpire(Player* /*player*/, ItemTemplate const* /*proto*/) { return false; }
 
+#ifdef DIY_ADEN2008
+    // Called when a player opens a gossip dialog with the creature.
+    [[nodiscard]] virtual bool OnGossipHello(Player* /*player*/, Item* /*item*/) { return false; }
+#endif // DIY_ADEN2008
+
     // Called when a player selects an option in an item gossip window
     virtual void OnGossipSelect(Player* /*player*/, Item* /*item*/, uint32 /*sender*/, uint32 /*action*/) { }
 

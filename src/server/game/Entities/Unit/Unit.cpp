@@ -451,7 +451,7 @@ void Unit::Update(uint32 p_time)
         SendThreatListUpdate();
 
     // update combat timer only for players and pets (only pets with PetAI)
-    if (IsInCombat() && (IsPlayer() || ((IsPet() || HasUnitTypeMask(UNIT_MASK_CONTROLABLE_GUARDIAN)) && IsControlledByPlayer())))
+    if (IsInCombat() && (IsPlayer() || ((IsPet() || HasUnitTypeMask(UNIT_MASK_CONTROLLABLE_GUARDIAN)) && IsControlledByPlayer())))
     {
         // Check UNIT_STATE_MELEE_ATTACKING or UNIT_STATE_CHASE (without UNIT_STATE_FOLLOW in this case) so pets can reach far away
         // targets without stopping half way there and running off.
@@ -4061,7 +4061,7 @@ float Unit::GetUnitParryChance() const
                 chance = ToCreature()->GetCreatureParryChance();
             else
             //end npcbot
-             chance = 5.0f;
+            chance = 5.0f;
         }
 #else
             chance = 5.0f;
@@ -11579,7 +11579,7 @@ void Unit::SetMinion(Minion* minion, bool apply)
             }
         }
 
-        if (minion->HasUnitTypeMask(UNIT_MASK_CONTROLABLE_GUARDIAN))
+        if (minion->HasUnitTypeMask(UNIT_MASK_CONTROLLABLE_GUARDIAN))
         {
             AddGuidValue(UNIT_FIELD_SUMMON, minion->GetGUID());
         }
@@ -11674,7 +11674,7 @@ void Unit::SetMinion(Minion* minion, bool apply)
                     }
                     ASSERT((*itr)->IsCreature());
 
-                    if (!(*itr)->HasUnitTypeMask(UNIT_MASK_CONTROLABLE_GUARDIAN))
+                    if (!(*itr)->HasUnitTypeMask(UNIT_MASK_CONTROLLABLE_GUARDIAN))
                         continue;
 
                     if (AddGuidValue(UNIT_FIELD_SUMMON, (*itr)->GetGUID()))
@@ -14398,7 +14398,7 @@ float Unit::GetPPMProcChance(uint32 WeaponSpeed, float PPM, SpellInfo const* spe
         if (Player* modOwner = GetSpellModOwner())
             modOwner->ApplySpellMod(spellProto->Id, SPELLMOD_PROC_PER_MINUTE, PPM);
 
-    return std::floor((WeaponSpeed * PPM) / 600.0f);   // result is chance in percents (probability = Speed_in_sec * (PPM / 60))
+    return (WeaponSpeed * PPM) / 600.0f;   // result is chance in percents (probability = Speed_in_sec * (PPM / 60))
 }
 
 void Unit::Mount(uint32 mount, uint32 VehicleId, uint32 creatureEntry)
@@ -14682,6 +14682,7 @@ void Unit::CombatStart(Unit* victim, bool initialAggro)
     if (player && who->IsPvP() && (!who->IsPlayer() || !player->duel || player->duel->Opponent != who))
     {
         player->UpdatePvP(true);
+        player->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_ENTER_PVP_COMBAT);
 #ifdef MOD_NPCERBOTS
         //npcbot: init contested PvP for owned bots
         if (IsNPCBotOrPet() && who->IsNPCBotOrPet())
@@ -14690,7 +14691,7 @@ void Unit::CombatStart(Unit* victim, bool initialAggro)
             {
                 BotMgr::SetBotContestedPvP(bot->ToCreature());
                 bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_ENTER_PVP_COMBAT);
-            }
+    }
         }
         //end npcbot
 #endif
@@ -14753,7 +14754,7 @@ void Unit::CombatStartOnCast(Unit* target, bool initialAggro, uint32 duration)
             {
                 BotMgr::SetBotContestedPvP(bot->ToCreature());
                 bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_ENTER_PVP_COMBAT);
-            }
+    }
         }
         //end npcbot
 #endif
@@ -15166,7 +15167,7 @@ bool Unit::_IsValidAttackTarget(Unit const* target, SpellInfo const* bySpell, Wo
         if (Unit const* bot = IsNPCBotPet() ? GetCreator() : this)
         {
             if (target->IsPvP())
-                return true;
+    return true;
 
             if (bot->IsFFAPvP() && target->IsFFAPvP())
                 return true;
@@ -15856,7 +15857,7 @@ bool Unit::CanHaveThreatList(bool skipAliveCheck) const
         return false;
 
     // summons can not have a threat list, unless they are controlled by a creature
-    if (HasUnitTypeMask(UNIT_MASK_MINION | UNIT_MASK_GUARDIAN | UNIT_MASK_CONTROLABLE_GUARDIAN) && ((Pet*)this)->GetOwnerGUID().IsPlayer())
+    if (HasUnitTypeMask(UNIT_MASK_MINION | UNIT_MASK_GUARDIAN | UNIT_MASK_CONTROLLABLE_GUARDIAN) && ((Pet*)this)->GetOwnerGUID().IsPlayer())
         return false;
 
 #ifdef MOD_NPCERBOTS
@@ -16019,7 +16020,7 @@ Unit* Creature::SelectVictim()
     // it in combat but attacker not make any damage and not enter to aggro radius to have record in threat list
     // Note: creature does not have targeted movement generator but has attacker in this case
     for (AttackerSet::const_iterator itr = m_attackers.begin(); itr != m_attackers.end(); ++itr)
-        if ((*itr) && CanCreatureAttack(*itr) && !(*itr)->IsPlayer() && !(*itr)->ToCreature()->HasUnitTypeMask(UNIT_MASK_CONTROLABLE_GUARDIAN))
+        if ((*itr) && CanCreatureAttack(*itr) && !(*itr)->IsPlayer() && !(*itr)->ToCreature()->HasUnitTypeMask(UNIT_MASK_CONTROLLABLE_GUARDIAN))
             return nullptr;
 
     if (GetVehicle())
@@ -16470,7 +16471,7 @@ uint32 Unit::GetCreatureType() const
         SpellShapeshiftFormEntry const* ssEntry = sSpellShapeshiftFormStore.LookupEntry(form);
         if (ssEntry && ssEntry->creatureType > 0)
             return ssEntry->creatureType;
-        else
+    else
             return CREATURE_TYPE_HUMANOID;
     }
     //end npcbot
@@ -17478,7 +17479,7 @@ void Unit::ProcDamageAndSpellFor(bool isVictim, Unit* target, uint32 procFlag, u
                 {
                     ModifyAuraState(AURA_STATE_HUNTER_PARRY, true);
                     StartReactiveTimer(REACTIVE_HUNTER_PARRY);
-                }
+            }
                 //end npcbot
 #endif
             }
@@ -17506,12 +17507,12 @@ void Unit::ProcDamageAndSpellFor(bool isVictim, Unit* target, uint32 procFlag, u
                 {
                     AddComboPoints(target, 1);
                     StartReactiveTimer(REACTIVE_OVERPOWER);
-                }
+            }
                 //TODO REACTIVE_WOLVERINE_BITE for bot hunter pets
                 //end npcbot
 #endif
-            }
         }
+    }
     }
 
     Unit* actor = isVictim ? target : this;
@@ -18960,16 +18961,30 @@ bool Unit::IsTriggeredAtSpellProcEvent(Unit* victim, Aura* aura, WeaponAttackTyp
     // If PPM exist calculate chance from PPM
     if (spellProcEvent && spellProcEvent->ppmRate != 0)
     {
+        uint32 attackSpeed = 0;
+        Unit* attacker = nullptr;
         if (!isVictim)
-        {
-            uint32 WeaponSpeed = GetAttackTime(attType);
-            chance = GetPPMProcChance(WeaponSpeed, spellProcEvent->ppmRate, spellProto);
-        }
+            attacker = this;
         else if (victim)
+            attacker = victim;
+
+        if (attacker)
         {
-            uint32 WeaponSpeed = victim->GetAttackTime(attType);
-            chance = victim->GetPPMProcChance(WeaponSpeed, spellProcEvent->ppmRate, spellProto);
+            if (!procSpell || procSpell->DmgClass == SPELL_DAMAGE_CLASS_MELEE || procSpell->IsRangedWeaponSpell())
+            {
+                attackSpeed = attacker->GetAttackTime(attType);
+            }
+            else //spells user their casttime for ppm calculations
+            {
+                if (procSpell->CastTimeEntry)
+                    attackSpeed = procSpell->CastTimeEntry->CastTime;
+
+                //instants and fast spells use 1.5s castspeed
+                if (attackSpeed < 1500)
+                    attackSpeed = 1500;
+            }
         }
+        chance = GetPPMProcChance(attackSpeed, spellProcEvent->ppmRate, spellProto);
     }
 
     // Custom chances
@@ -19513,10 +19528,10 @@ void Unit::Kill(Unit* killer, Unit* victim, bool durabilityLoss, WeaponAttackTyp
                 Unit* killerCreOwner = killerCre->GetCreator();
                 if (killerCre->IsNPCBotOrPet() && killerCreOwner && killerCreOwner->GetTypeId() == TYPEID_PLAYER)
                     sScriptMgr->OnPlayerCreatureKill(killerCreOwner->ToPlayer(), killedCre);
-            }
+        }
             //end npcbot
 #endif
-        }
+    }
     }
 
     sScriptMgr->OnUnitDeath(victim, killer);
@@ -20381,7 +20396,7 @@ void Unit::GetPartyMembers(std::list<Unit*>& TagUnitMap)
             Creature* bot = itr->GetSource();
             if (bot && group->GetMemberGroup(bot->GetGUID()) == subgroup && bot->IsAlive() && IsInMap(bot) && !IsHostileTo(bot))
                 TagUnitMap.push_back(bot);
-        }
+    }
         //end npcbot
 #endif
     }
@@ -20405,7 +20420,7 @@ void Unit::GetPartyMembers(std::list<Unit*>& TagUnitMap)
             {
                 if (it->second->IsAlive() && IsInMap(it->second) && !IsHostileTo(it->second))
                     TagUnitMap.push_back(it->second);
-            }
+    }
         }
         //end npcbot
 #endif
@@ -21760,11 +21775,11 @@ void Unit::StopAttackingInvalidTarget()
                 attacker->ToPlayer()->SendAttackSwingCancelAttack();
             }
 
-            for (Unit* controled : attacker->m_Controlled)
+            for (Unit* controlled : attacker->m_Controlled)
             {
-                if (controled->GetVictim() == this && !controled->IsValidAttackTarget(this))
+                if (controlled->GetVictim() == this && !controlled->IsValidAttackTarget(this))
                 {
-                    controled->AttackStop();
+                    controlled->AttackStop();
                 }
             }
 
@@ -22519,7 +22534,7 @@ void Unit::PatchValuesUpdate(ByteBuffer& valuesUpdateBuf, BuildValuesCachePosPoi
                 valuesUpdateBuf.put(posPointers.UnitFieldBytes2Pos, (m_uint32Values[UNIT_FIELD_BYTES_2] & ((UNIT_BYTE2_FLAG_SANCTUARY /*| UNIT_BYTE2_FLAG_AURAS | UNIT_BYTE2_FLAG_UNK5*/) << 8))); // this flag is at uint8 offset 1 !!
             else
                 valuesUpdateBuf.put(posPointers.UnitFieldBytes2Pos, m_uint32Values[UNIT_FIELD_BYTES_2]);
-        }
+    }
         //end npcbot
 #endif
     }
@@ -22548,7 +22563,7 @@ void Unit::PatchValuesUpdate(ByteBuffer& valuesUpdateBuf, BuildValuesCachePosPoi
             FactionTemplateEntry const* ft2 = target->GetFactionTemplateEntry();
             if (ft1 && ft2 && !ft1->IsFriendlyTo(*ft2))
                 valuesUpdateBuf.put(posPointers.UnitFieldBytes2Pos, uint32(target->GetFaction()));
-        }
+    }
         //end npcbot
 #endif
     }

@@ -1,0 +1,2 @@
+REPLACE INTO `item_template` (`entry`, `class`, `name`, `displayid`, `Quality`, `bonding`, `description`, `InventoryType`, `ScriptName`) 
+VALUES (80000, 15, '传送宝典', 34176, 4, 1, '使用：打开传送菜单', 0, 'TeleportBook');

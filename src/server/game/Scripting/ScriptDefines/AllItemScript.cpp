@@ -110,6 +110,28 @@ bool ScriptMgr::OnCastItemCombatSpell(Player* player, Unit* victim, SpellInfo co
     return tempScript ? tempScript->OnCastItemCombatSpell(player, victim, spellInfo, item) : true;
 }
 
+#ifdef DIY_ADEN2008
+bool ScriptMgr::OnGossipHello(Player* player, Item* item)
+{
+    ASSERT(player);
+    ASSERT(item);
+
+    auto ret = IsValidBoolScript<AllItemScript>([&](AllItemScript* script)
+        {
+            return script->CanItemGossipHello(player, item);
+        });
+
+    if (ret && *ret)
+    {
+        return true;
+    }
+
+    auto tempScript = ScriptRegistry<ItemScript>::GetScriptById(item->GetScriptId());
+    ClearGossipMenuFor(player);
+    return tempScript ? tempScript->OnGossipHello(player, item) : false;
+}
+#endif // DIY_ADEN2008
+
 void ScriptMgr::OnGossipSelect(Player* player, Item* item, uint32 sender, uint32 action)
 {
     ASSERT(player);
