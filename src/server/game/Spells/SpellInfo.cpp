@@ -1917,13 +1917,24 @@ SpellCastResult SpellInfo::CheckTarget(Unit const* caster, WorldObject const* ta
     else return SPELL_CAST_OK;
 
     // corpseOwner and unit specific target checks
-    if (AttributesEx3 & SPELL_ATTR3_ONLY_ON_PLAYER && !unitTarget->ToPlayer())
+    if (unitTarget->IsPlayer())
+    {
+        if (HasAttribute(SPELL_ATTR5_NOT_ON_PLAYER))
+            return SPELL_FAILED_TARGET_IS_PLAYER;
+    }
+    else
+    {
+        if (HasAttribute(SPELL_ATTR3_ONLY_ON_PLAYER))
 #ifdef MOD_NPCERBOTS
         //npcbot: allow to target bots
         if (!unitTarget->IsNPCBot())
         //end npcbot
 #endif
-        return SPELL_FAILED_TARGET_NOT_PLAYER;
+            return SPELL_FAILED_TARGET_NOT_PLAYER;
+
+        if (HasAttribute(SPELL_ATTR5_NOT_ON_PLAYER_CONTROLLED_NPC) && unitTarget->IsControlledByPlayer())
+            return SPELL_FAILED_TARGET_IS_PLAYER_CONTROLLED;
+    }
 
     if (!IsAllowingDeadTarget() && !unitTarget->IsAlive())
         return SPELL_FAILED_TARGETS_DEAD;
@@ -2030,7 +2041,7 @@ SpellCastResult SpellInfo::CheckExplicitTarget(Unit const* caster, WorldObject c
         {
             if (!caster->_IsValidAssistTarget(unitTarget, this))
                 return SPELL_FAILED_BAD_TARGETS;
-        }
+    }
         //end npcbot
 #endif
     }
