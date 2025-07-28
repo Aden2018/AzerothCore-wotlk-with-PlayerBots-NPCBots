@@ -47,7 +47,7 @@ class CreatureGroup;
 
 #define MAX_VENDOR_ITEMS 150    // Limitation in 3.x.x item count in SMSG_LIST_INVENTORY
 
-class Creature : public Unit, public GridObject<Creature>, public MovableMapObject
+class Creature : public Unit, public GridObject<Creature>, public MovableMapObject, public UpdatableMapObject
 {
 public:
     explicit Creature(bool isWorldObject = false);
@@ -455,6 +455,8 @@ public:
     bool IsCombatMovementAllowed() const { return _isCombatMovementAllowed; }
 
     std::string GetDebugInfo() const override;
+
+    bool IsUpdateNeeded() override;
 
 #ifdef MOD_NPCERBOTS
     //NPCBots
