@@ -4202,6 +4202,9 @@ bool Creature::IsUpdateNeeded()
     if (IsVisibilityOverridden())
         return true;
 
+    if (ToTempSummon())
+        return true;
+
     if (GetMotionMaster()->HasMovementGeneratorType(WAYPOINT_MOTION_TYPE))
         return true;
 
