@@ -1833,15 +1833,13 @@ private:
     void DePopulateNode(BG_AV_Nodes node, bool ignoreSpiritGuid = false);
 
     BG_AV_Nodes GetNodeThroughObject(uint32 object);
-#ifdef MOD_NPCERBOTS
-    //npcbot
+#ifdef MOD_NPCERBOTS    //npcbot
     uint32 GetObjectThroughNode(BG_AV_Nodes node, bool log = true) const;
-    //end npcbot
-    #else
-    //npcbot
+#else    //npcbot
+
     uint32 GetObjectThroughNode(BG_AV_Nodes node);
-    //end npcbot
-#endif
+
+#endif    //end npcbot
     bool IsTower(BG_AV_Nodes node) { return m_Nodes[node].Tower; }
 
     uint8 GetAttackString(BG_AV_Nodes node, TeamId teamId);
