@@ -23,7 +23,6 @@
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "TotemPackets.h"
-
 #ifdef MOD_NPCERBOTS
 //npcbot
 #include "botmgr.h"
@@ -31,7 +30,7 @@
 //end npcbot
 #endif
 
-Totem::Totem(SummonPropertiesEntry const* properties, ObjectGuid owner) : Minion(properties, owner, false)
+Totem::Totem(SummonPropertiesEntry const* properties, ObjectGuid owner) : Minion(properties, owner)
 {
     m_unitTypeMask |= UNIT_MASK_TOTEM;
     m_duration = 0;

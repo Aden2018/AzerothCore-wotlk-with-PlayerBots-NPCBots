@@ -23,7 +23,6 @@
 #include "Pet.h"
 #include "Player.h"
 #include "ScriptMgr.h"
-
 #ifdef MOD_NPCERBOTS
 //npcbot
 #include "botmgr.h"
@@ -31,8 +30,8 @@
 //end npcbot
 #endif
 
-TempSummon::TempSummon(SummonPropertiesEntry const* properties, ObjectGuid owner, bool isWorldObject) :
-    Creature(isWorldObject), m_Properties(properties), m_type(TEMPSUMMON_MANUAL_DESPAWN),
+TempSummon::TempSummon(SummonPropertiesEntry const* properties, ObjectGuid owner) :
+    Creature(), m_Properties(properties), m_type(TEMPSUMMON_MANUAL_DESPAWN),
     m_timer(0), m_lifetime(0), _visibleBySummonerOnly(false)
 {
     if (owner)
@@ -385,7 +384,7 @@ std::string TempSummon::GetDebugInfo() const
     return sstr.str();
 }
 
-Minion::Minion(SummonPropertiesEntry const* properties, ObjectGuid owner, bool isWorldObject) : TempSummon(properties, owner, isWorldObject)
+Minion::Minion(SummonPropertiesEntry const* properties, ObjectGuid owner) : TempSummon(properties, owner)
     , m_owner(owner)
 {
     ASSERT(m_owner);
@@ -463,7 +462,7 @@ std::string Minion::GetDebugInfo() const
     return sstr.str();
 }
 
-Guardian::Guardian(SummonPropertiesEntry const* properties, ObjectGuid owner, bool isWorldObject) : Minion(properties, owner, isWorldObject)
+Guardian::Guardian(SummonPropertiesEntry const* properties, ObjectGuid owner) : Minion(properties, owner)
 {
     m_unitTypeMask |= UNIT_MASK_GUARDIAN;
     if (properties && (properties->Type == SUMMON_TYPE_PET || properties->Category == SUMMON_CATEGORY_PET))
@@ -508,7 +507,7 @@ std::string Guardian::GetDebugInfo() const
     return sstr.str();
 }
 
-Puppet::Puppet(SummonPropertiesEntry const* properties, ObjectGuid owner) : Minion(properties, owner, false), m_owner(owner) //maybe true?
+Puppet::Puppet(SummonPropertiesEntry const* properties, ObjectGuid owner) : Minion(properties, owner), m_owner(owner)
 {
     ASSERT(owner.IsPlayer());
     m_unitTypeMask |= UNIT_MASK_PUPPET;
