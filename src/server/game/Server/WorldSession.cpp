@@ -148,6 +148,7 @@ WorldSession::WorldSession(uint32 id, std::string&& name, uint32 accountFlags, s
     _timeSyncClockDelta(0),
 #ifdef MOD_PLAYERBOTS
     _pendingTimeSyncRequests(),
+    _orderCounter(0),
     _isBot(isBot)
 #else
     _pendingTimeSyncRequests()
@@ -1579,6 +1580,12 @@ void WorldSession::InitializeSessionCallback(CharacterDatabaseQueryHolder const&
     SendAddonsInfo();
     SendClientCacheVersion(clientCacheVersion);
     SendTutorialsData();
+}
+
+void WorldSession::SetPacketLogging(bool state)
+{
+    if (m_Socket)
+        m_Socket->SetPacketLogging(state);
 }
 
 #ifdef MOD_PLAYERBOTS

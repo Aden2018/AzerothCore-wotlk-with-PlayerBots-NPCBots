@@ -70,7 +70,7 @@ void BattlegroundWS::PostUpdateImpl(uint32 diff)
         {
             case BG_WS_EVENT_UPDATE_GAME_TIME:
                 UpdateWorldState(WORLD_STATE_BATTLEGROUND_WS_STATE_TIMER, GetMatchTime());
-                _bgEvents.ScheduleEvent(BG_WS_EVENT_UPDATE_GAME_TIME, ((BG_WS_TOTAL_GAME_TIME - GetStartTime()) % (MINUTE * IN_MILLISECONDS)) + 1);
+                _bgEvents.ScheduleEvent(BG_WS_EVENT_UPDATE_GAME_TIME, Milliseconds(((BG_WS_TOTAL_GAME_TIME - GetStartTime()) % (MINUTE * IN_MILLISECONDS)) + 1));
                 break;
             case BG_WS_EVENT_NO_TIME_LEFT:
                 if (GetTeamScore(TEAM_ALLIANCE) == GetTeamScore(TEAM_HORDE))
@@ -144,8 +144,8 @@ void BattlegroundWS::StartingEventOpenDoors()
 
     StartTimedAchievement(ACHIEVEMENT_TIMED_TYPE_EVENT, WS_EVENT_START_BATTLE);
     UpdateWorldState(WORLD_STATE_BATTLEGROUND_WS_STATE_TIMER_ACTIVE, 1);
-    _bgEvents.ScheduleEvent(BG_WS_EVENT_UPDATE_GAME_TIME, 0);
-    _bgEvents.ScheduleEvent(BG_WS_EVENT_NO_TIME_LEFT, BG_WS_TOTAL_GAME_TIME - 2 * MINUTE * IN_MILLISECONDS); // 27 - 2 = 25 minutes
+    _bgEvents.ScheduleEvent(BG_WS_EVENT_UPDATE_GAME_TIME, 0ms);
+    _bgEvents.ScheduleEvent(BG_WS_EVENT_NO_TIME_LEFT, Milliseconds(BG_WS_TOTAL_GAME_TIME - 2 * MINUTE * IN_MILLISECONDS)); // 27 - 2 = 25 minutes
     _bgEvents.ScheduleEvent(BG_WS_EVENT_DESPAWN_DOORS, BG_WS_DOOR_DESPAWN_TIME);
 }
 
@@ -208,7 +208,7 @@ void BattlegroundWS::EventBotCapturedFlag(Creature* bot)
         EndBattleground(GetTeamScore(TEAM_HORDE) == BG_WS_MAX_TEAM_SCORE ? TEAM_HORDE : TEAM_ALLIANCE);
     }
    else
-        _bgEvents.ScheduleEvent(BG_WS_EVENT_RESPAWN_BOTH_FLAGS, BG_WS_FLAG_RESPAWN_TIME);
+        _bgEvents.ScheduleEvent(BG_WS_EVENT_RESPAWN_BOTH_FLAGS, Milliseconds(BG_WS_FLAG_RESPAWN_TIME));
 
     _bgEvents.CancelEvent(BG_WS_EVENT_BOTH_FLAGS_KEPT10);
     _bgEvents.CancelEvent(BG_WS_EVENT_BOTH_FLAGS_KEPT15);
@@ -548,7 +548,7 @@ void BattlegroundWS::EventPlayerCapturedFlag(Player* player)
         EndBattleground(GetTeamScore(TEAM_HORDE) == _configurableMaxTeamScore ? TEAM_HORDE : TEAM_ALLIANCE);
     }
     else
-        _bgEvents.ScheduleEvent(BG_WS_EVENT_RESPAWN_BOTH_FLAGS, BG_WS_FLAG_RESPAWN_TIME);
+        _bgEvents.ScheduleEvent(BG_WS_EVENT_RESPAWN_BOTH_FLAGS, Milliseconds(BG_WS_FLAG_RESPAWN_TIME));
 
     _bgEvents.CancelEvent(BG_WS_EVENT_BOTH_FLAGS_KEPT10);
     _bgEvents.CancelEvent(BG_WS_EVENT_BOTH_FLAGS_KEPT15);
@@ -745,15 +745,17 @@ void BattlegroundWS::HandleAreaTrigger(Player* player, uint32 trigger)
 
 bool BattlegroundWS::SetupBattleground()
 {
+    _wsReputationRate = sWorld->getRate(RATE_REPUTATION_GAIN_WSG);
+
     if (sBattlegroundMgr->IsBGWeekend(GetBgTypeID(true)))
     {
-        _reputationCapture = 45;
+        _reputationCapture = uint32(45 * _wsReputationRate);
         _honorWinKills = 3;
         _honorEndKills = 4;
     }
     else
     {
-        _reputationCapture = 35;
+        _reputationCapture = uint32(35 * _wsReputationRate);
         _honorWinKills = 1;
         _honorEndKills = 2;
     }
@@ -897,10 +899,10 @@ uint32 BattlegroundWS::GetAssaultSpellId() const
 {
     if ((!GetFlagPickerGUID(TEAM_ALLIANCE) && GetFlagState(TEAM_ALLIANCE) != BG_WS_FLAG_STATE_ON_GROUND) ||
             (!GetFlagPickerGUID(TEAM_HORDE) && GetFlagState(TEAM_HORDE) != BG_WS_FLAG_STATE_ON_GROUND) ||
-            _bgEvents.GetNextEventTime(BG_WS_EVENT_BOTH_FLAGS_KEPT10) > 0)
+            _bgEvents.HasTimeUntilEvent(BG_WS_EVENT_BOTH_FLAGS_KEPT10))
         return 0;
 
-    return _bgEvents.GetNextEventTime(BG_WS_EVENT_BOTH_FLAGS_KEPT15) > 0 ? BG_WS_SPELL_FOCUSED_ASSAULT : BG_WS_SPELL_BRUTAL_ASSAULT;
+    return _bgEvents.HasTimeUntilEvent(BG_WS_EVENT_BOTH_FLAGS_KEPT15) ? BG_WS_SPELL_FOCUSED_ASSAULT : BG_WS_SPELL_BRUTAL_ASSAULT;
 }
 
 void BattlegroundWS::RemoveAssaultAuras()

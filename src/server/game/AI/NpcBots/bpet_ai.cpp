@@ -98,6 +98,7 @@ bot_pet_ai::bot_pet_ai(Creature* creature) : CreatureAI(creature)
     _updateTimerMedium = 0;
     _updateTimerEx1 = urand(12000, 15000);
     checkAurasTimer = 0;
+    shouldUpdateStats = false;
 
     _wanderer = false;
 
@@ -106,6 +107,8 @@ bot_pet_ai::bot_pet_ai(Creature* creature) : CreatureAI(creature)
     myType = 0;
     petOwner = nullptr;
     canUpdate = true;
+
+    opponent = nullptr;
 }
 bot_pet_ai::~bot_pet_ai()
 {
@@ -234,7 +237,7 @@ void bot_pet_ai::SetBotCommandState(uint32 st, bool force, Position* newpos)
                 else if (pdist > 10.0f)
                     speed = baserunspeed * 1.25f;
             }
-            me->GetMotionMaster()->Add(new PointMovementGenerator<Creature>(1, movepos.m_positionX, movepos.m_positionY, movepos.m_positionZ, speed, 0.f, nullptr, true));
+            me->GetMotionMaster()->Add(new PointMovementGenerator<Creature>(1, movepos.m_positionX, movepos.m_positionY, movepos.m_positionZ, FORCED_MOVEMENT_NONE, speed, 0.f, nullptr, true));
         }
         RemoveBotCommandState(BOT_COMMAND_STAY | BOT_COMMAND_FULLSTOP | BOT_COMMAND_ATTACK | BOT_COMMAND_COMBATRESET);
     }

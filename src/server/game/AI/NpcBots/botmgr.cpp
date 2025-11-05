@@ -1194,24 +1194,6 @@ bool BotMgr::IsWanderingWorldBot(Creature const* bot)
 
 void BotMgr::Update(uint32 diff)
 {
-    while (!_delayedRemoveList.empty())
-    {
-        decltype(_delayedRemoveList)::iterator itr = _delayedRemoveList.begin();
-        RemoveBot(itr->first, itr->second);
-    }
-
-    //remove temp bots from bot map before updating it
-    while (!_removeList.empty())
-    {
-        std::list<ObjectGuid>::iterator itr = _removeList.begin();
-
-        BotMap::iterator bitr = _bots.find(*itr);
-        ASSERT(bitr != _bots.end());
-        _bots.erase(bitr);
-
-        _removeList.erase(itr);
-    }
-
     _dpstracker->Update(diff);
 
     if (!HaveBot())
@@ -1277,6 +1259,12 @@ void BotMgr::Update(uint32 diff)
     }
 
     _update_lock = false;
+
+    while (!_delayedRemoveList.empty())
+    {
+        decltype(_delayedRemoveList)::iterator itr = _delayedRemoveList.begin();
+        RemoveBot(itr->first, itr->second);
+    }
 
     if (_quickrecall)
     {
@@ -1776,7 +1764,9 @@ void BotMgr::CleanupsBeforeBotDelete(ObjectGuid guid, uint8 removetype)
 
     ASSERT(bot->GetCreator() && bot->GetCreator()->GetGUID() == _owner->GetGUID());
 
-    RemoveBotFromBGQueue(bot);
+    if (!bot->IsTempBot())
+        RemoveBotFromBGQueue(bot);
+
     if (removetype != BOT_REMOVE_LOGOUT)
         RemoveBotFromGroup(bot);
 
@@ -1808,7 +1798,7 @@ void BotMgr::CleanupsBeforeBotDelete(Creature* bot)
     //bot->SetCreatorGUID(ObjectGuid::Empty);
 
     Map* map = bot->FindMap();
-    if (!map || map->IsDungeon())
+    if (!map || map->IsDungeon() || bot->IsTempBot())
     {
         if (map)
             map->RemoveObjectFromMapUpdateList(bot);
@@ -1830,28 +1820,13 @@ void BotMgr::RemoveBot(ObjectGuid guid, uint8 removetype)
 
     Creature* bot = itr->second;
 
-    if (!bot->IsTempBot())
+    if (_update_lock)
     {
-        if (_update_lock)
-        {
-            _delayedRemoveList.emplace_back(guid, BotRemoveType(removetype));
-            return;
-        }
-        else if (!_delayedRemoveList.empty())
-            _delayedRemoveList.remove_if([=](decltype(_delayedRemoveList)::value_type const& p) { return p.first == guid; });
+        _delayedRemoveList.emplace_back(guid, BotRemoveType(removetype));
+        return;
     }
-
-    //trying to remove temp bot second time means removing all bots
-    //just erase from bots because already cleaned up
-    for (std::list<ObjectGuid>::iterator it = _removeList.begin(); it != _removeList.end(); ++it)
-    {
-        if (*it == guid)
-        {
-            _removeList.erase(it);
-            _bots.erase(itr);
-            return;
-        }
-    }
+    else if (!_delayedRemoveList.empty())
+        _delayedRemoveList.remove_if([=](decltype(_delayedRemoveList)::value_type const& p) { return p.first == guid; });
 
     CleanupsBeforeBotDelete(guid, removetype);
 
@@ -1862,14 +1837,10 @@ void BotMgr::RemoveBot(ObjectGuid guid, uint8 removetype)
     //if (GetNpcBotsCount() <= 1 && !_owner->GetPetGUID() && _owner->m_Controlled.empty())
     //    _owner->SendRemoveControlBar();
 
-    if (bot->GetBotAI()->IsTempBot())
-    {
-        //bot->GetBotAI()->OnBotDespawn(bot); //send to self
-        _removeList.push_back(guid);
-        return;
-    }
-
     _bots.erase(itr);
+
+    if (bot->GetBotAI()->IsTempBot())
+        return;
 
     BotAIResetType resetType;
     switch (removetype)
@@ -2098,12 +2069,7 @@ bool BotMgr::RemoveAllBotsFromGroup()
     return true;
 }
 
-uint32 BotMgr::GetNpcBotCostRent()
-{
-    return _npcBotsCostRent;
-}
-
-uint32 BotMgr::GetNpcBotCostHire(uint8 level, uint8 botclass)
+uint32 BotMgr::_normalizedCostForLevel(uint32 cost_base, uint8 bot_class, uint8 level)
 {
     //assuming default 1000000
     //level 1: 500  //5  silver
@@ -2114,13 +2080,13 @@ uint32 BotMgr::GetNpcBotCostHire(uint8 level, uint8 botclass)
     //rest is linear
     //rare / rareelite bots have their cost adjusted
     uint32 cost =
-        level < 10 ? _npcBotsCostHire / 2000 : //5 silver
-        level < 20 ? _npcBotsCostHire / 100 :  //1 gold
-        level < 30 ? _npcBotsCostHire / 20 :   //5 gold
-        level < 40 ? _npcBotsCostHire / 5 :    //20 gold
-        (_npcBotsCostHire * (level - (level % 10))) / DEFAULT_MAX_LEVEL; //50 - 100 gold
+        level < 10 ? cost_base / 2000 : //5 silver
+        level < 20 ? cost_base / 100 :  //1 gold
+        level < 30 ? cost_base / 20 :   //5 gold
+        level < 40 ? cost_base / 5 :    //20 gold
+        (cost_base * (level - (level % 10))) / DEFAULT_MAX_LEVEL; //50 - 100 gold
 
-    switch (botclass)
+    switch (bot_class)
     {
         case BOT_CLASS_BM:
         case BOT_CLASS_ARCHMAGE:
@@ -2142,6 +2108,16 @@ uint32 BotMgr::GetNpcBotCostHire(uint8 level, uint8 botclass)
     return cost;
 }
 
+uint32 BotMgr::GetNpcBotCostRent(uint8 level, uint8 botclass)
+{
+    return _normalizedCostForLevel(_npcBotsCostRent, botclass, level);
+}
+
+uint32 BotMgr::GetNpcBotCostHire(uint8 level, uint8 botclass)
+{
+    return _normalizedCostForLevel(_npcBotsCostHire, botclass, level);
+}
+
 std::string BotMgr::GetNpcBotCostStr(uint8 level, uint8 botclass)
 {
     std::ostringstream money;
@@ -2161,7 +2137,7 @@ std::string BotMgr::GetNpcBotCostStr(uint8 level, uint8 botclass)
             money << cost << " |TInterface\\Icons\\INV_Misc_Coin_05:8|t";
     }
 
-    if (uint32 rcost = GetNpcBotCostRent())
+    if (uint32 rcost = GetNpcBotCostRent(level, botclass))
     {
         uint32 gold = uint32(rcost / GOLD);
         rcost -= (gold * GOLD);
@@ -2405,7 +2381,7 @@ void BotMgr::RecallAllBots(bool teleport)
     {
         for (BotMap::const_iterator itr = _bots.begin(); itr != _bots.end(); ++itr)
             if (itr->second->IsInWorld() && itr->second->IsAlive() && !bot_ai::CCed(itr->second, true))
-                itr->second->GetMotionMaster()->MovePoint(_owner->GetMapId(), *_owner, false);
+                itr->second->GetMotionMaster()->MovePoint(_owner->GetMapId(), *_owner, FORCED_MOVEMENT_NONE, 0.0f, false);
     }
 }
 
@@ -2414,7 +2390,7 @@ void BotMgr::RecallBot(Creature* bot)
     ASSERT(GetBot(bot->GetGUID()));
 
     if (bot->IsInWorld() && bot->IsAlive() && !bot_ai::CCed(bot, true))
-        bot->GetMotionMaster()->MovePoint(_owner->GetMapId(), *_owner, false);
+        bot->GetMotionMaster()->MovePoint(_owner->GetMapId(), *_owner, FORCED_MOVEMENT_NONE, 0.0f, false);
 }
 
 void BotMgr::KillAllBots()

@@ -54,6 +54,10 @@ Notes:
 Methods may have null arg1 (Unit*):
 DamageTaken(Unit*, ), JustDied(Unit*, ), OwnerAttackedBy(Unit*, ), HealReceived(Unit*, )
 Possibly others
+Performance impact factors:
+ - Containers for selection
+ - GetDistance() instead of IsWithinDist() (extra sqrt)
+ - std::ostringstream::str() instead of std::ostringstream::view()
 */
 
 #ifdef _MSC_VER
@@ -531,7 +535,10 @@ void bot_ai::CheckOwnerExpiry()
                     }
                 }
                 if (item_idx >= BOT_INVENTORY_SIZE)
+                {
                     BOT_LOG_ERROR("npcbots", "bot_ai::CheckOwnerExpiry(): item id {} guid {} not found in bot's inventory!\n{}", itemId, itemGuidLow, me->GetGUID().ToString());
+                    continue;
+                }
 
                 items.push_back(_equips[item_idx]);
                 _removeEquipment(item_idx);
@@ -580,7 +587,7 @@ void bot_ai::CheckOwnerExpiry()
 
 void bot_ai::InitUnitFlags()
 {
-    if (BotMgr::DisplayEquipment() == true && CanDisplayNonWeaponEquipmentChanges())
+    if (BotMgr::DisplayEquipment() && CanDisplayNonWeaponEquipmentChanges())
     {
         (const_cast<CreatureTemplate*>(me->GetCreatureTemplate()))->unit_flags2 |= UNIT_FLAG2_MIRROR_IMAGE;
         me->ReplaceAllUnitFlags2(UnitFlags2(me->GetCreatureTemplate()->unit_flags2));
@@ -1171,7 +1178,7 @@ void bot_ai::BotMovement(BotMovementType type, Position const* pos, Unit* target
             mover->GetMotionMaster()->MoveChase(target, {}, ChaseAngle(target->GetRelativeAngle(me), float(target->IsPlayer() ? M_PI * 2.0 : M_PI / 8.0)));
             break;
         case BOT_MOVE_POINT:
-            mover->GetMotionMaster()->Add(new PointMovementGenerator<Creature>(1, pos->m_positionX, pos->m_positionY, pos->m_positionZ, speed, 0.0f, nullptr, generatePath));
+            mover->GetMotionMaster()->Add(new PointMovementGenerator<Creature>(1, pos->m_positionX, pos->m_positionY, pos->m_positionZ, FORCED_MOVEMENT_NONE, speed, 0.0f, nullptr, generatePath));
             break;
         case BOT_MOVE_JUMP:
             mover->GetMotionMaster()->MoveJump(pos->m_positionX, pos->m_positionY, pos->m_positionZ,
@@ -1201,7 +1208,7 @@ void bot_ai::MoveToSendPosition(Position const& mpos)
         {
             botPet->GetBotPetAI()->SetBotCommandState(BOT_COMMAND_STAY);
             botPet->InterruptNonMeleeSpells(true);
-            botPet->GetMotionMaster()->MovePoint(me->GetMapId(), mpos, false);
+            botPet->GetMotionMaster()->MovePoint(me->GetMapId(), mpos, FORCED_MOVEMENT_NONE, 0.0f, false);
         }
         sendlastpos.Relocate(me);
         BotWhisper("Moving to position!");
@@ -1257,7 +1264,7 @@ void bot_ai::SetBotCommandState(uint32 st, bool force, Position* newpos, float* 
             return;
     }
 
-    Vehicle* veh = me->GetVehicle();
+    Vehicle const* veh = me->GetVehicle();
     VehicleSeatEntry const* seat = veh ? veh->GetSeatForPassenger(me) : nullptr;
     bool canControl = seat ? (seat->m_flags & VEHICLE_SEAT_FLAG_CAN_CONTROL) : false;
     Unit* mover = canControl ? veh->GetBase() : !veh ? me : nullptr;
@@ -1816,7 +1823,7 @@ void bot_ai::CureGroup(uint32 cureSpell, uint32 diff)
 {
     if (!cureSpell) return;
     if (GC_Timer > diff) return;
-    if (me->IsMounted())
+    if (me->IsMounted()) return;
     if (IsTank() && me->GetVictim() && me->GetMap()->IsRaid()) return;
     if (IsCasting()) return;
 
@@ -4220,7 +4227,7 @@ std::tuple<Unit*, Unit*> bot_ai::_getTargets(bool byspell, bool ranged, bool &re
         }
 
         // Icecrown Citadel - The Lich King
-        if (me->GetMapId() == 631 && isInWMOArea(WMOAreaGroupLichKing) && me->IsInCombat() && HasRole(BOT_ROLE_DPS) && !IsTank())
+        if (me->GetMapId() == 631 && isInWMOArea(WMOAreaGroupLichKing) && me->IsInCombat() && HasRole(BOT_ROLE_DPS) && HasRole(BOT_ROLE_RANGED) && !IsTank())
         {
             static const std::array IceSphereIds = { CREATURE_ICC_ICE_SPHERE1, CREATURE_ICC_ICE_SPHERE2, CREATURE_ICC_ICE_SPHERE3, CREATURE_ICC_ICE_SPHERE4 };
             static const std::array ValkyrShadowguardIds = { CREATURE_ICC_VALKYR_LK1, CREATURE_ICC_VALKYR_LK2, CREATURE_ICC_VALKYR_LK3, CREATURE_ICC_VALKYR_LK4 };
@@ -5073,7 +5080,7 @@ bool bot_ai::ProcessImmediateNonAttackTarget()
 #elif defined(AC_COMPILER)
                 Creature* cre = get_shield_creature(go, cList);
                 ASSERT(cre);
-                cre->DespawnOrUnsummon(1);
+                cre->DespawnOrUnsummon(1ms);
                 player->DestroyItemCount(31088, 1, true); // Tainted Core
 #endif
                 return true;
@@ -5180,30 +5187,22 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
 {
     std::list<WorldObject*> doList;
     NearbyHostileAoEDynobjectCheck check(unit, 60.f);
-    Bcore::WorldObjectListSearcher<NearbyHostileAoEDynobjectCheck> searcher(unit, doList, check, GRID_MAP_TYPE_MASK_DYNAMICOBJECT);
-    //unit->VisitNearbyObject(60.f, searcher);
+    Bcore::WorldObjectListSearcher searcher(unit, doList, check, GRID_MAP_TYPE_MASK_DYNAMICOBJECT);
     Cell::VisitObjects(unit, searcher, 60.f);
 
-    //if (!doList.empty())
-    //    BOT_LOG_ERROR("scripts", "CalculateAoeSpots %u aoes around %s", uint32(doList.size()), unit->GetName().c_str());
-
     //filter and add to list
-    DynamicObject const* dObj;
     SpellInfo const* spellInfo;
-    for (std::list<WorldObject*>::const_iterator ci = doList.begin(); ci != doList.end(); ++ci)
+    for (WorldObject const* wObj : doList)
     {
-        dObj = (*ci)->ToDynObject();
+        DynamicObject const* dObj = wObj->ToDynObject();
         ASSERT_NODEBUGINFO(dObj);
         ASSERT_NODEBUGINFO(dObj->GetSpellId());
         spellInfo = sSpellMgr->GetSpellInfo(dObj->GetSpellId());
         if (IsPeriodicDynObjAOEDamage(spellInfo))
         {
-            //BOT_LOG_ERROR("scripts", "CalculateAoeSpots found %s's aoe %s (%u) radius %.2f size %.2f",
-            //    dObj->GetCaster()->GetName().c_str(), spellInfo->SpellName[0], spellInfo->Id, dObj->GetRadius(), dObj->GetObjectSize());
-
             float radius = dObj->GetRadius() + DEFAULT_WORLD_OBJECT_SIZE;
             radius += (unit->GetVehicle() ? unit->GetVehicleBase()->GetCombatReach() : DEFAULT_COMBAT_REACH) * 1.2f;
-            spots.push_back(AoeSpotsVec::value_type(*dObj, radius));
+            spots.emplace_back(*dObj, radius);
         }
     }
 
@@ -5217,12 +5216,51 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
     {
         std::list<GameObject*> gListMC;
         Bcore::AllGameObjectsWithEntryInRange checkMC(unit, GAMEOBJECT_HOT_COAL, 60.f);
-        Bcore::GameObjectListSearcher<Bcore::AllGameObjectsWithEntryInRange> searcherMC(unit, gListMC, checkMC);
+        Bcore::GameObjectListSearcher searcherMC(unit, gListMC, checkMC);
         Cell::VisitObjects(unit, searcherMC, 60.f);
 
-        float radius = 15.0f + DEFAULT_COMBAT_REACH;
-        for (std::list<GameObject*>::const_iterator ci = gListMC.cbegin(); ci != gListMC.cend(); ++ci)
-            spots.push_back(AoeSpotsVec::value_type(*(*ci), radius));
+        if (!gListMC.empty())
+        {
+            float radius = 15.0f + DEFAULT_COMBAT_REACH;
+            for (GameObject const* go : gListMC)
+                spots.emplace_back(*go, radius);
+        }
+    }
+    // Ruins of Ahn'Qiraj (AQ20) — Sand Trap avoidance
+    else if (unit->GetMapId() == 509)
+    {
+        static const uint32 GO_SAND_TRAP = 180647; // Sand Trap
+        std::list<GameObject*> sandTrapList;
+        Bcore::AllGameObjectsWithEntryInRange trapCheck(unit, GO_SAND_TRAP, 60.f);
+        Bcore::GameObjectListSearcher trapSearcher(unit, sandTrapList, trapCheck);
+        Cell::VisitObjects(unit, trapSearcher, 40.f);
+
+        if (!sandTrapList.empty())
+        {
+            float radius = 12.0f + DEFAULT_COMBAT_REACH * 1.2f;
+            for (GameObject const* go : sandTrapList)
+                spots.emplace_back(*go, radius);
+        }
+    }
+    //Temple of Ahn'Qiraj (AQ40) — Mutating bugs exploding
+    else if (unit->GetMapId() == 531)
+    {
+        static const uint32 AURA_EXPLODE = 804;
+        static const std::array<uint32, 2> MutatingBugIds = { 15316u, 15317u };
+        std::list<Creature*> cList;
+        auto bug_check = [](Creature const* c) {
+            return c && c->IsAlive() && std::ranges::find(MutatingBugIds, c->GetEntry()) != MutatingBugIds.cend() && c->HasAura(AURA_EXPLODE);
+        };
+        Bcore::CreatureListSearcher bugSearcher(unit, cList, bug_check);
+        Cell::VisitObjects(unit, bugSearcher, 60.f);
+
+        if (!cList.empty())
+        {
+            float explodeRadius = sSpellMgr->AssertSpellInfo(AURA_EXPLODE)->Effects[0].CalcRadius();
+            float radius = explodeRadius + DEFAULT_COMBAT_REACH * 1.5f;
+            for (Creature const* c : cList)
+                spots.emplace_back(*c, radius);
+        }
     }
     //Aucheai Crypts
     else if (unit->GetMapId() == 558)
@@ -5238,7 +5276,7 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
         {
             spellInfo = sSpellMgr->GetSpellInfo(32302); //Fiery Blast
             float radius = spellInfo->Effects[0].CalcRadius() + DEFAULT_COMBAT_REACH * 2.0f;
-            spots.push_back(AoeSpotsVec::value_type(*creature, radius));
+            spots.emplace_back(*creature, radius);
         }
     }
     //Magister's Terrace
@@ -5255,7 +5293,7 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
         {
             spellInfo = sSpellMgr->GetSpellInfo(44198); //Burn damage (44197 -> 44198)
             float radius = spellInfo->Effects[0].CalcRadius() + DEFAULT_COMBAT_REACH * 3.0f;
-            for (Creature* c : cList)
+            for (Creature const* c : cList)
                 spots.emplace_back(*c, radius);
         }
     }
@@ -5264,28 +5302,32 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
     {
         std::list<Creature*> cList;
         Bcore::AllCreaturesOfEntryInRange check2(unit->GetVehicleBase(), CREATURE_EOE_STATIC_FIELD, 60.f);
-        Bcore::CreatureListSearcher<Bcore::AllCreaturesOfEntryInRange> searcher2(unit->GetVehicleBase(), cList, check2);
-        //unit->GetVehicleBase()->VisitNearbyObject(60.f, searcher2);
+        Bcore::CreatureListSearcher searcher2(unit->GetVehicleBase(), cList, check2);
         Cell::VisitObjects(unit->GetVehicleBase(), searcher2, 60.f);
 
-        spellInfo = sSpellMgr->GetSpellInfo(57429); //Static Field damage
-        float radius = spellInfo->Effects[0].CalcRadius() + unit->GetVehicleBase()->GetCombatReach() * 1.2f;
-        for (std::list<Creature*>::const_iterator ci = cList.begin(); ci != cList.end(); ++ci)
-            spots.push_back(AoeSpotsVec::value_type(*(*ci), radius));
+        if (!cList.empty())
+        {
+            spellInfo = sSpellMgr->GetSpellInfo(57429); //Static Field damage
+            float radius = spellInfo->Effects[0].CalcRadius() + unit->GetVehicleBase()->GetCombatReach() * 1.2f;
+            for (Creature const* c : cList)
+                spots.emplace_back(*c, radius);
+        }
     }
     //Zul'Aman
     else if (unit->GetMapId() == 568)
     {
         std::list<Creature*> cList;
         Bcore::AllCreaturesOfEntryInRange check2(unit, CREATURE_ZA_FIRE_BOMB, 40.f);
-        Bcore::CreatureListSearcher<Bcore::AllCreaturesOfEntryInRange> searcher2(unit, cList, check2);
-        //unit->VisitNearbyObject(40.f, searcher2);
+        Bcore::CreatureListSearcher searcher2(unit, cList, check2);
         Cell::VisitObjects(unit, searcher2, 40.f);
 
-        spellInfo = sSpellMgr->GetSpellInfo(42630); //Fire Bomb
-        float radius = spellInfo->Effects[0].CalcRadius() + DEFAULT_COMBAT_REACH * 1.2f;
-        for (std::list<Creature*>::const_iterator ci = cList.begin(); ci != cList.end(); ++ci)
-            spots.push_back(AoeSpotsVec::value_type(*(*ci), radius));
+        if (!cList.empty())
+        {
+            spellInfo = sSpellMgr->GetSpellInfo(42630); //Fire Bomb
+            float radius = spellInfo->Effects[0].CalcRadius() + DEFAULT_COMBAT_REACH * 1.2f;
+            for (Creature const* c : cList)
+                spots.emplace_back(*c, radius);
+        }
     }
     //Uthgarde Keep
     else if (unit->GetMapId() == 574)
@@ -5301,7 +5343,7 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
         {
             spellInfo = sSpellMgr->GetSpellInfo(42751); //Shadow Axe
             float radius = spellInfo->Effects[0].CalcRadius() + DEFAULT_COMBAT_REACH * 2.0f;
-            spots.push_back(AoeSpotsVec::value_type(*creature, radius));
+            spots.emplace_back(*creature, radius);
         }
     }
     //Icecrown Citadel
@@ -5309,14 +5351,13 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
     {
         std::list<Creature*> cList;
         Bcore::AllCreaturesOfEntryInRange check2(unit, CREATURE_ICC_OOZE_PUDDLE, 50.f);
-        Bcore::CreatureListSearcher<Bcore::AllCreaturesOfEntryInRange> searcher2(unit, cList, check2);
-        //unit->VisitNearbyObject(50.f, searcher2);
+        Bcore::CreatureListSearcher searcher2(unit, cList, check2);
         Cell::VisitObjects(unit, searcher2, 50.f);
 
-        for (std::list<Creature*>::const_iterator ci = cList.begin(); ci != cList.end(); ++ci)
+        for (Creature const* c : cList)
         {
-            float radius = (*ci)->GetObjectScale() * 2.5f + DEFAULT_COMBAT_REACH * 3.f; //grows
-            spots.push_back(AoeSpotsVec::value_type(*(*ci), radius));
+            float radius = c->GetObjectScale() * 2.5f + DEFAULT_COMBAT_REACH * 3.f; //grows
+            spots.emplace_back(*c, radius);
         }
     }
 
@@ -7984,7 +8025,8 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
                 message2 << LocalizedNpcText(player, BOT_TEXT_HIREOPTION_DEFAULT);
             }
 
-            message1 << "\n(" << BotMgr::GetNpcBotCostStr(player->GetLevel(), _botclass) << ")";
+            if (BotMgr::GetNpcBotCostRent(player->GetLevel(), _botclass))
+                message1 << "\n(" << BotMgr::GetNpcBotCostStr(player->GetLevel(), _botclass) << ")";
 
             if (!reason)
                 player->PlayerTalkClass->GetGossipMenu().AddMenuItem(-1, GOSSIP_ICON_TAXI, message2.str(), GOSSIP_SENDER_HIRE, GOSSIP_ACTION_INFO_DEF + 0, message1.str(), cost, false);
@@ -17978,12 +18020,13 @@ bool bot_ai::GlobalUpdate(uint32 diff)
         _updateTimerEx2 = urand(2000, 4000);
 
         //Rent Collecting
-        if (_rentTimer >= RENT_COLLECT_TIMER && BotMgr::GetNpcBotCostRent() && !HasBotCommandState(BOT_COMMAND_UNBIND) && !IAmFree())
+        uint32 rent_cost = BotMgr::GetNpcBotCostRent(master->GetLevel(), GetBotClass());
+        if (_rentTimer >= RENT_COLLECT_TIMER && rent_cost && !HasBotCommandState(BOT_COMMAND_UNBIND) && !IAmFree())
         {
             uint32 rent_money = 0;
             while (_rentTimer >= RENT_COLLECT_TIMER)
             {
-                rent_money += uint32(uint64(BotMgr::GetNpcBotCostRent()) * (RENT_COLLECT_TIMER / 1000) / (RENT_TIMER / 1000));
+                rent_money += uint32(uint64(rent_cost) * (RENT_COLLECT_TIMER / 1000) / (RENT_TIMER / 1000));
                 _rentTimer -= RENT_COLLECT_TIMER;
             }
 
@@ -18769,7 +18812,7 @@ void bot_ai::CommonTimers(uint32 diff)
         UpdateReviveTimer(diff);
     else
     {
-        if (BotMgr::GetNpcBotCostRent() && me->IsInWorld() && !HasBotCommandState(BOT_COMMAND_UNBIND))
+        if (BotMgr::GetNpcBotCostRent(me->GetLevel(), GetBotClass()) && me->IsInWorld() && !HasBotCommandState(BOT_COMMAND_UNBIND))
             _rentTimer += diff;
     }
 
@@ -20744,7 +20787,7 @@ void bot_ai::OnBotExitVehicle(Vehicle const* vehicle)
 
             curVehStrat = BOT_VEH_STRAT_NONE;
             if (vehicle->GetBase()->IsSummon())
-                vehicle->GetBase()->ToCreature()->DespawnOrUnsummon(1);
+                vehicle->GetBase()->ToCreature()->DespawnOrUnsummon(1ms);
         }
     }
 }
@@ -20970,6 +21013,9 @@ void bot_ai::ChooseVehicleForEncounter(uint32 &creEntry, uint32 &vehEntry) const
         case CREATURE_ICC_MUTATED_ABOMINATION7:
         case CREATURE_ICC_MUTATED_ABOMINATION8:
             //no abomination bots
+            break;
+        case CREATURE_GEARGRINDERS_JUMPBOT:
+            //no jumpbot bots
             break;
         default:
             if (VehicleSeatEntry const* seat = mVeh->GetSeatForPassenger(master))

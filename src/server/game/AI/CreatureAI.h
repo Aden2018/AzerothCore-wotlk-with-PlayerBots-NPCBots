@@ -29,6 +29,7 @@ class Unit;
 class Creature;
 class Player;
 class SpellInfo;
+enum SpellFinishReason : uint8;
 
 typedef std::vector<AreaBoundary const*> CreatureBoundary;
 
@@ -93,7 +94,7 @@ public:
         EVADE_REASON_OTHER
     };
 
-    void Talk(uint8 id, WorldObject const* whisperTarget = nullptr, Milliseconds delay = 0s);
+    void Talk(uint8 id, WorldObject const* whisperTarget = nullptr, Milliseconds delay = 0ms);
     void Talk(uint8 id, Milliseconds delay) { Talk(id, nullptr, delay); }
 
     WorldObject* GetSummoner() const;
@@ -145,6 +146,9 @@ public:
 
     // Called when spell hits a target
     virtual void SpellHitTarget(Unit* /*target*/, SpellInfo const* /*spell*/) {}
+
+    // Called when a spell either finishes, interrupts or cancels a spell cast
+    virtual void OnSpellCastFinished(SpellInfo const* /*spell*/, SpellFinishReason /*reason*/) {}
 
 #ifdef MOD_NPCERBOTS    //npcbot
     // Called when a spell starts
@@ -231,6 +235,9 @@ public:
 
     // Called when an aura is removed or expires.
     virtual void OnAuraRemove(AuraApplication* /*aurApp*/, AuraRemoveMode /*mode*/) { }
+
+    virtual void DistancingStarted() {}
+    virtual void DistancingEnded() {}
 
 protected:
     virtual void MoveInLineOfSight(Unit* /*who*/);

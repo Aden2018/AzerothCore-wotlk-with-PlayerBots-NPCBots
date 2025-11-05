@@ -901,6 +901,12 @@ class spell_warl_life_tap : public SpellScript
 
     bool Load() override
     {
+#ifdef MOD_NPCERBOTS
+        //npcbot
+        if (GetCaster()->IsNPCBot())
+            return true;
+        //end npcbot
+#endif
         return GetCaster()->IsPlayer();
     }
 
@@ -911,6 +917,13 @@ class spell_warl_life_tap : public SpellScript
 
     void HandleDummy(SpellEffIndex /*effIndex*/)
     {
+#ifdef MOD_NPCERBOTS
+        //npcbot: skip - handled inside class AI
+        if (GetCaster()->IsNPCBot())
+            return;
+        //end npcbot
+#endif
+
         Player* caster = GetCaster()->ToPlayer();
         if (Unit* target = GetHitUnit())
         {

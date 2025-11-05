@@ -436,15 +436,11 @@ bool GameObject::Create(ObjectGuid::LowType guidlow, uint32 name_id, Map* map, u
 
     // Check if GameObject is Large
     if (goinfo->IsLargeGameObject())
-    {
         SetVisibilityDistanceOverride(VisibilityDistanceType::Large);
-    }
 
     // Check if GameObject is Infinite
     if (goinfo->IsInfiniteGameObject())
-    {
         SetVisibilityDistanceOverride(VisibilityDistanceType::Infinite);
-    }
 
     return true;
 }
@@ -959,7 +955,7 @@ void GameObject::AddUniqueUse(Player* player)
     m_unique_users.insert(player->GetGUID());
 }
 
-void GameObject::DespawnOrUnsummon(Milliseconds delay, Seconds forceRespawnTime)
+void GameObject::DespawnOrUnsummon(Milliseconds delay /*= 0ms*/, Seconds forceRespawnTime /*= 0s*/)
 {
     if (delay > 0ms)
     {
@@ -1496,7 +1492,7 @@ void GameObject::Use(Unit* user)
     // by default spell caster is user
     Unit* spellCaster = user;
     uint32 spellId = 0;
-    bool triggered = false;
+    uint32 triggeredFlags = TRIGGERED_NONE;
 
     if (Player* playerUser = user->ToPlayer())
     {
@@ -1515,6 +1511,10 @@ void GameObject::Use(Unit* user)
 
         m_cooldownTime = GameTime::GetGameTimeMS().count() + cooldown * IN_MILLISECONDS;
     }
+
+    if (user->IsPlayer() && GetGoType() != GAMEOBJECT_TYPE_TRAP) // workaround for GO casting
+        if (!m_goInfo->IsUsableMounted())
+            user->RemoveAurasByType(SPELL_AURA_MOUNTED);
 
     switch (GetGoType())
     {
@@ -1761,34 +1761,40 @@ void GameObject::Use(Unit* user)
                             uint32 zone, subzone;
                             GetZoneAndAreaId(zone, subzone);
 
-                            int32 zone_skill = sObjectMgr->GetFishingBaseSkillLevel(subzone);
-                            if (!zone_skill)
-                                zone_skill = sObjectMgr->GetFishingBaseSkillLevel(zone);
+                            int32 zoneSkill = sObjectMgr->GetFishingBaseSkillLevel(subzone);
+                            if (!zoneSkill)
+                                zoneSkill = sObjectMgr->GetFishingBaseSkillLevel(zone);
 
                             //provide error, no fishable zone or area should be 0
-                            if (!zone_skill)
+                            if (!zoneSkill)
                                 LOG_ERROR("sql.sql", "Fishable areaId {} are not properly defined in `skill_fishing_base_level`.", subzone);
 
-                            int32 skill = player->GetSkillValue(SKILL_FISHING);
+                            // no miss skill is zone skill + 95 since at least patch 2.1
+                            int32 const noMissSkill = zoneSkill + 95;
+
+                            int32 const skill = player->GetSkillValue(SKILL_FISHING);
 
                             int32 chance;
-                            if (skill < zone_skill)
+                            // fishing pool catches are 100%
+                            //TODO: find reasonable value for fishing hole search
+                            GameObject* fishingHole = LookupFishingHoleAround(20.0f + CONTACT_DISTANCE);
+                            if (fishingHole)
+                                chance = 100;
+                            else if (skill < noMissSkill)
                             {
-                                chance = int32(pow((double)skill / zone_skill, 2) * 100);
+                                chance = int32(pow((double)skill / noMissSkill, 2) * 100);
                                 if (chance < 1)
                                     chance = 1;
                             }
                             else
                                 chance = 100;
 
-                            int32 roll = irand(1, 100);
+                            int32 const roll = irand(1, 100);
 
-                            LOG_DEBUG("entities.gameobject", "Fishing check (skill: {} zone min skill: {} chance {} roll: {}", skill, zone_skill, chance, roll);
+                            LOG_DEBUG("entities.gameobject", "Fishing check (skill: {} zone min skill: {} no-miss skill: {} chance {} roll: {})", skill, zoneSkill, noMissSkill, chance, roll);
 
-                            if (sScriptMgr->OnPlayerUpdateFishingSkill(player, skill, zone_skill, chance, roll))
-                            {
+                            if (sScriptMgr->OnPlayerUpdateFishingSkill(player, skill, zoneSkill, chance, roll))
                                 player->UpdateFishingSkill();
-                            }
                             // but you will likely cause junk in areas that require a high fishing skill (not yet implemented)
                             if (chance >= roll)
                             {
@@ -1798,11 +1804,10 @@ void GameObject::Use(Unit* user)
                                 SetOwnerGUID(player->GetGUID());
                                 SetSpellId(0); // prevent removing unintended auras at Unit::RemoveGameObject
 
-                                //TODO: find reasonable value for fishing hole search
-                                GameObject* ok = LookupFishingHoleAround(20.0f + CONTACT_DISTANCE);
-                                if (ok)
+                                // fishing pool catch
+                                if (fishingHole)
                                 {
-                                    ok->Use(player);
+                                    fishingHole->Use(player);
                                     SetLootState(GO_JUST_DEACTIVATED);
                                 }
                                 else
@@ -1838,16 +1843,13 @@ void GameObject::Use(Unit* user)
                     spellCaster = botOwner;
 
                     if (info->summoningRitual.animSpell)
-                    {
                         user->CastSpell(user, info->summoningRitual.animSpell, true);
-                        triggered = true;
-                    }
 
                     spellId = info->summoningRitual.spellId;
                     if (spellId == 62330)
                     {
                         spellId = 61993;
-                        triggered = true;
+                        triggeredFlags = TRIGGERED_FULL_MASK;
                     }
                     if (!info->summoningRitual.ritualPersistent)
                         SetLootState(GO_JUST_DEACTIVATED);
@@ -1946,7 +1948,6 @@ void GameObject::Use(Unit* user)
                     }
                 }
 
-                user->RemoveAurasByType(SPELL_AURA_MOUNTED);
                 spellId = info->spellcaster.spellId;
                 break;
             }
@@ -2166,12 +2167,15 @@ void GameObject::Use(Unit* user)
         return;
     }
 
+    if (m_goInfo->IsUsableMounted())
+        triggeredFlags |= TRIGGERED_IGNORE_CASTER_MOUNTED_OR_ON_VEHICLE;
+
     if (Player* player = user->ToPlayer())
         sOutdoorPvPMgr->HandleCustomSpell(player, spellId, this);
 
     if (spellCaster)
     {
-        if ((spellCaster->CastSpell(user, spellInfo, triggered) == SPELL_CAST_OK) && GetGoType() == GAMEOBJECT_TYPE_SPELLCASTER)
+        if ((spellCaster->CastSpell(user, spellInfo, TriggerCastFlags(triggeredFlags)) == SPELL_CAST_OK) && GetGoType() == GAMEOBJECT_TYPE_SPELLCASTER)
             AddUse();
     }
     else
@@ -3161,13 +3165,13 @@ SpellInfo const* GameObject::GetSpellForLock(Player const* player) const
     return nullptr;
 }
 
-void GameObject::AddToSkillupList(ObjectGuid playerGuid)
+void GameObject::AddToSkillupList(ObjectGuid const& playerGuid)
 {
     int32 timer = GetMap()->IsDungeon() ? -1 : 10 * MINUTE * IN_MILLISECONDS;
     m_SkillupList[playerGuid] = timer;
 }
 
-bool GameObject::IsInSkillupList(ObjectGuid playerGuid) const
+bool GameObject::IsInSkillupList(ObjectGuid const& playerGuid) const
 {
     for (auto const& itr : m_SkillupList)
     {
@@ -3197,7 +3201,7 @@ bool GameObject::IsUpdateNeeded()
     if (GetMap()->isCellMarked(GetCurrentCell().GetCellCoord().GetId()))
         return true;
 
-    if (IsVisibilityOverridden())
+    if (!GetObjectVisibilityContainer().GetVisiblePlayersMap().empty())
         return true;
 
     if (IsTransport())

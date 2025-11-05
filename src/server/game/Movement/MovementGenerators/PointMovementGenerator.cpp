@@ -49,7 +49,7 @@ void PointMovementGenerator<T>::DoInitialize(T* unit)
     Movement::MoveSplineInit init(unit);
 #ifdef MOD_PLAYERBOTS
     /// Added by mod-playerbots
-    if (_orientationInversed)
+    if (_reverseOrientation)
         init.SetOrientationInversed();
     /// End added
 #endif
@@ -95,6 +95,11 @@ void PointMovementGenerator<T>::DoInitialize(T* unit)
     }
     if (speed > 0.0f)
         init.SetVelocity(speed);
+
+    if (_forcedMovement == FORCED_MOVEMENT_WALK)
+        init.SetWalk(true);
+    else if (_forcedMovement == FORCED_MOVEMENT_RUN)
+        init.SetWalk(false);
 
     if (i_orientation > 0.0f)
     {
@@ -153,6 +158,11 @@ bool PointMovementGenerator<T>::DoUpdate(T* unit, uint32 /*diff*/)
             init.MoveTo(i_x, i_y, i_z, true);
         if (speed > 0.0f) // Default value for point motion type is 0.0, if 0.0 spline will use GetSpeed on unit
             init.SetVelocity(speed);
+
+        if (_forcedMovement == FORCED_MOVEMENT_WALK)
+            init.SetWalk(true);
+        else if (_forcedMovement == FORCED_MOVEMENT_RUN)
+            init.SetWalk(false);
 
         if (i_orientation > 0.0f)
         {
@@ -238,6 +248,11 @@ void AssistanceMovementGenerator::Finalize(Unit* unit)
 bool EffectMovementGenerator::Update(Unit* unit, uint32)
 {
     return !unit->movespline->Finalized();
+}
+
+void EffectMovementGenerator::Initialize(Unit*)
+{
+    i_spline.Launch();
 }
 
 void EffectMovementGenerator::Finalize(Unit* unit)
