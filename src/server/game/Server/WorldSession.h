@@ -1300,12 +1300,9 @@ private:
     uint32 _timeSyncNextCounter;
     uint32 _timeSyncTimer;
 
-<<<<<<< Updated upstream
     uint32 _orderCounter;
 
-=======
 #ifdef MOD_PLAYERBOTS
->>>>>>> Stashed changes
     bool _isBot;
 #endif
 
