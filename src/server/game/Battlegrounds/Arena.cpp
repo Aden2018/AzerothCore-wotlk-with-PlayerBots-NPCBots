@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -157,7 +157,18 @@ void Arena::AddBot(Creature* bot)
     UpdateArenaWorldState();
 }
 //end npcbot
+#endif
 
+void Arena::RemovePlayer(Player* /*player*/)
+{
+    if (GetStatus() == STATUS_WAIT_LEAVE)
+        return;
+
+    UpdateArenaWorldState();
+    CheckWinConditions();
+}
+
+#ifdef MOD_NPCERBOTS
 //npcbot
 void Arena::RemoveBot(ObjectGuid /*guid*/)
 {
@@ -168,6 +179,33 @@ void Arena::RemoveBot(ObjectGuid /*guid*/)
     CheckWinConditions();
 }
 //end npcbot
+#endif
+
+void Arena::FillInitialWorldStates(WorldPackets::WorldState::InitWorldStates& packet)
+{
+    packet.Worldstates.reserve(2);
+    packet.Worldstates.emplace_back(WORLD_STATE_ARENA_ALIVE_PLAYERS_GREEN, GetAlivePlayersCountByTeam(TEAM_HORDE));
+    packet.Worldstates.emplace_back(WORLD_STATE_ARENA_ALIVE_PLAYERS_GOLD, GetAlivePlayersCountByTeam(TEAM_ALLIANCE));
+}
+
+void Arena::UpdateArenaWorldState()
+{
+    UpdateWorldState(WORLD_STATE_ARENA_ALIVE_PLAYERS_GREEN, GetAlivePlayersCountByTeam(TEAM_HORDE));
+    UpdateWorldState(WORLD_STATE_ARENA_ALIVE_PLAYERS_GOLD, GetAlivePlayersCountByTeam(TEAM_ALLIANCE));
+}
+
+void Arena::HandleKillPlayer(Player* player, Player* killer)
+{
+    if (GetStatus() != STATUS_IN_PROGRESS)
+        return;
+
+    Battleground::HandleKillPlayer(player, killer);
+
+    UpdateArenaWorldState();
+    CheckWinConditions();
+}
+
+#ifdef MOD_NPCERBOTS
 //npcbot
 void Arena::HandleBotKillPlayer(Creature* killer, Player* victim)
 {
@@ -194,6 +232,30 @@ void Arena::HandlePlayerKillBot(Creature* victim, Player* killer)
     CheckWinConditions();
 }
 //end npcbot
+#endif
+
+void Arena::RemovePlayerAtLeave(Player* player)
+{
+    if (isRated() && GetStatus() == STATUS_IN_PROGRESS)
+    {
+        if (auto const& member = Acore::Containers::MapGetValuePtr(m_Players, player->GetGUID()))
+        {
+            // if the player was a match participant, calculate rating
+            auto teamId = member->GetBgTeamId();
+
+            ArenaTeam* winnerArenaTeam = sArenaTeamMgr->GetArenaTeamById(GetArenaTeamIdForTeam(GetOtherTeamId(teamId)));
+            ArenaTeam* loserArenaTeam = sArenaTeamMgr->GetArenaTeamById(GetArenaTeamIdForTeam(teamId));
+
+            if (winnerArenaTeam && loserArenaTeam && winnerArenaTeam != loserArenaTeam)
+                loserArenaTeam->MemberLost(player, GetArenaMatchmakerRating(GetOtherTeamId(teamId)));
+        }
+    }
+
+    // remove player
+    Battleground::RemovePlayerAtLeave(player);
+}
+
+#ifdef MOD_NPCERBOTS
 //npcbot
 void Arena::RemoveBotAtLeave(ObjectGuid guid)
 {
@@ -223,60 +285,6 @@ void Arena::RemoveBotAtLeave(ObjectGuid guid)
 }
 //end npcbot
 #endif
-
-void Arena::RemovePlayer(Player* /*player*/)
-{
-    if (GetStatus() == STATUS_WAIT_LEAVE)
-        return;
-
-    UpdateArenaWorldState();
-    CheckWinConditions();
-}
-
-void Arena::FillInitialWorldStates(WorldPackets::WorldState::InitWorldStates& packet)
-{
-    packet.Worldstates.reserve(2);
-    packet.Worldstates.emplace_back(WORLD_STATE_ARENA_ALIVE_PLAYERS_GREEN, GetAlivePlayersCountByTeam(TEAM_HORDE));
-    packet.Worldstates.emplace_back(WORLD_STATE_ARENA_ALIVE_PLAYERS_GOLD, GetAlivePlayersCountByTeam(TEAM_ALLIANCE));
-}
-
-void Arena::UpdateArenaWorldState()
-{
-    UpdateWorldState(WORLD_STATE_ARENA_ALIVE_PLAYERS_GREEN, GetAlivePlayersCountByTeam(TEAM_HORDE));
-    UpdateWorldState(WORLD_STATE_ARENA_ALIVE_PLAYERS_GOLD, GetAlivePlayersCountByTeam(TEAM_ALLIANCE));
-}
-
-void Arena::HandleKillPlayer(Player* player, Player* killer)
-{
-    if (GetStatus() != STATUS_IN_PROGRESS)
-        return;
-
-    Battleground::HandleKillPlayer(player, killer);
-
-    UpdateArenaWorldState();
-    CheckWinConditions();
-}
-
-void Arena::RemovePlayerAtLeave(Player* player)
-{
-    if (isRated() && GetStatus() == STATUS_IN_PROGRESS)
-    {
-        if (auto const& member = Acore::Containers::MapGetValuePtr(m_Players, player->GetGUID()))
-        {
-            // if the player was a match participant, calculate rating
-            auto teamId = member->GetBgTeamId();
-
-            ArenaTeam* winnerArenaTeam = sArenaTeamMgr->GetArenaTeamById(GetArenaTeamIdForTeam(GetOtherTeamId(teamId)));
-            ArenaTeam* loserArenaTeam = sArenaTeamMgr->GetArenaTeamById(GetArenaTeamIdForTeam(teamId));
-
-            if (winnerArenaTeam && loserArenaTeam && winnerArenaTeam != loserArenaTeam)
-                loserArenaTeam->MemberLost(player, GetArenaMatchmakerRating(GetOtherTeamId(teamId)));
-        }
-    }
-
-    // remove player
-    Battleground::RemovePlayerAtLeave(player);
-}
 
 void Arena::CheckWinConditions()
 {
@@ -436,16 +444,16 @@ void Arena::EndBattleground(TeamId winnerTeamId)
 
                         // Last standing - Rated 5v5 arena & be solely alive player
                         if (GetArenaType() == ARENA_TYPE_5v5 && aliveWinners == 1 && player->IsAlive())
-                        {
                             player->CastSpell(player, SPELL_LAST_MAN_STANDING, true);
-                        }
 
-                        winnerArenaTeam->MemberWon(player, loserMatchmakerRating, winnerMatchmakerChange);
+                        if (sScriptMgr->OnBeforeArenaTeamMemberUpdate(winnerArenaTeam, player, true, loserMatchmakerRating, winnerMatchmakerChange))
+                            winnerArenaTeam->MemberWon(player, loserMatchmakerRating, winnerMatchmakerChange);
                     }
                 }
                 else
                 {
-                    loserArenaTeam->MemberLost(player, winnerMatchmakerRating, loserMatchmakerChange);
+                    if (sScriptMgr->OnBeforeArenaTeamMemberUpdate(loserArenaTeam, player, false, winnerMatchmakerRating, loserMatchmakerChange))
+                        loserArenaTeam->MemberLost(player, winnerMatchmakerRating, loserMatchmakerChange);
 
                     // Arena lost => reset the win_rated_arena having the "no_lose" condition
                     player->ResetAchievementCriteria(ACHIEVEMENT_CRITERIA_CONDITION_NO_LOSE, 0);

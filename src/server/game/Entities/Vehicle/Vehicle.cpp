@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -26,6 +26,7 @@
 #include "TemporarySummon.h"
 #include "Unit.h"
 #include "Util.h"
+#include <algorithm>
 
 #ifdef MOD_NPCERBOTS
 //npcbot
@@ -34,7 +35,8 @@
 #endif
 
 Vehicle::Vehicle(Unit* unit, VehicleEntry const* vehInfo, uint32 creatureEntry) :
-    _me(unit), _vehicleInfo(vehInfo), _usableSeatNum(0), _creatureEntry(creatureEntry), _status(STATUS_NONE)
+    _me(unit), _vehicleInfo(vehInfo), _usableSeatNum(0), _creatureEntry(creatureEntry), _status(STATUS_NONE),
+    _accessoriesInstalled(false)
 {
     for (uint32 i = 0; i < MAX_VEHICLE_SEATS; ++i)
     {
@@ -92,8 +94,16 @@ void Vehicle::Install()
 
 void Vehicle::InstallAllAccessories(bool evading)
 {
-    if (GetBase()->IsPlayer() || !evading)
-        RemoveAllPassengers();   // We might have aura's saved in the DB with now invalid casters - remove
+    // Clear stale control-vehicle auras only on the first non-evade reset;
+    // a re-Reset would otherwise eject a just-seated passenger and, for
+    // accessories, fire a spurious SMART_EVENT_PASSENGER_REMOVED.
+    if (GetBase()->IsPlayer() || (!evading && !_accessoriesInstalled))
+        RemoveAllPassengers();
+
+    // Mark the initial reset as done even if this vehicle has no accessory
+    // list, so subsequent Resets don't eject passengers on vehicles without
+    // accessories (e.g. WG demolisher/catapult).
+    _accessoriesInstalled = true;
 
     VehicleAccessoryList const* accessories = sObjectMgr->GetVehicleAccessoryList(this);
     if (!accessories)
@@ -116,6 +126,7 @@ void Vehicle::Uninstall()
     _status = STATUS_UNINSTALLING;
     LOG_DEBUG("vehicles", "Vehicle::Uninstall {}", _me->GetGUID().ToString());
     RemoveAllPassengers();
+    _accessoriesInstalled = false;
 
     if (_me && _me->IsCreature())
     {
@@ -308,7 +319,10 @@ void Vehicle::InstallAccessory(uint32 entry, int8 seatId, bool minion, uint8 typ
     if (TempSummon* accessory = _me->SummonCreature(entry, *_me, TempSummonType(type), summonTime))
     {
         if (minion)
+        {
             accessory->AddUnitTypeMask(UNIT_MASK_ACCESSORY);
+            accessory->GetThreatMgr().Initialize(); // reinitialize CanHaveThreatList cached value
+        }
 
         if (!_me->HandleSpellClick(accessory, seatId))
         {
@@ -477,6 +491,10 @@ bool Vehicle::AddPassenger(Unit* unit, int8 seatId)
         init.SetTransportEnter();
         init.Launch();
 
+        // Put the vehicle in combat with anything that was threatening the passenger; the threat itself stays on the passenger
+        for (auto const& [guid, threatRef] : unit->GetThreatMgr().GetThreatenedByMeList())
+            threatRef->GetOwner()->GetThreatMgr().AddThreat(_me, 0.0f, nullptr, true, true);
+
         if (_me->IsCreature())
         {
             if (_me->ToCreature()->IsAIEnabled)
@@ -528,15 +546,18 @@ void Vehicle::RemovePassenger(Unit* unit)
 
     seat->second.Passenger.Reset();
 
+    // RemoveCharmedBy() clears MOVEMENTFLAG_FLYING, so cache this before uncharm.
+    bool wasFlying = _me->IsFlying();
+
     if (_me->IsCreature() && unit->IsPlayer() && seat->second.SeatInfo->m_flags & VEHICLE_SEAT_FLAG_CAN_CONTROL)
 #ifdef MOD_NPCERBOTS
-        //npcbot
     {
+        //npcbot
         if (unit->ToPlayer()->HaveBot())
             BotMgr::OnBotOwnerExitVehicle(unit->ToPlayer(), this);
+        //end npcbot
          _me->RemoveCharmedBy(unit);
     }
-        //end npcbot
 #else
          _me->RemoveCharmedBy(unit);
 #endif
@@ -553,7 +574,7 @@ void Vehicle::RemovePassenger(Unit* unit)
     }
 
     // only for flyable vehicles
-    if (_me->IsFlying() && !_me->GetInstanceId() && unit->IsPlayer() && !(unit->ToPlayer()->GetDelayedOperations() & DELAYED_VEHICLE_TELEPORT) && _me->GetEntry() != 30275 /*NPC_WILD_WYRM*/)
+    if (wasFlying && !_me->GetInstanceId() && unit->IsPlayer() && !(unit->ToPlayer()->GetDelayedOperations() & DELAYED_VEHICLE_TELEPORT) && _me->GetEntry() != 30275 /*NPC_WILD_WYRM*/)
         _me->CastSpell(unit, VEHICLE_SPELL_PARACHUTE, true);
 
     if (_me->IsCreature())
@@ -610,6 +631,11 @@ bool Vehicle::IsVehicleInUse()
         }
 
     return false;
+}
+
+bool Vehicle::IsControllableVehicle() const
+{
+    return std::ranges::any_of(Seats, [](auto const& seat) { return seat.second.SeatInfo->CanControl(); });
 }
 
 void Vehicle::TeleportVehicle(float x, float y, float z, float ang)

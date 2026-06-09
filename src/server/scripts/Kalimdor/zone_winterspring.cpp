@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -20,40 +20,6 @@
 #include "Player.h"
 #include "ScriptedCreature.h"
 #include "ScriptedEscortAI.h"
-#include "ScriptedGossip.h"
-
-/*######
-## npc_rivern_frostwind
-######*/
-
-class npc_rivern_frostwind : public CreatureScript
-{
-public:
-    npc_rivern_frostwind() : CreatureScript("npc_rivern_frostwind") { }
-
-    bool OnGossipSelect(Player* player, Creature* creature, uint32 /*sender*/, uint32 action) override
-    {
-        ClearGossipMenuFor(player);
-        if (action == GOSSIP_ACTION_TRADE)
-            player->GetSession()->SendListInventory(creature->GetGUID());
-
-        return true;
-    }
-
-    bool OnGossipHello(Player* player, Creature* creature) override
-    {
-        if (creature->IsQuestGiver())
-            player->PrepareQuestMenu(creature->GetGUID());
-
-        if (creature->IsVendor() && player->GetReputationRank(589) == REP_EXALTED)
-            AddGossipItemFor(player, GOSSIP_ICON_VENDOR, GOSSIP_TEXT_BROWSE_GOODS, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRADE);
-
-        SendGossipMenuFor(player, player->GetGossipTextId(creature), creature->GetGUID());
-
-        return true;
-    }
-};
-
 enum Says
 {
     // Escort texts
@@ -383,6 +349,7 @@ public:
             StartNextDialogueText(SAY_PRIESTESS_ALTAR_3);
         }
 
+        using CreatureAI::WaypointReached;
         void WaypointReached(uint32 pointId) override
         {
             switch (pointId)
@@ -607,7 +574,6 @@ public:
 
 void AddSC_winterspring()
 {
-    new npc_rivern_frostwind();
     new npc_ranshalla();
     new go_elune_fire();
 }

@@ -1,8 +1,10 @@
 name: pch-build
+
 on:
   push:
     branches:
       - 'master'
+      - 'test-staging'
   pull_request:
     types:
       - opened
@@ -10,7 +12,7 @@ on:
       - synchronize
 
 concurrency:
-  group: ${{ github.head_ref }} || concat(${{ github.ref_name }}, ${{ github.workflow }})
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -32,9 +34,7 @@ jobs:
               CC: clang-18
               CXX: clang++-18
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }}-${{ matrix.compiler }}-pch
-    env:
-      COMPILER: ${{ matrix.compiler }}
+    name: ${{ matrix.os }}-${{ matrix.compiler.CC }}-pch
     if: github.repository == 'mod-playerbots/azerothcore-wotlk' && !github.event.pull_request.draft
     steps:
       - uses: actions/checkout@v4
@@ -43,3 +43,4 @@ jobs:
           CC: ${{ matrix.compiler.CC }}
           CXX: ${{ matrix.compiler.CXX }}
           pch: true
+          modules: true   # optional: include modules in PCH build

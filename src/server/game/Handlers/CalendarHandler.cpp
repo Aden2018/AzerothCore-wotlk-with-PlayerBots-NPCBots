@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -754,11 +754,21 @@ void WorldSession::HandleCalendarEventModeratorStatus(WorldPacket& recvData)
 
 void WorldSession::HandleCalendarComplain(WorldPackets::Calendar::CalendarComplain& packet)
 {
-    ObjectGuid guid = _player->GetGUID();
+    if (sWorld->getBoolConfig(CONFIG_LOGSPAMREPORTS))
+    {
+        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_INS_SPAM_REPORT);
 
-    LOG_DEBUG("network", "CMSG_CALENDAR_COMPLAIN [{}] EventId [{}] guid [{}]", guid.ToString(), packet.EventId, packet.ComplainGuid.ToString());
+        stmt->SetData(0, 2); // SpamType 2 = Calendar
+        stmt->SetData(1, packet.ComplainGuid.GetCounter());
+        stmt->SetData(2, 0);
+        stmt->SetData(3, 0);
+        stmt->SetData(4, 0);
+        stmt->SetData(5, 0);
+        stmt->SetData(6, "EventId: " + std::to_string(packet.EventId));
+        stmt->SetData(7, GameTime::GetGameTime().count());
 
-    // what to do with complains?
+        CharacterDatabase.Execute(stmt);
+    }
 }
 
 void WorldSession::HandleCalendarGetNumPending(WorldPacket& /*recvData*/)

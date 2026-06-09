@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -23,6 +23,7 @@
 #include "Pet.h"
 #include "Player.h"
 #include "ScriptMgr.h"
+
 #ifdef MOD_NPCERBOTS
 //npcbot
 #include "botmgr.h"
@@ -243,7 +244,6 @@ void TempSummon::InitStats(uint32 duration)
         owner->ToPlayer()->HaveBot() && owner->ToPlayer()->GetBotMgr()->GetBot(GetCreatorGUID())))
     //end npcbot
 #endif
-
     if (owner)
     {
         if (uint32 slot = m_Properties->Slot)
@@ -260,6 +260,11 @@ void TempSummon::InitStats(uint32 duration)
 
     if (m_Properties->Faction)
         SetFaction(m_Properties->Faction);
+    else if (m_Properties->Flags & SUMMON_PROP_FLAG_USE_SUMMONER_FACTION)
+    {
+        if (owner)
+            SetFaction(owner->GetFaction());
+    }
     else if (IsVehicle() && owner) // properties should be vehicle
         SetFaction(owner->GetFaction());
 }
@@ -287,13 +292,15 @@ void TempSummon::InitSummon()
         if (IsAIEnabled)
             AI()->IsSummonedBy(owner);
 
-#ifdef MOD_NPCERBOTS        //npcbot
+#ifdef MOD_NPCERBOTS
+        //npcbot
         if (IsTempBot())
         {
             m_summonerGUID = ObjectGuid::Empty;
             SetCreatorGUID(m_summonerGUID);
         }
-#endif        //end npcbot
+        //end npcbot
+#endif
     }
 }
 
@@ -339,7 +346,6 @@ void TempSummon::UnSummon(Milliseconds msTime)
     else
     //end npcbot
 #endif
-
     if (WorldObject* owner = GetSummoner())
     {
         if (owner->IsCreature() && owner->ToCreature()->IsAIEnabled)

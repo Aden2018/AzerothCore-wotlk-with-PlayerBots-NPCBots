@@ -1,12 +1,13 @@
 name: windows-build
+
 on:
   push:
-    branches: [ "Playerbot" ]
+    branches: [ "Playerbot", "test-staging" ]
   pull_request:
-    branches: [ "Playerbot" ]
+    branches: [ "Playerbot", "test-staging" ]
 
 concurrency:
-  group: ${{ github.head_ref }} || concat(${{ github.ref_name }}, ${{ github.workflow }})
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -18,19 +19,38 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }}
     env:
-      BOOST_ROOT: C:\local\boost_1_82_0
+      BOOST_ROOT: C:\local\boost_1_87_0
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout AzerothCore
+        uses: actions/checkout@v4
+
+      - name: Checkout Playerbot Module
+        uses: actions/checkout@v4
+        with:
+          repository: mod-playerbots/mod-playerbots
+          ref: ${{ github.ref_name == 'Playerbot' && 'master' || 'test-staging' }}
+          path: modules/mod-playerbots
+
+      - name: Move repo to short path
+        shell: bash
+        run: |
+          mkdir C:/ac
+          cp -r . C:/ac/
+
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2.13
+
       - name: Configure OS
         shell: bash
         env:
           CONTINUOUS_INTEGRATION: true
         run: |
+          cd C:/ac
           ./acore.sh install-deps
+
       - name: Build
         shell: bash
         run: |
+          cd C:/ac
           export CTOOLS_BUILD=all
           ./acore.sh compiler build

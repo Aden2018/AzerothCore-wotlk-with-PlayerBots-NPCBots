@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -103,17 +103,14 @@ struct boss_faction_championsAI : public ScriptedAI
 
     void RecalculateThreat()
     {
-        ThreatContainer::StorageType const& tList = me->GetThreatMgr().GetThreatList();
-        for( ThreatContainer::StorageType::const_iterator itr = tList.begin(); itr != tList.end(); ++itr )
+        for (ThreatReference const* ref : me->GetThreatMgr().GetUnsortedThreatList())
         {
-            Unit* pUnit = ObjectAccessor::GetUnit(*me, (*itr)->getUnitGuid());
+            Unit* pUnit = ref->GetVictim();
             if (pUnit && pUnit->IsPlayer() && me->GetThreatMgr().GetThreat(pUnit))
             {
                 float threatMod = GetThreatMod(me->GetDistance2d(pUnit), (float)pUnit->GetArmor(), pUnit->GetHealth(), pUnit->GetMaxHealth(), pUnit);
-                me->GetThreatMgr().ModifyThreatByPercent(pUnit, -100);
-                //me->getThreatMgr().DoAddThreat(pUnit, 10000000.0f * threatMod);
-                if (HostileReference* ref = me->GetThreatMgr().GetOnlineContainer().getReferenceByTarget(pUnit))
-                    ref->AddThreat(10000000.0f * threatMod);
+                me->GetThreatMgr().ResetThreat(pUnit);
+                me->GetThreatMgr().AddThreat(pUnit, 10000000.0f * threatMod, nullptr, true, true);
             }
         }
     }
@@ -179,27 +176,23 @@ struct boss_faction_championsAI : public ScriptedAI
 
     uint32 EnemiesInRange(float distance)
     {
-        ThreatContainer::StorageType const& tList = me->GetThreatMgr().GetThreatList();
         uint32 count = 0;
-        Unit* target;
-        for( ThreatContainer::StorageType::const_iterator iter = tList.begin(); iter != tList.end(); ++iter )
+        for (ThreatReference const* ref : me->GetThreatMgr().GetUnsortedThreatList())
         {
-            target = ObjectAccessor::GetUnit((*me), (*iter)->getUnitGuid());
-            if (target && me->GetDistance2d(target) < distance )
-                ++count;
+            if (Unit* target = ref->GetVictim())
+                if (me->GetDistance2d(target) < distance)
+                    ++count;
         }
         return count;
     }
 
     Unit* SelectEnemyCaster(bool casting, float range)
     {
-        ThreatContainer::StorageType const& tList = me->GetThreatMgr().GetThreatList();
-        Unit* target;
-        for( ThreatContainer::StorageType::const_iterator iter = tList.begin(); iter != tList.end(); ++iter )
+        for (ThreatReference const* ref : me->GetThreatMgr().GetUnsortedThreatList())
         {
-            target = ObjectAccessor::GetUnit((*me), (*iter)->getUnitGuid());
-            if (target && target->getPowerType() == POWER_MANA && (!casting || target->HasUnitState(UNIT_STATE_CASTING)) && me->GetExactDist(target) <= range )
-                return target;
+            if (Unit* target = ref->GetVictim())
+                if (target->getPowerType() == POWER_MANA && (!casting || target->HasUnitState(UNIT_STATE_CASTING)) && me->GetExactDist(target) <= range)
+                    return target;
         }
         return nullptr;
     }
@@ -2037,7 +2030,7 @@ public:
         npc_toc_enh_shamanAI(Creature* pCreature) : boss_faction_championsAI(pCreature, AI_MELEE)
         {
             SetEquipmentSlots(false, 51803, 48013, EQUIP_NO_CHANGE);
-            me->SetModifierValue(UNIT_MOD_DAMAGE_OFFHAND, TOTAL_PCT, 1.0f);
+            me->SetStatPctModifier(UNIT_MOD_DAMAGE_OFFHAND, TOTAL_PCT, 1.0f);
             me->UpdateDamagePhysical(OFF_ATTACK);
 
             events.Reset();

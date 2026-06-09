@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -27,6 +27,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <vector>
 
 std::string DBUpdaterUtil::GetCorrectedMySQLExecutable()
 {
@@ -105,6 +106,7 @@ bool DBUpdater<LoginDatabaseConnection>::IsEnabled(uint32 const updateMask)
 template<>
 std::string DBUpdater<LoginDatabaseConnection>::GetDBModuleName()
 {
+    // must be lowercase
 #ifdef MOD_PLAYERBOTS
     return "auth";
 #else
@@ -154,6 +156,7 @@ bool DBUpdater<WorldDatabaseConnection>::IsEnabled(uint32 const updateMask)
 template<>
 std::string DBUpdater<WorldDatabaseConnection>::GetDBModuleName()
 {
+    // must be lowercase
 #ifdef MOD_PLAYERBOTS
     return "world";
 #else
@@ -204,6 +207,7 @@ bool DBUpdater<CharacterDatabaseConnection>::IsEnabled(uint32 const updateMask)
 template<>
 std::string DBUpdater<CharacterDatabaseConnection>::GetDBModuleName()
 {
+    // must be lowercase
 #ifdef MOD_PLAYERBOTS
     return "characters";
 #else
@@ -321,6 +325,7 @@ bool DBUpdater<T>::Update(DatabaseWorkerPool<T>& pool, std::string_view modulesL
 #else
     Path const sourceDirectory(BuiltInConfig::GetSourceDirectory());
 #endif
+
     if (!is_directory(sourceDirectory))
     {
         LOG_ERROR("sql.updates", "DBUpdater: The given source directory {} does not exist, change the path to the directory where your sql directory exists (for example c:\\source\\azerothcore). Shutting down.",
@@ -495,16 +500,23 @@ bool DBUpdater<T>::Populate(DatabaseWorkerPool<T>& pool)
         return false;
     }
 
-    for (std::filesystem::directory_iterator itr(DirPath); itr != DirItr; ++itr)
-    {
-        if (itr->path().extension() != ".sql")
-            continue;
+    std::vector<std::filesystem::path> sqlFiles;
 
-        LOG_INFO("sql.updates", ">> Applying \'{}\'...", itr->path().filename().generic_string());
+    for (const auto &entry : std::filesystem::directory_iterator(DirPath))
+    {
+        if (entry.path().extension() == ".sql")
+            sqlFiles.push_back(entry.path());
+    }
+
+    std::sort(sqlFiles.begin(), sqlFiles.end());
+
+    for (const auto &file : sqlFiles)
+    {
+        LOG_INFO("sql.updates", ">> Applying \'{}\'...", file.filename().generic_string());
 
         try
         {
-            ApplyFile(pool, itr->path());
+            ApplyFile(pool, file);
         }
         catch (UpdateException&)
         {

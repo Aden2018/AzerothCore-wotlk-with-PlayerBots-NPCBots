@@ -13,11 +13,6 @@
 # set up output paths for executable binaries (.exe-files, and .dll-files on DLL-capable platforms)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Set build-directive (used in core to tell which buildtype we used)
-target_compile_definitions(acore-compile-option-interface
-  INTERFACE
-    -D_BUILD_DIRECTIVE="${CMAKE_BUILD_TYPE}")
-
 if(PLATFORM EQUAL 32)
   # Required on 32-bit systems to enable SSE2 (standard on x64)
   target_compile_options(acore-compile-option-interface
@@ -25,6 +20,16 @@ if(PLATFORM EQUAL 32)
       -msse2
       -mfpmath=sse)
 endif()
+
+target_compile_definitions(acore-compile-option-interface
+  INTERFACE
+    -DDIY_ADEN2008
+    -DMOD_NPCERBOTS
+    -DMOD_PLAYERBOTS)
+
+message(STATUS "MinGW: Enable DIY_ADEN2008")
+message(STATUS "MinGW: Enable MOD_NPCERBOTS")
+message(STATUS "MinGW: Enable MOD_PLAYERBOTS")
 
 target_compile_definitions(acore-compile-option-interface
   INTERFACE

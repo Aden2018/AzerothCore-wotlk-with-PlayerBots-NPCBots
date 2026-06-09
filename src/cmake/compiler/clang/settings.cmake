@@ -16,11 +16,6 @@ if ((USE_COREPCH OR USE_SCRIPTPCH) AND (CMAKE_C_COMPILER_LAUNCHER STREQUAL "ccac
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fno-pch-timestamp")
 endif()
 
-# Set build-directive (used in core to tell which buildtype we used)
-target_compile_definitions(acore-compile-option-interface
-  INTERFACE
-    -D_BUILD_DIRECTIVE="${CMAKE_BUILD_TYPE}")
-
 set(CLANG_EXPECTED_VERSION 10.0.0)
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS CLANG_EXPECTED_VERSION)
@@ -28,6 +23,17 @@ if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS CLANG_EXPECTED_VERSION)
 else()
   message(STATUS "Clang: Minimum version required is ${CLANG_EXPECTED_VERSION}, found ${CMAKE_CXX_COMPILER_VERSION} - ok!")
 endif()
+
+target_compile_definitions(acore-compile-option-interface
+  INTERFACE
+    -DDIY_ADEN2008
+    -DMOD_NPCERBOTS
+    -DMOD_PLAYERBOTS
+)
+
+message(STATUS "Clang: Enable DIY_ADEN2008")
+message(STATUS "Clang: Enable MOD_NPCERBOTS")
+message(STATUS "Clang: Enable MOD_PLAYERBOTS")
 
 # This tests for a bug in clang-7 that causes linkage to fail for 64-bit from_chars (in some configurations)
 # If the clang requirement is bumped to >= clang-8, you can remove this check, as well as

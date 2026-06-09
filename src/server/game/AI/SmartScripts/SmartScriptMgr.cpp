@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -48,11 +48,6 @@ void SmartWaypointMgr::LoadFromDB()
 {
     uint32 oldMSTime = getMSTime();
 
-    for (auto itr : waypoint_map)
-    {
-        delete itr.second;
-    }
-
     waypoint_map.clear();
 
     WorldDatabasePreparedStatement* stmt = WorldDatabase.GetPreparedStatement(WORLD_SEL_SMARTAI_WP);
@@ -78,14 +73,15 @@ void SmartWaypointMgr::LoadFromDB()
         float x = fields[2].Get<float>();
         float y = fields[3].Get<float>();
         float z = fields[4].Get<float>();
-        Optional<float> o;
+        std::optional<float> o;
         if (!fields[5].IsNull())
             o = fields[5].Get<float>();
         uint32 delay = fields[6].Get<uint32>();
 
         if (last_entry != entry)
         {
-            waypoint_map[entry] = new WaypointPath();
+            waypoint_map[entry] = WaypointPath();
+            waypoint_map[entry].Id = entry;
             last_id = 1;
             count++;
         }
@@ -94,15 +90,15 @@ void SmartWaypointMgr::LoadFromDB()
             LOG_ERROR("sql.sql", "SmartWaypointMgr::LoadFromDB: Path entry {}, unexpected point id {}, expected {}.", entry, id, last_id);
 
         last_id++;
-        WaypointData data;
-        data.id = id;
-        data.x = x;
-        data.y = y;
-        data.z = z;
-        data.orientation = o;
-        data.delay = delay;
-        data.move_type = WAYPOINT_MOVE_TYPE_MAX;
-        (*waypoint_map[entry]).emplace(id, data);
+        WaypointNode node;
+        node.Id = id;
+        node.X = x;
+        node.Y = y;
+        node.Z = z;
+        node.Orientation = o;
+        node.Delay = delay;
+        node.MoveType = WAYPOINT_MOVE_TYPE_MAX;
+        waypoint_map[entry].Nodes.push_back(std::move(node));
 
         last_entry = entry;
         total++;
@@ -110,14 +106,6 @@ void SmartWaypointMgr::LoadFromDB()
 
     LOG_INFO("server.loading", ">> Loaded {} SmartAI waypoint paths (total {} waypoints) in {} ms", count, total, GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
-}
-
-SmartWaypointMgr::~SmartWaypointMgr()
-{
-    for (auto itr : waypoint_map)
-    {
-        delete itr.second;
-    }
 }
 
 SmartAIMgr* SmartAIMgr::instance()
@@ -531,6 +519,18 @@ bool SmartAIMgr::IsTargetValid(SmartScriptHolder const& e)
             }
             break;
         }
+        case SMART_TARGET_FORMATION:
+        {
+            if (e.target.formation.type > 2)
+            {
+                LOG_ERROR("sql.sql", "SmartAIMgr: Entry {} SourceType {} Event {} Action {} has invalid formation target type ({}, must be 0-2).",
+                    e.entryOrGuid, e.GetScriptType(), e.GetEventType(), e.GetActionType(), e.target.formation.type);
+                return false;
+            }
+            if (e.target.formation.entry && !IsCreatureValid(e, e.target.formation.entry))
+                return false;
+            return IsSAIBoolValid(e, e.target.formation.excludeSelf);
+        }
         case SMART_TARGET_HOSTILE_SECOND_AGGRO:
         case SMART_TARGET_HOSTILE_LAST_AGGRO:
         case SMART_TARGET_HOSTILE_RANDOM:
@@ -846,8 +846,8 @@ bool SmartAIMgr::CheckUnusedActionParams(SmartScriptHolder const& e)
             case SMART_ACTION_PLAY_ANIMKIT: return sizeof(SmartAction::raw);
             case SMART_ACTION_SCENE_PLAY: return sizeof(SmartAction::raw);
             case SMART_ACTION_SCENE_CANCEL: return sizeof(SmartAction::raw);
-            // case SMART_ACTION_SPAWN_SPAWNGROUP: return sizeof(SmartAction::groupSpawn);
-            // case SMART_ACTION_DESPAWN_SPAWNGROUP: return sizeof(SmartAction::groupSpawn);
+            case SMART_ACTION_SPAWN_SPAWNGROUP: return sizeof(SmartAction::groupSpawn);
+            case SMART_ACTION_DESPAWN_SPAWNGROUP: return sizeof(SmartAction::groupSpawn);
             // case SMART_ACTION_RESPAWN_BY_SPAWNID: return sizeof(SmartAction::respawnData);
             case SMART_ACTION_PLAY_CINEMATIC: return sizeof(SmartAction::cinematic);
             case SMART_ACTION_SET_MOVEMENT_SPEED: return sizeof(SmartAction::movementSpeed);
@@ -884,6 +884,10 @@ bool SmartAIMgr::CheckUnusedActionParams(SmartScriptHolder const& e)
             case SMART_ACTION_MOVEMENT_RESUME: return sizeof(SmartAction::move);
             case SMART_ACTION_WORLD_SCRIPT: return sizeof(SmartAction::worldStateScript);
             case SMART_ACTION_DISABLE_REWARD: return sizeof(SmartAction::reward);
+            case SMART_ACTION_SET_ANIM_TIER: return sizeof(SmartAction::animTier);
+            case SMART_ACTION_SET_GOSSIP_MENU: return sizeof(SmartAction::setGossipMenu);
+            case SMART_ACTION_SUMMON_GAMEOBJECT_GROUP: return sizeof(SmartAction::gameobjectGroup);
+            case SMART_ACTION_DISMOUNT: return NO_PARAMS;
             default:
                 LOG_WARN("sql.sql", "SmartAIMgr: entryorguid {} source_type {} id {} action_type {} is using an action with no unused params specified in SmartAIMgr::CheckUnusedActionParams(), please report this.",
                             e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType());
@@ -948,6 +952,10 @@ bool SmartAIMgr::CheckUnusedTargetParams(SmartScriptHolder const& e)
             case SMART_TARGET_VEHICLE_PASSENGER: return sizeof(SmartTarget::vehicle);
             // case SMART_TARGET_CLOSEST_UNSPAWNED_GAMEOBJECT: return sizeof(SmartTarget::goClosest);
             case SMART_TARGET_PLAYER_WITH_AURA: return sizeof(SmartTarget::playerWithAura);
+            case SMART_TARGET_RANDOM_POINT: return sizeof(SmartTarget::randomPoint);
+            case SMART_TARGET_SUMMONED_CREATURES: return sizeof(SmartTarget::summonedCreatures);
+            case SMART_TARGET_INSTANCE_STORAGE: return sizeof(SmartTarget::instanceStorage);
+            case SMART_TARGET_FORMATION: return sizeof(SmartTarget::formation);
             default:
                 LOG_WARN("sql.sql", "SmartAIMgr: entryorguid {} source_type {} id {} action_type {} is using a target {} with no unused params specified in SmartAIMgr::CheckUnusedTargetParams(), please report this.",
                             e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType(), e.GetTargetType());
@@ -1005,12 +1013,21 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
         case SMART_ACTION_SET_CAN_FLY:
         case SMART_ACTION_REMOVE_AURAS_BY_TYPE:
         case SMART_ACTION_REMOVE_MOVEMENT:
-        case SMART_ACTION_SPAWN_SPAWNGROUP:
-        case SMART_ACTION_DESPAWN_SPAWNGROUP:
         case SMART_ACTION_RESPAWN_BY_SPAWNID:
             LOG_ERROR("sql.sql", "SmartAIMgr: EntryOrGuid {} using event({}) has an action type that is not yet supported on AzerothCore ({}), skipped.",
                              e.entryOrGuid, e.event_id, e.GetActionType());
             return false;
+        case SMART_ACTION_SPAWN_SPAWNGROUP:
+        case SMART_ACTION_DESPAWN_SPAWNGROUP:
+        {
+            if (!sObjectMgr->GetSpawnGroupData(e.action.groupSpawn.groupId))
+            {
+                LOG_ERROR("sql.sql", "SmartAIMgr: EntryOrGuid {} using event({}) has action type {} with invalid spawn group id {}.",
+                    e.entryOrGuid, e.event_id, e.GetActionType(), e.action.groupSpawn.groupId);
+                return false;
+            }
+            break;
+        }
         default:
             break;
     }
@@ -1893,6 +1910,13 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
                 }
                 break;
             }
+        case SMART_ACTION_SET_ANIM_TIER:
+            if (e.action.animTier.animTier >= uint32(AnimTier::Max))
+            {
+                LOG_ERROR("sql.sql", "SmartAIMgr: Entry {} SourceType {} Event {} Action {} uses invalid animtier %u, skipped.", e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType(), e.action.animTier.animTier);
+                return false;
+            }
+            break;
         case SMART_ACTION_AUTO_ATTACK:
             return IsSAIBoolValid(e, e.action.autoAttack.attack);
         case SMART_ACTION_ALLOW_COMBAT_MOVEMENT:
@@ -2028,6 +2052,10 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
         case SMART_ACTION_MOVEMENT_PAUSE:
         case SMART_ACTION_MOVEMENT_RESUME:
         case SMART_ACTION_WORLD_SCRIPT:
+        case SMART_ACTION_SET_GOSSIP_MENU:
+        case SMART_ACTION_SUMMON_GAMEOBJECT_GROUP:
+        case SMART_ACTION_SPAWN_SPAWNGROUP:
+        case SMART_ACTION_DESPAWN_SPAWNGROUP:
             break;
         default:
             LOG_ERROR("sql.sql", "SmartAIMgr: Not handled action_type({}), event_type({}), Entry {} SourceType {} Event {}, skipped.", e.GetActionType(), e.GetEventType(), e.entryOrGuid, e.GetScriptType(), e.event_id);

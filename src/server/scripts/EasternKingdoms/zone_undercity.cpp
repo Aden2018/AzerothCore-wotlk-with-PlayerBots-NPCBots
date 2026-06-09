@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -116,6 +116,11 @@ public:
             _events.ScheduleEvent(EVENT_BLACK_ARROW, 15s);
             _events.ScheduleEvent(EVENT_SHOOT, 8s);
             _events.ScheduleEvent(EVENT_MULTI_SHOT, 10s);
+        }
+
+        void JustDied(Unit* /*killer*/) override
+        {
+            DoRewardPlayersInArea();
         }
 
         void SetGUID(ObjectGuid const& guid, int32 type) override
@@ -286,63 +291,6 @@ public:
             }
         }
     };
-};
-
-/*######
-## npc_parqual_fintallas
-######*/
-
-enum ParqualFintallas
-{
-    SPELL_MARK_OF_SHAME             = 6767,
-    QUEST_ID_TEST_OF_LORE           = 6628,
-    GOSSIP_MENU_ID_TEST_OF_LORE     = 4764,
-    GOSSIP_TEXTID_PARQUAL_FINTALLAS = 5821,
-    GOSSIP_TEXTID_TEST_OF_LORE      = 5822,
-};
-
-class npc_parqual_fintallas : public CreatureScript
-{
-public:
-    npc_parqual_fintallas() : CreatureScript("npc_parqual_fintallas") { }
-
-    bool OnGossipSelect(Player* player, Creature* creature, uint32 /*sender*/, uint32 action) override
-    {
-        ClearGossipMenuFor(player);
-        if (action == GOSSIP_ACTION_INFO_DEF + 1)
-        {
-            CloseGossipMenuFor(player);
-            creature->CastSpell(player, SPELL_MARK_OF_SHAME, false);
-        }
-        if (action == GOSSIP_ACTION_INFO_DEF + 2)
-        {
-            CloseGossipMenuFor(player);
-            player->AreaExploredOrEventHappens(6628);
-        }
-        return true;
-    }
-
-    bool OnGossipHello(Player* player, Creature* creature) override
-    {
-        if (creature->IsQuestGiver())
-        {
-            player->PrepareQuestMenu(creature->GetGUID());
-        }
-
-        if (player->GetQuestStatus(QUEST_ID_TEST_OF_LORE) == QUEST_STATUS_INCOMPLETE && !player->HasAura(SPELL_MARK_OF_SHAME))
-        {
-            AddGossipItemFor(player, GOSSIP_MENU_ID_TEST_OF_LORE, 0, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
-            AddGossipItemFor(player, GOSSIP_MENU_ID_TEST_OF_LORE, 1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
-            AddGossipItemFor(player, GOSSIP_MENU_ID_TEST_OF_LORE, 3, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2);
-            SendGossipMenuFor(player, GOSSIP_TEXTID_TEST_OF_LORE, creature->GetGUID());
-        }
-        else
-        {
-            SendGossipMenuFor(player, GOSSIP_TEXTID_PARQUAL_FINTALLAS, creature->GetGUID());
-        }
-
-        return true;
-    }
 };
 
 /*######
@@ -1418,6 +1366,7 @@ public:
             }
         }
 
+        using CreatureAI::WaypointReached;
         void WaypointReached(uint32 waypointId) override
         {
             switch (waypointId)
@@ -2815,6 +2764,7 @@ public:
             }
         }
 
+        using CreatureAI::WaypointReached;
         void WaypointReached(uint32 waypointId) override
         {
             switch (waypointId)
@@ -4030,7 +3980,6 @@ void AddSC_undercity()
 {
     new npc_lady_sylvanas_windrunner();
     new npc_highborne_lamenter();
-    new npc_parqual_fintallas();
 
     new npc_varian_wrynn();
     new npc_thrall_bfu();

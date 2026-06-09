@@ -1,6 +1,7 @@
 #ifndef BOTWANDERFUL_H_
 #define BOTWANDERFUL_H_
 
+#include "EnumFlag.h"
 #include "Position.h"
 
 #include <functional>
@@ -38,7 +39,10 @@ enum class BotWPFlags : uint32
     BOTWP_FLAG_MOVEMENT_FORCE_JUMP_BEGIN    = 0x00010000, // movement between 2 WPs having begin and end flags is forced to be a jump (prevent casting when falling from a cliff)
     BOTWP_FLAG_MOVEMENT_FORCE_JUMP_END      = 0x00020000, // movement between 2 WPs having begin and end flags is forced to be a jump (prevent casting when falling from a cliff)
     BOTWP_FLAG_INTERACTION_MILL_RADIUS      = 0x00040000, // if chosen as a mill point, radius is reduced to INTERACTION_DISTANCE
-    BOTWP_FLAG_END                          = 0x00080000,
+    BOTWP_FLAG_NOT_A_START_POINT            = 0x00080000, // a bot can not teleport to this node, its a waypoint for moving only.
+    BOTWP_FLAG_END                          = 0x00100000,
+
+    BOTWP_FLAGS_ALL_VALID                   = BOTWP_FLAG_END - 1,
 
     BOTWP_FLAG_ALLIANCE_OR_HORDE_ONLY       = BOTWP_FLAG_ALLIANCE_ONLY | BOTWP_FLAG_HORDE_ONLY,
     BOTWP_FLAG_ALLIANCE_SPAWN_POINT         = BOTWP_FLAG_SPAWN | BOTWP_FLAG_ALLIANCE_ONLY,
@@ -59,14 +63,16 @@ enum class BotWPFlags : uint32
     BOTWP_FLAG_WS_PICKUP_BERSERKING         = BOTWP_FLAG_BG_OPTIONAL_PICKUP_2 | BOTWP_FLAG_BG_OPTIONAL_PICKUP_4,
 };
 
+DEFINE_ENUM_FLAG(BotWPFlags);
+
 enum class BotWPLevel : uint32
 {
     BOTWP_LEVEL_ZERO                        = 0,
     BOTWP_LEVEL_ONE                         = 1,
 };
 
-constexpr uint32 WP_SPELL_ID_LINK_TO = 64034;
-constexpr uint32 WP_SPELL_ID_LINK_FROM = 64036;
+inline constexpr uint32 WP_SPELL_ID_LINK_TO = 64034;
+inline constexpr uint32 WP_SPELL_ID_LINK_FROM = 64036;
 
 class WanderNode : public Position
 {
@@ -76,9 +82,10 @@ public:
         WanderNode* wp;
         uint32 weight;
 
-        inline uint32 Id() const { return wp ? wp->GetWPId() : 0; }
+        inline constexpr uint32 Id() const noexcept { return wp ? wp->GetWPId() : 0; }
 
-        inline constexpr std::strong_ordering operator<=>(WanderNodeLink const& other) const noexcept = default;
+        inline constexpr bool operator==(WanderNodeLink const& other) const noexcept { return Id() == other.Id(); }
+        inline constexpr std::strong_ordering operator<=>(WanderNodeLink const& other) const noexcept { return Id() <=> other.Id(); }
 
         struct WeightExtractor {
             inline constexpr uint32 operator()(WanderNodeLink const& wpl) const noexcept { return wpl.weight; }
@@ -97,25 +104,17 @@ private:
     using node_check_ftype_c = std::function<bool(WanderNode const*)>;
     using node_proc_ltype = std::function<void(WanderNodeLink const&)>;
 
-    using mutex_type = std::recursive_mutex;
-    using lock_type = std::unique_lock<mutex_type>;
+    using mutex_type = std::shared_mutex;
 
     static node_ltype ALL_WPS;
     static node_mtype ALL_WPS_PER_MAP;
     static node_mtype ALL_WPS_PER_ZONE;
     static node_mtype ALL_WPS_PER_AREA;
 
-    template<class T, typename = void>
-    struct is_container : std::false_type {};
-    template<class T>
-    struct is_container<T, std::void_t<decltype(std::declval<typename T::const_iterator>()), decltype(std::declval<T>().size())>> : std::true_type {};
-    template<class T>
-    static constexpr bool is_container_v = is_container<T>::value;
+    static mutex_type* GetLock();
 
 public:
     static uint32 nextWPId;
-
-    static mutex_type* GetLock();
 
     static WanderNode* FindInAllWPs(uint32 wpId);
     static WanderNode* FindInAllWPs(Creature const* creature);
@@ -126,23 +125,24 @@ public:
     static WanderNode* FindInAreaWPs(uint32 areaId, node_check_ftype_c const& pred);
 
     template<typename Func>
+    requires (std::is_convertible_v<Func, node_proc_ltype>)
     static void DoForContainerWPLinks(WanderNode::node_lltype const& c, Func&& func) {
-        static_assert(std::is_convertible_v<Func, node_proc_ltype>);
         for (auto const& wl : c)
             func(wl);
     }
 
     template<typename Container, typename Func>
+    requires (
+        std::is_convertible_v<Func, node_proc_ftype_c> &&
+        std::is_same_v<std::decay_t<std::remove_pointer_t<typename Container::value_type>>, WanderNode> &&
+        std::input_or_output_iterator<typename Container::iterator>
+    )
     static void DoForContainerWPs(Container const& c, Func&& func) {
-        static_assert(WanderNode::is_container_v<Container>);
-        static_assert(std::is_same_v<std::decay_t<std::remove_pointer_t<typename Container::value_type>>, WanderNode>);
-        static_assert(std::is_convertible_v<Func, node_proc_ftype>);
-        //lock_type lock(*GetLock());
         for (auto* wp : c)
             func(wp);
     }
 
-    static void DoForAllWPs(node_proc_ftype&& func);
+    static void DoForAllWPs(node_proc_ftype_c&& func);
     static void DoForAllMapWPs(uint32 mapId, node_proc_ftype_c&& func);
     static void DoForAllZoneWPs(uint32 zoneId, node_proc_ftype_c&& func);
     static void DoForAllAreaWPs(uint32 areaId, node_proc_ftype_c&& func);
@@ -150,7 +150,7 @@ public:
     static size_t GetMapWPsCount(uint32 mapId);
     static size_t GetWPMapsCount();
 
-    WanderNode(uint32 wpId, uint32 mapId, float x, float y, float z, float o, uint32 zoneId, uint32 areaId, std::string const& name);
+    WanderNode(uint32 wpId, uint32 mapId, float x, float y, float z, float o, uint32 zoneId, uint32 areaId, std::string&& name);
     ~WanderNode();
 
     static void RemoveAllWPs();
@@ -186,6 +186,11 @@ public:
     void SetLevels(std::pair<uint8, uint8> levels) { std::tie(_minLevel, _maxLevel) = levels; }
     inline void SetLevels(uint8 minLevel, uint8 maxLevel) { SetLevels(std::pair{ minLevel, maxLevel }); }
 
+    void SetWaitTime(std::pair<uint32, uint32> waitTime) { std::tie(_minWaitTime, _maxWaitTime) = waitTime; }
+    inline void SetWaitTime(uint32 minWaitTime, uint32 maxWaitTime) { SetWaitTime(std::pair{ minWaitTime, maxWaitTime }); }
+
+    void SetProximity(float proximity) { _proximity = proximity; }
+
     void SetFlags(BotWPFlags flags);
     void RemoveFlags(BotWPFlags flags);
     bool HasFlag(BotWPFlags flags) const;
@@ -203,6 +208,8 @@ public:
     uint32 GetAreaId() const { return _areaId; }
     std::string const& GetName() const { return _name; }
     std::pair<uint8, uint8> GetLevels() const { return { _minLevel, _maxLevel }; }
+    std::pair<uint32, uint32> GetWaitTime() const { return { _minWaitTime, _maxWaitTime }; }
+    float GetProximity() const { return _proximity; }
     uint32 GetFlags() const { return _flags; }
 
     void SetupLinkFromAura() const;
@@ -219,6 +226,9 @@ private:
     /*const*/ std::string _name;
     uint8 _minLevel;
     uint8 _maxLevel;
+    uint32 _minWaitTime;
+    uint32 _maxWaitTime;
+    float _proximity;
     uint32 _flags;
 
     node_lltype _links;

@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -352,12 +352,7 @@ class spell_cannibalize_heal : public SpellScript
 struct npc_hyjal_ground_trash : public ScriptedAI
 {
     npc_hyjal_ground_trash(Creature* creature) : ScriptedAI(creature)
-    {
-        scheduler.SetValidator([this]
-        {
-            return !me->HasUnitState(UNIT_STATE_CASTING);
-        });
-    }
+    {    }
 
     void Reset() override
     {
@@ -574,12 +569,7 @@ struct npc_hyjal_ground_trash : public ScriptedAI
 struct npc_hyjal_gargoyle : public ScriptedAI
 {
     npc_hyjal_gargoyle(Creature* creature) : ScriptedAI(creature)
-    {
-        scheduler.SetValidator([this]
-            {
-                return !me->HasUnitState(UNIT_STATE_CASTING);
-            });
-    }
+    {    }
 
     void Reset() override
     {
@@ -648,12 +638,7 @@ struct npc_hyjal_gargoyle : public ScriptedAI
 struct npc_hyjal_frost_wyrm : public ScriptedAI
 {
     npc_hyjal_frost_wyrm(Creature* creature) : ScriptedAI(creature)
-    {
-        scheduler.SetValidator([this]
-            {
-                return !me->HasUnitState(UNIT_STATE_CASTING);
-            });
-    }
+    {    }
 
     void Reset() override
     {

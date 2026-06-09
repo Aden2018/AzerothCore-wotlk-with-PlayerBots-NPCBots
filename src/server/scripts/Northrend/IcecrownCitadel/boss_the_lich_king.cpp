@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -187,14 +187,6 @@ enum Spells
     SPELL_ENRAGE                        = 72143,
     SPELL_FRENZY                        = 28747,
 };
-
-#define NECROTIC_PLAGUE_LK   RAID_MODE<uint32>(70337, 73912, 73913, 73914)
-#define NECROTIC_PLAGUE_PLR  RAID_MODE<uint32>(70338, 73785, 73786, 73787)
-#define REMORSELESS_WINTER_1 RAID_MODE<uint32>(68981, 74270, 74271, 74272)
-#define REMORSELESS_WINTER_2 RAID_MODE<uint32>(72259, 74273, 74274, 74275)
-#define SUMMON_VALKYR        RAID_MODE<uint32>(69037, 74361, 69037, 74361)
-//#define HARVEST_SOUL         RAID_MODE<uint32>(68980, 74325, 74296, 74297)
-#define HARVESTED_SOUL_BUFF  RAID_MODE<uint32>(72679, 74318, 74319, 74320)
 
 enum Events
 {
@@ -375,7 +367,7 @@ void SendPacketToPlayers(WorldPacket const* data, Unit* source)
         for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
             if (Player* player = itr->GetSource())
                 if (player->GetAreaId() == AREA_THE_FROZEN_THRONE)
-                    player->GetSession()->SendPacket(data);
+                    player->SendDirectMessage(data);
 }
 
 struct ShadowTrapLKTargetSelector
@@ -506,7 +498,7 @@ public:
     bool Execute(uint64 /*time*/, uint32 /*diff*/) override
     {
         _owner->SetReactState(REACT_AGGRESSIVE);
-        if (!_owner->GetThreatMgr().isThreatListEmpty())
+        if (!_owner->GetThreatMgr().IsThreatListEmpty())
             if (Unit* target = _owner->SelectVictim())
                 _owner->AI()->AttackStart(target);
         if (!_owner->GetVictim())
@@ -661,6 +653,8 @@ public:
             _lastTalkTimeBuff = 0;
             _bFrostmournePhase = false;
             _bFordringMustFallYell = false;
+            me->SetRegeneratingHealth(true);
+            me->SetIsCombatDisallowed(false);
 
             _Reset();
             DoAction(ACTION_RESTORE_LIGHT);
@@ -800,12 +794,15 @@ public:
             if (_phase == PHASE_THREE && HealthBelowPct(10) && !me->HasUnitState(UNIT_STATE_CASTING))
             {
                 _phase = PHASE_OUTRO;
+                me->SetRegeneratingHealth(false);
+                me->SetIsCombatDisallowed(true);
                 EntryCheckPredicate pred(NPC_STRANGULATE_VEHICLE);
                 summons.DoAction(ACTION_TELEPORT_BACK, pred);
                 events.Reset();
                 summons.DespawnAll();
                 me->SetReactState(REACT_PASSIVE);
                 me->AttackStop();
+                me->CombatStop(true);
                 me->GetMap()->SetZoneMusic(AREA_THE_FROZEN_THRONE, MUSIC_FURY_OF_FROSTMOURNE);
                 me->InterruptNonMeleeSpells(true);
                 me->CastSpell((Unit*)nullptr, SPELL_FURY_OF_FROSTMOURNE, false);
@@ -915,7 +912,7 @@ public:
 
         void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override
         {
-            if (spell->Id == HARVESTED_SOUL_BUFF && me->IsInCombat() && !IsHeroic() && _phase != PHASE_OUTRO && _lastTalkTimeBuff + 5 <= GameTime::GetGameTime().count())
+            if (spell->Id == sSpellMgr->GetSpellIdForDifficulty(SPELL_HARVESTED_SOUL_LK_BUFF, me) && me->IsInCombat() && !IsHeroic() && _phase != PHASE_OUTRO && _lastTalkTimeBuff + 5 <= GameTime::GetGameTime().count())
             {
                 _lastTalkTimeBuff = GameTime::GetGameTime().count();
                 Talk(SAY_LK_FROSTMOURNE_KILL);
@@ -924,7 +921,7 @@ public:
 
         void SpellHitTarget(Unit* /*target*/, SpellInfo const* spell) override
         {
-            if (spell->Id == REMORSELESS_WINTER_1 || spell->Id == REMORSELESS_WINTER_2)
+            if (spell->Id == sSpellMgr->GetSpellIdForDifficulty(SPELL_REMORSELESS_WINTER_1, me) || spell->Id == sSpellMgr->GetSpellIdForDifficulty(SPELL_REMORSELESS_WINTER_2, me))
             {
                 me->GetMap()->SetZoneOverrideLight(AREA_THE_FROZEN_THRONE, LIGHT_SNOWSTORM, 5s);
                 me->GetMap()->SetZoneWeather(AREA_THE_FROZEN_THRONE, WEATHER_STATE_LIGHT_SNOW, 0.5f);
@@ -1064,7 +1061,7 @@ public:
                     events.ScheduleEvent(EVENT_INFEST, 22s + 500ms, EVENT_GROUP_ABILITIES);
                     break;
                 case EVENT_NECROTIC_PLAGUE:
-                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, NecroticPlagueTargetCheck(me, NECROTIC_PLAGUE_LK, NECROTIC_PLAGUE_PLR)))
+                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, NecroticPlagueTargetCheck(me, sSpellMgr->GetSpellIdForDifficulty(SPELL_NECROTIC_PLAGUE, me), sSpellMgr->GetSpellIdForDifficulty(SPELL_NECROTIC_PLAGUE_JUMP, me))))
                     {
                         Talk(EMOTE_NECROTIC_PLAGUE_WARNING, target);
                         me->CastSpell(target, SPELL_NECROTIC_PLAGUE, false);
@@ -1145,7 +1142,7 @@ public:
                     {
                         me->GetMap()->SetZoneMusic(AREA_THE_FROZEN_THRONE, MUSIC_SPECIAL);
                         Talk(SAY_LK_SUMMON_VALKYR);
-                        me->CastSpell((Unit*)nullptr, SUMMON_VALKYR, false);
+                        DoCastSelf(Is25ManRaid() ? SPELL_SUMMON_VALKYR_PERIODIC : SPELL_SUMMON_VALKYR);
                         events.ScheduleEvent(EVENT_SUMMON_VALKYR, 45s, EVENT_GROUP_ABILITIES);
 
                         // schedule a defile (or reschedule it) if next defile event
@@ -1188,7 +1185,7 @@ public:
                         {
                             if (summon->GetEntry() == NPC_VILE_SPIRIT)
                             {
-                                summon->m_Events.KillAllEvents(true);
+                                summon->m_Events.KillAllEvents(false);
                                 summon->m_Events.AddEventAtOffset(new VileSpiritActivateEvent(summon), 55s);
                                 summon->GetMotionMaster()->Clear(true);
                                 summon->StopMoving();
@@ -1261,6 +1258,9 @@ public:
 
         void EnterEvadeMode(EvadeReason why) override
         {
+            if (_phase == PHASE_OUTRO || _phase == PHASE_FROSTMOURNE)
+                return;
+
             EntryCheckPredicate pred(NPC_STRANGULATE_VEHICLE);
             summons.DoAction(ACTION_TELEPORT_BACK, pred);
             instance->SetBossState(DATA_THE_LICH_KING, FAIL);
@@ -2281,7 +2281,7 @@ public:
                     {
                         me->SetControlled(false, UNIT_STATE_ROOT);
 
-                        if (!me->GetThreatMgr().isThreatListEmpty())
+                        if (!me->GetThreatMgr().IsThreatListEmpty())
                             if (Unit* target = me->SelectVictim())
                                 AttackStart(target);
                         if (!me->GetVictim())
@@ -2352,8 +2352,7 @@ class spell_the_lich_king_defile : public SpellScript
     {
         targets.remove_if(VehicleCheck());
         targets.remove_if(Acore::AllWorldObjectsInExactRange(GetCaster(), 10.0f * GetCaster()->GetFloatValue(OBJECT_FIELD_SCALE_X), true));
-        uint32 strangulatedAura[4] = {68980, 74325, 74296, 74297};
-        targets.remove_if(Acore::UnitAuraCheck(true, strangulatedAura[GetCaster()->GetMap()->GetDifficulty()]));
+        targets.remove_if(Acore::UnitAuraCheck(true, sSpellMgr->GetSpellIdForDifficulty(SPELL_HARVEST_SOUL, GetCaster())));
     }
 
     void ChangeDamageAndGrow()

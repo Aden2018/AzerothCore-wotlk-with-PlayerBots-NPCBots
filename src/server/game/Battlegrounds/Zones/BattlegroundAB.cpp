@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -197,216 +197,10 @@ void BattlegroundAB::AddBot(Creature* bot)
         BotScores[bot->GetEntry()] = new BattlegroundABScore(bot->GetGUID());
 }
 //end npcbot
-//npcbot
-void BattlegroundAB::EventBotClickedOnFlag(Creature* bot, GameObject* target_obj)
-{
-    if (GetStatus() != STATUS_IN_PROGRESS || !bot->IsWithinDistInMap(target_obj, 10.0f))
-        return;
-
-    TeamId teamId = GetBotTeamId(bot->GetGUID());
-
-    uint8 node = BG_AB_NODE_STABLES;
-    for (; node < BG_AB_DYNAMIC_NODES_COUNT; ++node)
-        if (bot->GetDistance2d(BG_AB_NodePositions[node][0], BG_AB_NodePositions[node][1]) < 10.0f)
-            break;
-
-    if (node == BG_AB_DYNAMIC_NODES_COUNT || _capturePointInfo[node]._ownerTeamId == teamId ||
-            (_capturePointInfo[node]._state == BG_AB_NODE_STATE_ALLY_CONTESTED && teamId == TEAM_ALLIANCE) ||
-            (_capturePointInfo[node]._state == BG_AB_NODE_STATE_HORDE_CONTESTED && teamId == TEAM_HORDE))
-        return;
-
-    bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_ENTER_PVP_COMBAT);
-
-    uint32 sound = 0;
-
-    DeleteBanner(node);
-    CreateBanner(node, true);
-
-    if (_capturePointInfo[node]._state == BG_AB_NODE_STATE_NEUTRAL)
-    {
-        UpdateBotScore(bot, SCORE_BASES_ASSAULTED, 1);
-        _capturePointInfo[node]._state = static_cast<uint8>(BG_AB_NODE_STATE_ALLY_CONTESTED) + teamId;
-        _capturePointInfo[node]._ownerTeamId = TEAM_NEUTRAL;
-        _bgEvents.RescheduleEvent(BG_AB_EVENT_CAPTURE_STABLE + node, BG_AB_FLAG_CAPTURING_TIME);
-        sound = BG_AB_SOUND_NODE_CLAIMED;
-
-        if (teamId == TEAM_ALLIANCE)
-        {
-            SendBroadcastText(ABNodes[node].TextAllianceClaims, CHAT_MSG_BG_SYSTEM_ALLIANCE, bot);
-        }
-        else
-        {
-            SendBroadcastText(ABNodes[node].TextHordeClaims, CHAT_MSG_BG_SYSTEM_HORDE, bot);
-        }
-    }
-    else if (_capturePointInfo[node]._state == BG_AB_NODE_STATE_ALLY_CONTESTED || _capturePointInfo[node]._state == BG_AB_NODE_STATE_HORDE_CONTESTED)
-    {
-        if (!_capturePointInfo[node]._captured)
-        {
-            UpdateBotScore(bot, SCORE_BASES_ASSAULTED, 1);
-            _capturePointInfo[node]._state = static_cast<uint8>(BG_AB_NODE_STATE_ALLY_CONTESTED) + teamId;
-            _capturePointInfo[node]._ownerTeamId = TEAM_NEUTRAL;
-            _bgEvents.RescheduleEvent(BG_AB_EVENT_CAPTURE_STABLE + node, BG_AB_FLAG_CAPTURING_TIME);
-
-            if (teamId == TEAM_ALLIANCE)
-            {
-                SendBroadcastText(ABNodes[node].TextAllianceAssaulted, CHAT_MSG_BG_SYSTEM_ALLIANCE, bot);
-            }
-            else
-            {
-                SendBroadcastText(ABNodes[node].TextHordeAssaulted, CHAT_MSG_BG_SYSTEM_HORDE, bot);
-            }
-        }
-        else
-        {
-            UpdateBotScore(bot, SCORE_BASES_DEFENDED, 1);
-            _capturePointInfo[node]._state = static_cast<uint8>(BG_AB_NODE_STATE_ALLY_OCCUPIED) + teamId;
-            _capturePointInfo[node]._ownerTeamId = teamId;
-            _bgEvents.CancelEvent(BG_AB_EVENT_CAPTURE_STABLE + node);
-            NodeOccupied(node); // after setting team owner
-
-            if (teamId == TEAM_ALLIANCE)
-            {
-                SendBroadcastText(ABNodes[node].TextAllianceDefended, CHAT_MSG_BG_SYSTEM_ALLIANCE, bot);
-            }
-            else
-            {
-                SendBroadcastText(ABNodes[node].TextHordeDefended, CHAT_MSG_BG_SYSTEM_HORDE, bot);
-            }
-        }
-
-        sound = teamId == TEAM_ALLIANCE ? BG_AB_SOUND_NODE_ASSAULTED_ALLIANCE : BG_AB_SOUND_NODE_ASSAULTED_HORDE;
-    }
-    else
-    {
-        UpdateBotScore(bot, SCORE_BASES_ASSAULTED, 1);
-        NodeDeoccupied(node); // before setting team owner to neutral
-
-        _capturePointInfo[node]._state = static_cast<uint8>(BG_AB_NODE_STATE_ALLY_CONTESTED) + teamId;
-
-        ApplyPhaseMask();
-        _bgEvents.RescheduleEvent(BG_AB_EVENT_CAPTURE_STABLE + node, BG_AB_FLAG_CAPTURING_TIME);
-        sound = teamId == TEAM_ALLIANCE ? BG_AB_SOUND_NODE_ASSAULTED_ALLIANCE : BG_AB_SOUND_NODE_ASSAULTED_HORDE;
-
-        if (teamId == TEAM_ALLIANCE)
-        {
-            SendBroadcastText(ABNodes[node].TextAllianceAssaulted, CHAT_MSG_BG_SYSTEM_ALLIANCE, bot);
-        }
-        else
-        {
-            SendBroadcastText(ABNodes[node].TextHordeAssaulted, CHAT_MSG_BG_SYSTEM_HORDE, bot);
-        }
-    }
-
-    SendNodeUpdate(node);
-    PlaySoundToAll(sound);
-}
-
-bool BattlegroundAB::IsNodeOccupied(uint8 node, TeamId teamId) const
-{
-    if (node < BG_AB_DYNAMIC_NODES_COUNT)
-    {
-        switch (teamId)
-        {
-            case TEAM_ALLIANCE:
-                return _capturePointInfo[node]._state == BG_AB_NODE_STATE_ALLY_OCCUPIED;
-            case TEAM_HORDE:
-                return _capturePointInfo[node]._state == BG_AB_NODE_STATE_HORDE_OCCUPIED;
-            default:
-                break;
-        }
-    }
-
-    return false;
-}
-bool BattlegroundAB::IsNodeContested(uint8 node, TeamId teamId) const
-{
-    if (node < BG_AB_DYNAMIC_NODES_COUNT)
-    {
-        switch (teamId)
-        {
-            case TEAM_ALLIANCE:
-                return _capturePointInfo[node]._state == BG_AB_NODE_STATE_ALLY_CONTESTED;
-            case TEAM_HORDE:
-                return _capturePointInfo[node]._state == BG_AB_NODE_STATE_HORDE_CONTESTED;
-            default:
-                break;
-        }
-    }
-
-    return false;
-}
-//end npcbot
-//npcbot
-GraveyardStruct const* BattlegroundAB::GetClosestGraveyardForBot(Creature* bot) const
-{
-    TeamId teamIndex = GetBotTeamId(bot->GetGUID());
-
-    GraveyardStruct const* entry = sGraveyard->GetGraveyard(BG_AB_GraveyardIds[static_cast<uint8>(BG_AB_SPIRIT_ALIANCE) + teamIndex]);
-    GraveyardStruct const* nearestEntry = entry;
-
-    float pX = bot->GetPositionX();
-    float pY = bot->GetPositionY();
-    float dist = (entry->x - pX) * (entry->x - pX) + (entry->y - pY) * (entry->y - pY);
-    float minDist = dist;
-
-    for (uint8 i = BG_AB_NODE_STABLES; i < BG_AB_DYNAMIC_NODES_COUNT; ++i)
-    {
-        if (_capturePointInfo[i]._ownerTeamId == teamIndex)
-        {
-            entry = sGraveyard->GetGraveyard(BG_AB_GraveyardIds[i]);
-            dist = (entry->x - pX) * (entry->x - pX) + (entry->y - pY) * (entry->y - pY);
-            if (dist < minDist)
-            {
-                minDist = dist;
-                nearestEntry = entry;
-            }
-        }
-    }
-
-    return nearestEntry;
-}
-
-void BattlegroundAB::RewardKillScore(TeamId teamId, uint32 amount)
-{
-    // Score feature
-    m_TeamScores[teamId] += amount;
-    if (m_TeamScores[teamId] > BG_AB_MAX_TEAM_SCORE)
-        m_TeamScores[teamId] = BG_AB_MAX_TEAM_SCORE;
-    UpdateWorldState(teamId == TEAM_ALLIANCE ? WORLD_STATE_BATTLEGROUND_AB_RESOURCES_ALLIANCE : WORLD_STATE_BATTLEGROUND_AB_RESOURCES_HORDE, m_TeamScores[teamId]);
-    if (m_TeamScores[teamId] >= BG_AB_MAX_TEAM_SCORE)
-        EndBattleground(teamId);
-}
-
-void BattlegroundAB::HandleBotKillPlayer(Creature* killer, Player* victim)
-{
-    if (GetStatus() != STATUS_IN_PROGRESS)
-        return;
-
-    Battleground::HandleBotKillPlayer(killer, victim);
-    //RewardKillScore(GetPlayerTeamId(killer->GetGUID()), BG_AB_TickPoints[1]);
-}
-void BattlegroundAB::HandleBotKillBot(Creature* killer, Creature* victim)
-{
-    if (GetStatus() != STATUS_IN_PROGRESS)
-        return;
-
-    Battleground::HandleBotKillBot(killer, victim);
-    //RewardKillScore(GetPlayerTeamId(killer->GetGUID()), BG_AB_TickPoints[1]);
-}
-void BattlegroundAB::HandlePlayerKillBot(Creature* victim, Player* killer)
-{
-    if (GetStatus() != STATUS_IN_PROGRESS)
-        return;
-    Battleground::HandlePlayerKillBot(victim, killer);
-    //RewardKillScore(GetPlayerTeamId(killer->GetGUID()), BG_AB_TickPoints[1]);
-}
-//end npcbot
 #endif
 
-void BattlegroundAB::RemovePlayer(Player* player)
+void BattlegroundAB::RemovePlayer(Player* /*player*/)
 {
-    player->SetPhaseMask(1, false);
 }
 
 void BattlegroundAB::HandleAreaTrigger(Player* player, uint32 trigger)
@@ -493,7 +287,6 @@ void BattlegroundAB::SendNodeUpdate(uint8 node)
 
 void BattlegroundAB::NodeOccupied(uint8 node)
 {
-    ApplyPhaseMask();
     AddSpiritGuide(node, BG_AB_SpiritGuidePos[node][0], BG_AB_SpiritGuidePos[node][1], BG_AB_SpiritGuidePos[node][2], BG_AB_SpiritGuidePos[node][3], _capturePointInfo[node]._ownerTeamId);
 
     ++_controlledPoints[_capturePointInfo[node]._ownerTeamId];
@@ -616,7 +409,6 @@ void BattlegroundAB::EventPlayerClickedOnFlag(Player* player, GameObject* gameOb
 
         _capturePointInfo[node]._state = static_cast<uint8>(BG_AB_NODE_STATE_ALLY_CONTESTED) + player->GetTeamId();
 
-        ApplyPhaseMask();
         _bgEvents.RescheduleEvent(BG_AB_EVENT_CAPTURE_STABLE + node, BG_AB_FLAG_CAPTURING_TIME);
         sound = player->GetTeamId() == TEAM_ALLIANCE ? BG_AB_SOUND_NODE_ASSAULTED_ALLIANCE : BG_AB_SOUND_NODE_ASSAULTED_HORDE;
 
@@ -633,6 +425,148 @@ void BattlegroundAB::EventPlayerClickedOnFlag(Player* player, GameObject* gameOb
     SendNodeUpdate(node);
     PlaySoundToAll(sound);
 }
+
+#ifdef MOD_NPCERBOTS
+//npcbot
+void BattlegroundAB::EventBotClickedOnFlag(Creature* bot, GameObject* target_obj)
+{
+    if (GetStatus() != STATUS_IN_PROGRESS || !bot->IsWithinDistInMap(target_obj, 10.0f))
+        return;
+
+    TeamId teamId = GetBotTeamId(bot->GetGUID());
+
+    uint8 node = BG_AB_NODE_STABLES;
+    for (; node < BG_AB_DYNAMIC_NODES_COUNT; ++node)
+        if (bot->GetDistance2d(BG_AB_NodePositions[node][0], BG_AB_NodePositions[node][1]) < 10.0f)
+            break;
+
+    if (node == BG_AB_DYNAMIC_NODES_COUNT || _capturePointInfo[node]._ownerTeamId == teamId ||
+            (_capturePointInfo[node]._state == BG_AB_NODE_STATE_ALLY_CONTESTED && teamId == TEAM_ALLIANCE) ||
+            (_capturePointInfo[node]._state == BG_AB_NODE_STATE_HORDE_CONTESTED && teamId == TEAM_HORDE))
+        return;
+
+    bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_ENTER_PVP_COMBAT);
+
+    uint32 sound = 0;
+
+    DeleteBanner(node);
+    CreateBanner(node, true);
+
+    if (_capturePointInfo[node]._state == BG_AB_NODE_STATE_NEUTRAL)
+    {
+        UpdateBotScore(bot, SCORE_BASES_ASSAULTED, 1);
+        _capturePointInfo[node]._state = static_cast<uint8>(BG_AB_NODE_STATE_ALLY_CONTESTED) + teamId;
+        _capturePointInfo[node]._ownerTeamId = TEAM_NEUTRAL;
+        _bgEvents.RescheduleEvent(BG_AB_EVENT_CAPTURE_STABLE + node, BG_AB_FLAG_CAPTURING_TIME);
+        sound = BG_AB_SOUND_NODE_CLAIMED;
+
+        if (teamId == TEAM_ALLIANCE)
+        {
+            SendBroadcastText(ABNodes[node].TextAllianceClaims, CHAT_MSG_BG_SYSTEM_ALLIANCE, bot);
+        }
+        else
+        {
+            SendBroadcastText(ABNodes[node].TextHordeClaims, CHAT_MSG_BG_SYSTEM_HORDE, bot);
+        }
+    }
+    else if (_capturePointInfo[node]._state == BG_AB_NODE_STATE_ALLY_CONTESTED || _capturePointInfo[node]._state == BG_AB_NODE_STATE_HORDE_CONTESTED)
+    {
+        if (!_capturePointInfo[node]._captured)
+        {
+            UpdateBotScore(bot, SCORE_BASES_ASSAULTED, 1);
+            _capturePointInfo[node]._state = static_cast<uint8>(BG_AB_NODE_STATE_ALLY_CONTESTED) + teamId;
+            _capturePointInfo[node]._ownerTeamId = TEAM_NEUTRAL;
+            _bgEvents.RescheduleEvent(BG_AB_EVENT_CAPTURE_STABLE + node, BG_AB_FLAG_CAPTURING_TIME);
+
+            if (teamId == TEAM_ALLIANCE)
+            {
+                SendBroadcastText(ABNodes[node].TextAllianceAssaulted, CHAT_MSG_BG_SYSTEM_ALLIANCE, bot);
+            }
+            else
+            {
+                SendBroadcastText(ABNodes[node].TextHordeAssaulted, CHAT_MSG_BG_SYSTEM_HORDE, bot);
+            }
+        }
+        else
+        {
+            UpdateBotScore(bot, SCORE_BASES_DEFENDED, 1);
+            _capturePointInfo[node]._state = static_cast<uint8>(BG_AB_NODE_STATE_ALLY_OCCUPIED) + teamId;
+            _capturePointInfo[node]._ownerTeamId = teamId;
+            _bgEvents.CancelEvent(BG_AB_EVENT_CAPTURE_STABLE + node);
+            NodeOccupied(node); // after setting team owner
+
+            if (teamId == TEAM_ALLIANCE)
+            {
+                SendBroadcastText(ABNodes[node].TextAllianceDefended, CHAT_MSG_BG_SYSTEM_ALLIANCE, bot);
+            }
+            else
+            {
+                SendBroadcastText(ABNodes[node].TextHordeDefended, CHAT_MSG_BG_SYSTEM_HORDE, bot);
+            }
+        }
+
+        sound = teamId == TEAM_ALLIANCE ? BG_AB_SOUND_NODE_ASSAULTED_ALLIANCE : BG_AB_SOUND_NODE_ASSAULTED_HORDE;
+    }
+    else
+    {
+        UpdateBotScore(bot, SCORE_BASES_ASSAULTED, 1);
+        NodeDeoccupied(node); // before setting team owner to neutral
+
+        _capturePointInfo[node]._state = static_cast<uint8>(BG_AB_NODE_STATE_ALLY_CONTESTED) + teamId;
+
+        _bgEvents.RescheduleEvent(BG_AB_EVENT_CAPTURE_STABLE + node, BG_AB_FLAG_CAPTURING_TIME);
+        sound = teamId == TEAM_ALLIANCE ? BG_AB_SOUND_NODE_ASSAULTED_ALLIANCE : BG_AB_SOUND_NODE_ASSAULTED_HORDE;
+
+        if (teamId == TEAM_ALLIANCE)
+        {
+            SendBroadcastText(ABNodes[node].TextAllianceAssaulted, CHAT_MSG_BG_SYSTEM_ALLIANCE, bot);
+        }
+        else
+        {
+            SendBroadcastText(ABNodes[node].TextHordeAssaulted, CHAT_MSG_BG_SYSTEM_HORDE, bot);
+        }
+    }
+
+    SendNodeUpdate(node);
+    PlaySoundToAll(sound);
+}
+
+bool BattlegroundAB::IsNodeOccupied(uint8 node, TeamId teamId) const
+{
+    if (node < BG_AB_DYNAMIC_NODES_COUNT)
+    {
+        switch (teamId)
+        {
+            case TEAM_ALLIANCE:
+                return _capturePointInfo[node]._state == BG_AB_NODE_STATE_ALLY_OCCUPIED;
+            case TEAM_HORDE:
+                return _capturePointInfo[node]._state == BG_AB_NODE_STATE_HORDE_OCCUPIED;
+            default:
+                break;
+        }
+    }
+
+    return false;
+}
+bool BattlegroundAB::IsNodeContested(uint8 node, TeamId teamId) const
+{
+    if (node < BG_AB_DYNAMIC_NODES_COUNT)
+    {
+        switch (teamId)
+        {
+            case TEAM_ALLIANCE:
+                return _capturePointInfo[node]._state == BG_AB_NODE_STATE_ALLY_CONTESTED;
+            case TEAM_HORDE:
+                return _capturePointInfo[node]._state == BG_AB_NODE_STATE_HORDE_CONTESTED;
+            default:
+                break;
+        }
+    }
+
+    return false;
+}
+//end npcbot
+#endif
 
 TeamId BattlegroundAB::GetPrematureWinner()
 {
@@ -747,6 +681,75 @@ GraveyardStruct const* BattlegroundAB::GetClosestGraveyard(Player* player)
     return nearestEntry;
 }
 
+#ifdef MOD_NPCERBOTS
+//npcbot
+GraveyardStruct const* BattlegroundAB::GetClosestGraveyardForBot(Creature* bot) const
+{
+    TeamId teamIndex = GetBotTeamId(bot->GetGUID());
+
+    GraveyardStruct const* entry = sGraveyard->GetGraveyard(BG_AB_GraveyardIds[static_cast<uint8>(BG_AB_SPIRIT_ALIANCE) + teamIndex]);
+    GraveyardStruct const* nearestEntry = entry;
+
+    float pX = bot->GetPositionX();
+    float pY = bot->GetPositionY();
+    float dist = (entry->x - pX) * (entry->x - pX) + (entry->y - pY) * (entry->y - pY);
+    float minDist = dist;
+
+    for (uint8 i = BG_AB_NODE_STABLES; i < BG_AB_DYNAMIC_NODES_COUNT; ++i)
+    {
+        if (_capturePointInfo[i]._ownerTeamId == teamIndex)
+        {
+            entry = sGraveyard->GetGraveyard(BG_AB_GraveyardIds[i]);
+            dist = (entry->x - pX) * (entry->x - pX) + (entry->y - pY) * (entry->y - pY);
+            if (dist < minDist)
+            {
+                minDist = dist;
+                nearestEntry = entry;
+            }
+        }
+    }
+
+    return nearestEntry;
+}
+
+void BattlegroundAB::RewardKillScore(TeamId teamId, uint32 amount)
+{
+    // Score feature
+    m_TeamScores[teamId] += amount;
+    if (m_TeamScores[teamId] > BG_AB_MAX_TEAM_SCORE)
+        m_TeamScores[teamId] = BG_AB_MAX_TEAM_SCORE;
+    UpdateWorldState(teamId == TEAM_ALLIANCE ? WORLD_STATE_BATTLEGROUND_AB_RESOURCES_ALLIANCE : WORLD_STATE_BATTLEGROUND_AB_RESOURCES_HORDE, m_TeamScores[teamId]);
+    if (m_TeamScores[teamId] >= BG_AB_MAX_TEAM_SCORE)
+        EndBattleground(teamId);
+}
+
+void BattlegroundAB::HandleBotKillPlayer(Creature* killer, Player* victim)
+{
+    if (GetStatus() != STATUS_IN_PROGRESS)
+        return;
+
+    Battleground::HandleBotKillPlayer(killer, victim);
+    //RewardKillScore(GetPlayerTeamId(killer->GetGUID()), BG_AB_TickPoints[1]);
+}
+void BattlegroundAB::HandleBotKillBot(Creature* killer, Creature* victim)
+{
+    if (GetStatus() != STATUS_IN_PROGRESS)
+        return;
+
+    Battleground::HandleBotKillBot(killer, victim);
+    //RewardKillScore(GetPlayerTeamId(killer->GetGUID()), BG_AB_TickPoints[1]);
+}
+void BattlegroundAB::HandlePlayerKillBot(Creature* victim, Player* killer)
+{
+    if (GetStatus() != STATUS_IN_PROGRESS)
+        return;
+
+    Battleground::HandlePlayerKillBot(victim, killer);
+    //RewardKillScore(GetPlayerTeamId(killer->GetGUID()), BG_AB_TickPoints[1]);
+}
+//end npcbot
+#endif
+
 bool BattlegroundAB::UpdatePlayerScore(Player* player, uint32 type, uint32 value, bool doAddHonor)
 {
     if (!Battleground::UpdatePlayerScore(player, type, value, doAddHonor))
@@ -770,20 +773,4 @@ bool BattlegroundAB::UpdatePlayerScore(Player* player, uint32 type, uint32 value
 bool BattlegroundAB::AllNodesConrolledByTeam(TeamId teamId) const
 {
     return _controlledPoints[teamId] == BG_AB_DYNAMIC_NODES_COUNT;
-}
-
-void BattlegroundAB::ApplyPhaseMask()
-{
-    uint32 phaseMask = 1;
-    for (uint32 i = BG_AB_NODE_STABLES; i < BG_AB_DYNAMIC_NODES_COUNT; ++i)
-        if (_capturePointInfo[i]._ownerTeamId != TEAM_NEUTRAL)
-            phaseMask |= 1 << (i * 2 + 1 + _capturePointInfo[i]._ownerTeamId);
-
-    const BattlegroundPlayerMap& bgPlayerMap = GetPlayers();
-
-    for (auto const& itr : bgPlayerMap)
-    {
-        itr.second->SetPhaseMask(phaseMask, false);
-        itr.second->UpdateObjectVisibility(true, false);
-    }
 }

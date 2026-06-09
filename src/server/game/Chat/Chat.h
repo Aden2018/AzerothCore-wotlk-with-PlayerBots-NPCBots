@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -32,19 +32,6 @@ class WorldSession;
 class WorldObject;
 
 struct GameTele;
-
-#ifdef MOD_PLAYERBOTS
-enum PlayerChatTag
-{
-    CHAT_TAG_NONE               = 0x00,
-    CHAT_TAG_AFK                = 0x01,
-    CHAT_TAG_DND                = 0x02,
-    CHAT_TAG_GM                 = 0x04,
-    CHAT_TAG_COM                = 0x08,                     // Commentator
-    CHAT_TAG_DEV                = 0x10,                     // Developer
-};
-typedef uint32 ChatTagFlags;
-#endif
 
 class AC_GAME_API ChatHandler
 {
@@ -178,7 +165,7 @@ public:
         return Acore::StringFormat(GetAcoreString(entry), std::forward<Args>(args)...);
     }
 
-    std::string const* GetModuleString(std::string module, uint32 id) const;
+    virtual std::string const* GetModuleString(std::string module, uint32 id) const;
 
     template<typename... Args>
     void PSendModuleSysMessage(std::string module, uint32 id, Args&&... args)
@@ -263,6 +250,7 @@ public:
     Player* GetPlayer() const;
     WorldSession* GetSession() { return m_session; }
     bool IsAvailable(uint32 securityLevel) const;
+    bool HasPermission(uint32 permissionId) const;
 protected:
     explicit ChatHandler() : m_session(nullptr), sentErrorMessage(false) {}      // for CLI subclass
 
@@ -281,6 +269,7 @@ public:
 
     // overwrite functions
     std::string GetAcoreString(uint32 entry) const override;
+    std::string const* GetModuleString(std::string module, uint32 id) const override;
     void SendSysMessage(std::string_view, bool escapeCharacters) override;
     bool ParseCommands(std::string_view str) override;
     std::string GetNameLink() const override;

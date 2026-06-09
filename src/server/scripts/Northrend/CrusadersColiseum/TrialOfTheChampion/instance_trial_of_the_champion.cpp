@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -176,11 +176,7 @@ public:
                 case VEHICLE_ARGENT_WARHORSE:
                 case VEHICLE_ARGENT_BATTLEWORG:
                     if (InstanceProgress < INSTANCE_PROGRESS_CHAMPIONS_UNMOUNTED && m_auiEncounter[0] == NOT_STARTED)
-                    {
-                        creature->DespawnOrUnsummon();
-                        creature->SetRespawnTime(3);
                         VehicleList.push_back(creature->GetGUID());
-                    }
                     else
                         creature->DespawnOrUnsummon();
                     break;
@@ -301,6 +297,7 @@ public:
             switch (InstanceProgress)
             {
                 case INSTANCE_PROGRESS_INITIAL:
+                    break;
                 case INSTANCE_PROGRESS_GRAND_CHAMPIONS_REACHED_DEST:
                 case INSTANCE_PROGRESS_CHAMPION_GROUP_DIED_1:
                 case INSTANCE_PROGRESS_CHAMPION_GROUP_DIED_2:
@@ -309,10 +306,8 @@ public:
                     {
                         for (ObjectGuid const& guid : VehicleList)
                             if (Creature* veh = instance->GetCreature(guid))
-                            {
-                                veh->DespawnOrUnsummon();
-                                veh->SetRespawnTime(3);
-                            }
+                                veh->DespawnOrUnsummon(0ms, 3s);
+                        VehicleList.clear();
                         for( uint8 i = 0; i < 3; ++i )
                         {
                             for( uint8 j = 0; j < 3; ++j )
@@ -327,11 +322,9 @@ public:
                         }
                         if (Creature* c = instance->GetCreature(NPC_AnnouncerGUID))
                         {
-                            c->DespawnOrUnsummon();
                             c->SetHomePosition(748.309f, 619.488f, 411.172f, 4.71239f);
-                            c->SetPosition(748.309f, 619.488f, 411.172f, 4.71239f);
-                            c->SetRespawnTime(3);
                             c->SetNpcFlag(UNIT_NPC_FLAG_GOSSIP);
+                            c->DespawnOrUnsummon(0ms, 3s);
                         }
                         InstanceProgress = INSTANCE_PROGRESS_INITIAL;
                     }
@@ -340,10 +333,7 @@ public:
                     {
                         if (Creature* announcer = instance->GetCreature(NPC_AnnouncerGUID))
                         {
-                            announcer->DespawnOrUnsummon();
                             announcer->SetHomePosition(735.81f, 661.92f, 412.39f, 4.714f);
-                            announcer->SetPosition(735.81f, 661.92f, 412.39f, 4.714f);
-                            announcer->SetRespawnTime(3);
                             announcer->RemoveNpcFlag(UNIT_NPC_FLAG_GOSSIP);
 
                             for( uint8 i = 0; i < 3; ++i )
@@ -376,6 +366,7 @@ public:
                                             break;
                                     }
                                 }
+                            announcer->DespawnOrUnsummon(0ms, 3s);
                         }
                     }
                     break;
@@ -398,11 +389,9 @@ public:
                         NPC_ArgentChampionGUID.Clear();
                         if (Creature* c = instance->GetCreature(NPC_AnnouncerGUID))
                         {
-                            c->DespawnOrUnsummon();
                             c->SetHomePosition(743.14f, 628.77f, 411.2f, 4.71239f);
-                            c->SetPosition(743.14f, 628.77f, 411.2f, 4.71239f);
-                            c->SetRespawnTime(3);
                             c->SetNpcFlag(UNIT_NPC_FLAG_GOSSIP);
+                            c->DespawnOrUnsummon(0ms, 3s);
                         }
                         NPC_MemoryEntry = 0;
                         InstanceProgress = INSTANCE_PROGRESS_CHAMPIONS_DEAD;
@@ -422,11 +411,9 @@ public:
                         NPC_BlackKnightGUID.Clear();
                         if (Creature* c = instance->GetCreature(NPC_AnnouncerGUID))
                         {
-                            c->DespawnOrUnsummon();
                             c->SetHomePosition(743.14f, 628.77f, 411.2f, 4.71239f);
-                            c->SetPosition(743.14f, 628.77f, 411.2f, 4.71239f);
-                            c->SetRespawnTime(3);
                             c->SetNpcFlag(UNIT_NPC_FLAG_GOSSIP);
+                            c->DespawnOrUnsummon(0ms, 3s);
                         }
                         InstanceProgress = INSTANCE_PROGRESS_ARGENT_CHALLENGE_DIED;
                     }

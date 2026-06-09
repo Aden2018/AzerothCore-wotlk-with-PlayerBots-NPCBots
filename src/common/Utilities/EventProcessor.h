@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -55,10 +55,10 @@ class BasicEvent
 
         // Aborts the event at the next update tick
         void ScheduleAbort();
-
 #ifdef MOD_NPCERBOTS
         bool IsActive() const { return m_abortState == AbortState::STATE_RUNNING; }
 #endif
+
     private:
         void SetAborted();
         [[nodiscard]] bool IsRunning() const { return (m_abortState == AbortState::STATE_RUNNING); }
@@ -123,7 +123,7 @@ class EventProcessor
         [[nodiscard]] uint64 CalculateQueueTime(uint64 delay) const;
 
         void CancelEventGroup(uint8 group);
-        bool HaveEventList() const { return !m_events.empty(); }
+        bool HasEvents() const { return !m_events.empty(); }
 
     protected:
         uint64 m_time{0};

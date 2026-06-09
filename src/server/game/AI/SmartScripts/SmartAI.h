@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -58,7 +58,7 @@ public:
     void StopPath(uint32 DespawnTime = 0, uint32 quest = 0, bool fail = false);
     void EndPath(bool fail = false);
     void ResumePath();
-    WaypointData const* GetNextWayPoint();
+    WaypointNode const* GetNextWayPoint();
     void GenerateWayPointArray(Movement::PointsArray* points);
     bool HasEscortState(uint32 uiEscortState) { return (mEscortState & uiEscortState); }
     void AddEscortState(uint32 uiEscortState) { mEscortState |= uiEscortState; }
@@ -67,6 +67,7 @@ public:
     void SetAutoAttack(bool on) { mCanAutoAttack = on; }
     void SetCombatMovement(bool on, bool stopOrStartMovement);
     void SetCurrentRangeMode(bool on, float range = 0.f);
+    void SetMainSpell(uint32 spellId);
     void DistanceYourself(float range);
     void SetFollow(Unit* target, float dist = 0.0f, float angle = 0.0f, uint32 credit = 0, uint32 end = 0, uint32 creditType = 0, bool aliveState = true);
     void StopFollow(bool complete);
@@ -83,6 +84,9 @@ public:
 
     // Called for reaction at enter to combat if not in combat yet (enemy can be nullptr)
     void JustEngagedWith(Unit* enemy) override;
+
+    // Called when creature exits combat (all combat refs gone)
+    void JustExitedCombat() override;
 
     // Called for reaction at stopping attack at no attackers or targets
     void EnterEvadeMode(EvadeReason why = EVADE_REASON_OTHER) override;
@@ -180,6 +184,7 @@ public:
     void SetSwim(bool swim = true);
 
     void SetEvadeDisabled(bool disable = true);
+    void SetSuppressEvade(bool suppress) { mSuppressEvade = suppress; }
 
     void SetInvincibilityHpLevel(uint32 level) { mInvincibilityHpLevel = level; }
 
@@ -205,6 +210,11 @@ public:
 
     void PathEndReached(uint32 pathId) override;
 
+    void WaypointPathStarted(uint32 pathId) override;
+    void WaypointStarted(uint32 nodeId, uint32 pathId) override;
+    void WaypointReached(uint32 nodeId, uint32 pathId) override;
+    void WaypointPathEnded(uint32 nodeId, uint32 pathId) override;
+
     bool CanRespawn() override { return mcanSpawn; };
     void SetCanRespawn(bool canSpawn) { mcanSpawn = canSpawn; }
 
@@ -213,10 +223,15 @@ public:
 
     void DistancingEnded() override;
 
+    bool IsMainSpellPrevented(SpellInfo const* spellInfo) const;
+
+    void OnSpellFailed(SpellInfo const* spell) override;
+
 private:
     bool mIsCharmed;
     uint32 mFollowCreditType;
     uint32 mFollowArrivedTimer;
+    uint32 _followCheckTimer;
     uint32 mFollowCredit;
     uint32 mFollowArrivedEntry;
     bool   mFollowArrivedAlive;
@@ -233,11 +248,12 @@ private:
     bool mWPReached;
     bool mOOCReached;
     uint32 mWPPauseTimer;
-    WaypointData const* mLastWP;
+    WaypointNode const* mLastWP;
     uint32 mEscortNPCFlags;
-    uint32 GetWPCount() { return mWayPoints ? mWayPoints->size() : 0; }
+    uint32 GetWPCount() { return mWayPoints ? mWayPoints->Nodes.size() : 0; }
     bool mCanRepeatPath;
     bool mEvadeDisabled;
+    bool mSuppressEvade;
     bool mCanAutoAttack;
     bool mForcedPaused;
     uint32 mInvincibilityHpLevel;
@@ -248,6 +264,7 @@ private:
     uint32 mDespawnTime;
     uint32 mDespawnState;
     void UpdateDespawn(const uint32 diff);
+    void UpdateFollow(const uint32 diff);
     uint32 mEscortInvokerCheckTimer;
     bool mJustReset;
 
@@ -264,6 +281,7 @@ private:
     bool _currentRangeMode;
     float _attackDistance;
     float _pendingDistancing;
+    uint32 _mainSpellId;
 };
 
 class SmartGameObjectAI : public GameObjectAI

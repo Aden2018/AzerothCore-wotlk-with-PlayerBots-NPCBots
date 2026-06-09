@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -95,32 +95,6 @@ public:
     bool Empty() const
     {
         return _eventMap.empty();
-    }
-
-    /**
-    * @return Current internal time as uint32 milliseconds
-    * 
-    * was removed in core https://github.com/azerothcore/azerothcore-wotlk/pull/23121,
-    * but still required atm for mod-playerbot.
-    */
-    uint32 GetTimer() const
-    {
-        return static_cast<uint32>(duration_cast<Milliseconds>(_time.time_since_epoch()).count());
-    }
-
-    /**
-    * @return Time of found even
-    *
-    * was removed in core https://github.com/azerothcore/azerothcore-wotlk/pull/23121,
-    * but still required atm for mod-playerbot.
-    */
-    uint32 GetNextEventTime(uint16 eventId) const
-    {
-        auto timeUntil = GetTimeUntilEvent(eventId);
-        if (timeUntil == Milliseconds::max())
-            return 0;
-
-        return GetTimer() + static_cast<uint32>(timeUntil.count());
     }
 
     /**

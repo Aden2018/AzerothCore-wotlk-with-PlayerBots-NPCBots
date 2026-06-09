@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -22,6 +22,7 @@
 #include "Errors.h"
 #include "LFGMgr.h"
 #include "Log.h"
+#include "RaceMgr.h"
 #include "SharedDefines.h"
 #include "SpellMgr.h"
 #include "TransportMgr.h"
@@ -431,7 +432,7 @@ void LoadDBCStores(const std::string& dataPath)
 
 #ifdef MOD_PLAYERBOTS
     for (CharSectionsEntry const* charSection : sCharSectionsStore)
-        if (charSection->Race && ((1 << (charSection->Race - 1)) & RACEMASK_ALL_PLAYABLE) != 0) //ignore Nonplayable races
+        if (charSection->Race && ((1 << (charSection->Race - 1)) & sRaceMgr->GetPlayableRaceMask()) != 0) //ignore Nonplayable races
             sCharSectionMap.insert({ charSection->GenType | (charSection->Gender << 8) | (charSection->Race << 16), charSection });
 #endif
 

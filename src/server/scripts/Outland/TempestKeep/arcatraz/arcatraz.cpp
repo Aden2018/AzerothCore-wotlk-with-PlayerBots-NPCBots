@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -385,11 +385,11 @@ public:
 
         void DamageTaken(Unit* attacker, uint32& damage, DamageEffectType, SpellSchoolMask) override
         {
-            if (attacker && attacker->GetCharmerOrOwnerOrOwnGUID().IsPlayer() && damage > 0 && !me->isActiveObject())
+            if (attacker && attacker->GetCharmerOrOwnerOrOwnGUID().IsPlayer() && damage > 0 && instance->GetBossState(DATA_WARDEN_MELLICHAR) != IN_PROGRESS)
             {
                 me->setActive(true);
                 me->InterruptNonMeleeSpells(false);
-                me->SetImmuneToAll(true);
+                me->SetImmuneToAll(true, true);
                 events.ScheduleEvent(EVENT_WARDEN_INTRO1, 1500ms);
                 events.ScheduleEvent(EVENT_WARDEN_CHECK_PLAYERS, 1s);
                 instance->SetBossState(DATA_WARDEN_MELLICHAR, IN_PROGRESS);

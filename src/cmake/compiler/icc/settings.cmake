@@ -10,11 +10,6 @@
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #
 
-# Set build-directive (used in core to tell which buildtype we used)
-target_compile_definitions(acore-compile-option-interface
-  INTERFACE
-    -D_BUILD_DIRECTIVE="${CMAKE_BUILD_TYPE}")
-
 if(PLATFORM EQUAL 32)
   target_compile_options(acore-compile-option-interface
     INTERFACE
@@ -24,6 +19,16 @@ else()
     INTERFACE
       -xSSE2)
 endif()
+
+target_compile_definitions(acore-compile-option-interface
+  INTERFACE
+    -DDIY_ADEN2008
+    -DMOD_NPCERBOTS
+    -DMOD_PLAYERBOTS)
+
+message(STATUS "ICC: Enable DIY_ADEN2008")
+message(STATUS "ICC: Enable MOD_NPCERBOTS")
+message(STATUS "ICC: Enable MOD_PLAYERBOTS")
 
 if(WITH_WARNINGS)
   target_compile_options(acore-warning-interface

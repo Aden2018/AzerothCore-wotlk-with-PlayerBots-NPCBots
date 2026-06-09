@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -904,7 +904,7 @@ struct npc_akama_illidan : public ScriptedAI
         else if (type == WAYPOINT_MOTION_TYPE)
         {
             if (me->GetCurrentWaypointID() == PATH_AKAMA_MINIONS)
-                if (id == 2)
+                if (id == 3)
                     DoCastSelf(SPELL_AKAMA_TELEPORT);
         }
     }
@@ -1000,7 +1000,8 @@ struct npc_akama_illidan : public ScriptedAI
     void JustReachedHome() override
     {
         // Minions Event
-        if (instance->GetBossState(DATA_ILLIDAN_STORMRAGE) == IN_PROGRESS && !instance->GetCreature(DATA_ILLIDAN_STORMRAGE)->HasAura(SPELL_DEATH))
+        Creature* illidan = instance->GetCreature(DATA_ILLIDAN_STORMRAGE);
+        if (illidan && instance->GetBossState(DATA_ILLIDAN_STORMRAGE) == IN_PROGRESS && !illidan->HasAura(SPELL_DEATH))
         {
             me->SetReactState(REACT_PASSIVE);
             me->RemoveNpcFlag(UNIT_NPC_FLAG_GOSSIP);
@@ -1100,16 +1101,29 @@ struct npc_maiev_illidan : public ScriptedAI
         instance = creature->GetInstanceScript();
     }
 
+    bool _outroActive{ false };
+
     void Reset() override
     {
+        if (_outroActive)
+            return;
         scheduler.CancelAll();
-        me->m_Events.KillAllEvents(true);
+        me->m_Events.KillAllEvents(false);
+    }
+
+    void JustExitedCombat() override
+    {
+        EngagementOver();
+        if (_outroActive)
+            return;
+        EnterEvadeMode(EVADE_REASON_NO_HOSTILES);
     }
 
     void DoAction(int32 param) override
     {
         if (param == ACTION_MAIEV_ENDING)
         {
+            _outroActive = true;
             scheduler.CancelAll();
             me->SetReactState(REACT_PASSIVE);
             DoStopAttack();

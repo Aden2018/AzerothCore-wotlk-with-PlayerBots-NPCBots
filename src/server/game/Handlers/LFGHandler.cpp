@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -23,6 +23,7 @@
 #include "ObjectMgr.h"
 #include "Opcodes.h"
 #include "Player.h"
+#include "ScriptMgr.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
 
@@ -188,10 +189,13 @@ void WorldSession::HandleLfgPlayerLockInfoRequestOpcode(WorldPacket& /*recvData*
         if (quest)
         {
             uint8 playerLevel = GetPlayer() ? GetPlayer()->GetLevel() : 0;
+            uint8 playerLevelForXP = playerLevel;
+            sScriptMgr->OnPlayerBeforeGetLevelForXPGain(GetPlayer(), playerLevelForXP);
+
             data << uint8(done);
             data << uint32(quest->GetRewOrReqMoney(playerLevel));
-            if (!GetPlayer()->IsMaxLevel())
-                data << uint32(quest->XPValue(playerLevel));
+            if (playerLevelForXP < GetPlayer()->GetUInt32Value(PLAYER_FIELD_MAX_LEVEL))
+                data << uint32(quest->XPValue(playerLevelForXP));
             else
                 data << uint32(0);
             data << uint32(0);
@@ -479,6 +483,8 @@ void WorldSession::SendLfgPlayerReward(lfg::LfgPlayerRewardData const& rewardDat
     uint8 itemNum = rewardData.quest->GetRewItemsCount();
 
     uint8 playerLevel = GetPlayer() ? GetPlayer()->GetLevel() : 0;
+    uint8 playerLevelForXP = playerLevel;
+    sScriptMgr->OnPlayerBeforeGetLevelForXPGain(GetPlayer(), playerLevelForXP);
 
     WorldPacket data(SMSG_LFG_PLAYER_REWARD, 4 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 1 + itemNum * (4 + 4 + 4));
     data << uint32(rewardData.rdungeonEntry);              // Random Dungeon Finished
@@ -486,7 +492,7 @@ void WorldSession::SendLfgPlayerReward(lfg::LfgPlayerRewardData const& rewardDat
     data << uint8(rewardData.done);
     data << uint32(1);
     data << uint32(rewardData.quest->GetRewOrReqMoney(playerLevel));
-    data << uint32(rewardData.quest->XPValue(playerLevel));
+    data << uint32(rewardData.quest->XPValue(playerLevelForXP));
     data << uint32(0);
     data << uint32(0);
     data << uint8(itemNum);

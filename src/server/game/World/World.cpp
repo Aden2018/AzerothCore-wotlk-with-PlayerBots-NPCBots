@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -60,7 +60,6 @@
 #include "LootItemStorage.h"
 #include "LootMgr.h"
 #include "M2Stores.h"
-#include "MMapFactory.h"
 #include "MapMgr.h"
 #include "Metric.h"
 #include "MotdMgr.h"
@@ -74,6 +73,7 @@
 #include "Player.h"
 #include "PlayerDump.h"
 #include "PoolMgr.h"
+#include "RaceMgr.h"
 #include "Realm.h"
 #include "ScriptMgr.h"
 #include "ServerMailMgr.h"
@@ -141,7 +141,6 @@ World::~World()
         delete command;
 
     VMAP::VMapFactory::clear();
-    MMAP::MMapFactory::clear();
 }
 
 std::unique_ptr<IWorld>& getWorldInstance()
@@ -286,17 +285,15 @@ void World::LoadConfigSettings(bool reload)
     }
 
     bool const enableIndoor = getBoolConfig(CONFIG_VMAP_INDOOR_CHECK);
-    bool const enableLOS = sConfigMgr->GetOption<bool>("vmap.enableLOS", true);
+    bool const enableLOS = getBoolConfig(CONFIG_VMAP_ENABLE_LOS);
     bool const enablePetLOS = getBoolConfig(CONFIG_PET_LOS);
-    bool const enableHeight = sConfigMgr->GetOption<bool>("vmap.enableHeight", true);
+    bool const enableHeight = getBoolConfig(CONFIG_VMAP_ENABLE_HEIGHT);
     if (!enableHeight)
         LOG_ERROR("server.loading", "VMap height checking disabled! Creatures movements and other various things WILL be broken! Expect no support.");
 
     VMAP::VMapFactory::createOrGetVMapMgr()->setEnableLineOfSightCalc(enableLOS);
     VMAP::VMapFactory::createOrGetVMapMgr()->setEnableHeightCalc(enableHeight);
     LOG_INFO("server.loading", "WORLD: VMap support included. LineOfSight:{}, getHeight:{}, indoorCheck:{} PetLOS:{}", enableLOS, enableHeight, enableIndoor, enablePetLOS);
-
-    MMAP::MMapFactory::InitializeDisabledMaps();
 
     // call ScriptMgr if we're reloading the configuration
     sScriptMgr->OnAfterConfigLoad(reload);
@@ -388,19 +385,11 @@ void World::SetInitialWorldSettings()
     // Load cinematic cameras
     LoadM2Cameras(_dataPath);
 
+    LOG_INFO("server.loading", "Loading Player race data...");
+    sRaceMgr->LoadRaces();
+
     // Load IP Location Database
     sIPLocation->Load();
-
-    std::vector<uint32> mapIds;
-    for (auto const& map : sMapStore)
-    {
-        mapIds.emplace_back(map->MapID);
-    }
-
-    vmmgr2->InitializeThreadUnsafe(mapIds);
-
-    MMAP::MMapMgr* mmmgr = MMAP::MMapFactory::createOrGetMMapMgr();
-    mmmgr->InitializeThreadUnsafe(mapIds);
 
     LOG_INFO("server.loading", "Loading Game Graveyard...");
     sGraveyard->LoadGraveyardFromDB();
@@ -431,6 +420,12 @@ void World::SetInitialWorldSettings()
 
     LOG_INFO("server.loading", "Loading SpellInfo Custom Attributes...");
     sSpellMgr->LoadSpellInfoCustomAttributes();
+
+    LOG_INFO("server.loading", "Loading Spell Jump Distances...");
+    sSpellMgr->LoadSpellJumpDistances();
+
+    LOG_INFO("server.loading", "Loading SpellInfo Immunity infos...");
+    sSpellMgr->LoadSpellInfoImmunities();
 
     LOG_INFO("server.loading", "Loading Player Totem models...");
     sObjectMgr->LoadPlayerTotemModels();
@@ -477,6 +472,9 @@ void World::SetInitialWorldSettings()
     LOG_INFO("server.loading", ">> Localization Strings loaded in {} ms", GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
 
+    LOG_INFO("server.loading", "Loading Account Roles and Permissions...");
+    sAccountMgr->LoadRBAC();
+
     LOG_INFO("server.loading", "Loading Page Texts...");
     sObjectMgr->LoadPageTexts();
 
@@ -497,9 +495,6 @@ void World::SetInitialWorldSettings()
 
     LOG_INFO("server.loading", "Loading Spell Learn Skills...");
     sSpellMgr->LoadSpellLearnSkills();                           // must be after LoadSpellRanks
-
-    LOG_INFO("server.loading", "Loading Spell Proc Event Conditions...");
-    sSpellMgr->LoadSpellProcEvents();
 
     LOG_INFO("server.loading", "Loading Spell Proc Conditions and Data...");
     sSpellMgr->LoadSpellProcs();
@@ -564,6 +559,9 @@ void World::SetInitialWorldSettings()
     LOG_INFO("server.loading", "Loading Creature Base Stats...");
     sObjectMgr->LoadCreatureClassLevelStats();
 
+    LOG_INFO("server.loading", "Loading Spawn Group Templates...");
+    sObjectMgr->LoadSpawnGroupTemplates();
+
     LOG_INFO("server.loading", "Loading Creature Data...");
     sObjectMgr->LoadCreatures();
 
@@ -572,6 +570,9 @@ void World::SetInitialWorldSettings()
 
     LOG_INFO("server.loading", "Loading Temporary Summon Data...");
     sObjectMgr->LoadTempSummons();                               // must be after LoadCreatureTemplates() and LoadGameObjectTemplates()
+
+    LOG_INFO("server.loading", "Loading Gameobject Summon Data...");
+    sObjectMgr->LoadGameObjectSummons();                         // must be after LoadCreatureTemplates() and LoadGameObjectTemplates()
 
     LOG_INFO("server.loading", "Loading Pet Levelup Spells...");
     sSpellMgr->LoadPetLevelupSpellMap();
@@ -587,6 +588,9 @@ void World::SetInitialWorldSettings()
 
     LOG_INFO("server.loading", "Loading Gameobject Data...");
     sObjectMgr->LoadGameobjects();
+
+    LOG_INFO("server.loading", "Loading Spawn Group Data...");
+    sObjectMgr->LoadSpawnGroups();                                 // must be after LoadCreatures() and LoadGameobjects()
 
     LOG_INFO("server.loading", "Loading GameObject Addon Data...");
     sObjectMgr->LoadGameObjectAddons();                          // must be after LoadGameObjectTemplate() and LoadGameobjects()
@@ -769,6 +773,12 @@ void World::SetInitialWorldSettings()
     LOG_INFO("server.loading", "Loading GameTeleports...");
     sObjectMgr->LoadGameTele();
 
+    LOG_INFO("server.loading", "Loading Trainers..."); // must be after LoadCreatureTemplates
+    sObjectMgr->LoadTrainers();
+
+    LOG_INFO("server.loading", "Loading Creature default trainers...");
+    sObjectMgr->LoadCreatureDefaultTrainers();
+
     LOG_INFO("server.loading", "Loading Gossip Menu...");
     sObjectMgr->LoadGossipMenu();
 
@@ -778,11 +788,11 @@ void World::SetInitialWorldSettings()
     LOG_INFO("server.loading", "Loading Vendors...");
     sObjectMgr->LoadVendors();                                   // must be after load CreatureTemplate and ItemTemplate
 
-    LOG_INFO("server.loading", "Loading Trainers...");
-    sObjectMgr->LoadTrainerSpell();                              // must be after load CreatureTemplate
-
     LOG_INFO("server.loading", "Loading Waypoints...");
     sWaypointMgr->Load();
+
+    LOG_INFO("server.loading", "Loading Waypoint Addons...");
+    sWaypointMgr->LoadWaypointAddons();
 
     LOG_INFO("server.loading", "Loading SmartAI Waypoints...");
     sSmartWaypointMgr->LoadFromDB();
@@ -1743,6 +1753,16 @@ void World::ResetEventSeasonalQuests(uint16 event_id)
     for (WorldSessionMgr::SessionMap::const_iterator itr = sessionMap.begin(); itr != sessionMap.end(); ++itr)
         if (itr->second->GetPlayer())
             itr->second->GetPlayer()->ResetSeasonalQuestStatus(event_id);
+}
+
+void World::ReloadRBAC()
+{
+    // Passive reload, we mark the data as invalidated and next time a permission is checked it will be reloaded
+    LOG_INFO("rbac", "World::ReloadRBAC()");
+    WorldSessionMgr::SessionMap const& sessionMap = sWorldSessionMgr->GetAllSessions();
+    for (WorldSessionMgr::SessionMap::const_iterator itr = sessionMap.begin(); itr != sessionMap.end(); ++itr)
+        if (WorldSession* session = itr->second)
+            session->InvalidateRBACData();
 }
 
 void World::ResetRandomBG()

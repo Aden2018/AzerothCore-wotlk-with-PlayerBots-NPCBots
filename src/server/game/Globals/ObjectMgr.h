@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -33,6 +33,7 @@
 #include "ObjectDefines.h"
 #include "QuestDef.h"
 #include "TemporarySummon.h"
+#include "Trainer.h"
 #include "VehicleDefines.h"
 #include <functional>
 #include <limits>
@@ -524,7 +525,10 @@ struct AcoreString
 typedef std::map<ObjectGuid, ObjectGuid> LinkedRespawnContainer;
 typedef std::unordered_map<ObjectGuid::LowType, CreatureData> CreatureDataContainer;
 typedef std::unordered_map<ObjectGuid::LowType, GameObjectData> GameObjectDataContainer;
+typedef std::unordered_map<uint32, SpawnGroupTemplateData> SpawnGroupDataContainer;
+typedef std::multimap<uint32, SpawnData const*> SpawnGroupLinkContainer;
 typedef std::map<TempSummonGroupKey, std::vector<TempSummonData> > TempSummonDataContainer;
+typedef std::map<TempSummonGroupKey, std::vector<GameObjectSummonData> > GameObjectSummonDataContainer;
 typedef std::unordered_map<uint32, CreatureLocale> CreatureLocaleContainer;
 typedef std::unordered_map<uint32, GameObjectLocale> GameObjectLocaleContainer;
 typedef std::unordered_map<uint32, ItemLocale> ItemLocaleContainer;
@@ -683,7 +687,6 @@ typedef std::unordered_map<uint32, QuestPOIVector> QuestPOIContainer;
 typedef std::map<std::pair<uint32, uint8>, QuestGreeting> QuestGreetingContainer;
 
 typedef std::unordered_map<uint32, VendorItemData> CacheVendorItemContainer;
-typedef std::unordered_map<uint32, TrainerSpellData> CacheTrainerSpellContainer;
 
 typedef std::vector<uint32> CreatureCustomIDsContainer;
 
@@ -829,6 +832,7 @@ public:
     void GetPlayerLevelInfo(uint32 race, uint32 class_, uint8 level, PlayerLevelInfo* info) const;
 
     uint32 GetNearestTaxiNode(float x, float y, float z, uint32 mapid, uint32 teamId);
+    uint32 GetNearestTaxiNode(WorldLocation const& loc, uint32 teamId);
     void GetTaxiPath(uint32 source, uint32 destination, uint32& path, uint32& cost);
     uint32 GetTaxiMountDisplayId(uint32 id, TeamId teamId, bool allowed_alt_team = false);
 
@@ -1058,6 +1062,9 @@ public:
     void LoadGameObjectQuestItems();
     void LoadCreatureQuestItems();
     void LoadTempSummons();
+    void LoadGameObjectSummons();
+    void LoadSpawnGroupTemplates();
+    void LoadSpawnGroups();
     void LoadCreatures();
     void LoadCreatureSparring();
     void LoadLinkedRespawn();
@@ -1132,8 +1139,8 @@ public:
     void LoadGossipMenuItems();
 
     void LoadVendors();
-    void LoadTrainerSpell();
-    void AddSpellToTrainer(uint32 entry, uint32 spell, uint32 spellCost, uint32 reqSkill, uint32 reqSkillValue, uint32 reqLevel, uint32 reqSpell);
+    void LoadTrainers();
+    void LoadCreatureDefaultTrainers();
 
     std::string GeneratePetName(uint32 entry);
     std::string GeneratePetNameLocale(uint32 entry, LocaleConstant locale);
@@ -1170,6 +1177,18 @@ public:
     typedef std::pair<ExclusiveQuestGroups::const_iterator, ExclusiveQuestGroups::const_iterator> ExclusiveQuestGroupsBounds;
 
     ExclusiveQuestGroups mExclusiveQuestGroups;
+
+    typedef std::unordered_map<uint32, std::vector<uint32>> BreadcrumbQuestMap;
+    BreadcrumbQuestMap _breadcrumbsForQuest;
+
+    [[nodiscard]] std::vector<uint32> const* GetBreadcrumbsForQuest(uint32 questId) const
+    {
+        auto itr = _breadcrumbsForQuest.find(questId);
+        if (itr != _breadcrumbsForQuest.end())
+            return &itr->second;
+
+        return nullptr;
+    }
 
     MailLevelReward const* GetMailLevelReward(uint32 level, uint32 raceMask)
     {
@@ -1222,6 +1241,15 @@ public:
         return nullptr;
     }
 
+    [[nodiscard]] std::vector<GameObjectSummonData> const* GetGameObjectSummonGroup(uint32 summonerId, SummonerType summonerType, uint8 group) const
+    {
+        GameObjectSummonDataContainer::const_iterator itr = _goSummonDataStore.find(TempSummonGroupKey(summonerId, summonerType, group));
+        if (itr != _goSummonDataStore.end())
+            return &itr->second;
+
+        return nullptr;
+    }
+
     [[nodiscard]] BroadcastText const* GetBroadcastText(uint32 id) const
     {
         BroadcastTextContainer::const_iterator itr = _broadcastTextStore.find(id);
@@ -1240,6 +1268,21 @@ public:
     [[nodiscard]] CreatureSparringContainer const& GetSparringData() const { return _creatureSparringStore; }
 
     CreatureData& NewOrExistCreatureData(ObjectGuid::LowType spawnId) { return _creatureDataStore[spawnId]; }
+    /**
+     * @brief Loads a single creature spawn entry from the database into the data store cache.
+     *
+     * This is needed as a prerequisite for Creature::LoadCreatureFromDB(), which reads
+     * from the in-memory cache (via GetCreatureData()) rather than querying the DB itself.
+     * For spawns not loaded during server startup, this method populates the cache so that
+     * Creature::LoadCreatureFromDB() can then create the live entity.
+     *
+     * Returns the cached data if already loaded, or nullptr if the spawn doesn't exist
+     * or fails validation.
+     *
+     * @param spawnId The creature spawn GUID to load.
+     * @return Pointer to the cached CreatureData, or nullptr on failure.
+     */
+    CreatureData const* LoadCreatureDataFromDB(ObjectGuid::LowType spawnId);
     void DeleteCreatureData(ObjectGuid::LowType spawnId);
     [[nodiscard]] ObjectGuid GetLinkedRespawnGuid(ObjectGuid guid) const
     {
@@ -1256,6 +1299,21 @@ public:
         if (itr == _gameObjectDataStore.end()) return nullptr;
             return &itr->second;
     }
+    [[nodiscard]] SpawnData const* GetSpawnData(SpawnObjectType type, ObjectGuid::LowType spawnId) const;
+
+    [[nodiscard]] SpawnGroupTemplateData const* GetSpawnGroupData(uint32 groupId) const
+    {
+        auto itr = _spawnGroupDataStore.find(groupId);
+        return itr != _spawnGroupDataStore.end() ? &itr->second : nullptr;
+    }
+    [[nodiscard]] SpawnGroupTemplateData const* GetDefaultSpawnGroup() const { return &_spawnGroupDataStore.at(0); }
+    [[nodiscard]] SpawnGroupTemplateData const* GetLegacySpawnGroup() const { return &_spawnGroupDataStore.at(1); }
+    std::pair<SpawnGroupLinkContainer::const_iterator, SpawnGroupLinkContainer::const_iterator> GetSpawnDataForGroup(uint32 groupId) const
+    {
+        return _spawnGroupMapStore.equal_range(groupId);
+    }
+    void OnDeleteSpawnData(SpawnData const* data);
+
     [[nodiscard]] CreatureLocale const* GetCreatureLocale(uint32 entry) const
     {
         CreatureLocaleContainer::const_iterator itr = _creatureLocaleStore.find(entry);
@@ -1325,6 +1383,21 @@ public:
     [[nodiscard]] QuestGreeting const* GetQuestGreeting(TypeID type, uint32 id) const;
 
     GameObjectData& NewGOData(ObjectGuid::LowType guid) { return _gameObjectDataStore[guid]; }
+    /**
+     * @brief Loads a single gameobject spawn entry from the database into the data store cache.
+     *
+     * This is needed as a prerequisite for GameObject::LoadGameObjectFromDB(), which reads
+     * from the in-memory cache (via GetGameObjectData()) rather than querying the DB itself.
+     * For spawns not loaded during server startup, this method populates the cache so that
+     * GameObject::LoadGameObjectFromDB() can then create the live entity.
+     *
+     * Returns the cached data if already loaded, or nullptr if the spawn doesn't exist
+     * or fails validation.
+     *
+     * @param spawnId The gameobject spawn GUID to load.
+     * @return Pointer to the cached GameObjectData, or nullptr on failure.
+     */
+    GameObjectData const* LoadGameObjectDataFromDB(ObjectGuid::LowType spawnId);
     void DeleteGOData(ObjectGuid::LowType guid);
 
     [[nodiscard]] ModuleString const* GetModuleString(std::string module, uint32 id) const
@@ -1394,14 +1467,8 @@ public:
     CreatureOutfitContainer const& GetCreatureOutfitMap() const { return _creatureOutfitStore; }
 #endif
 
-    [[nodiscard]] TrainerSpellData const* GetNpcTrainerSpells(uint32 entry) const
-    {
-        CacheTrainerSpellContainer::const_iterator  iter = _cacheTrainerSpellStore.find(entry);
-        if (iter == _cacheTrainerSpellStore.end())
-            return nullptr;
-
-        return &iter->second;
-    }
+    Trainer::Trainer* GetTrainer(uint32 creatureId);
+    std::vector<Trainer::Trainer const*> const& GetClassTrainers(uint8 classId) const { return _classTrainers.at(classId); }
 
     [[nodiscard]] VendorItemData const* GetNpcVendorItemList(uint32 entry) const
     {
@@ -1412,9 +1479,9 @@ public:
         return &iter->second;
     }
 
-    void AddVendorItem(uint32 entry, uint32 item, int32 maxcount, uint32 incrtime, uint32 extendedCost, bool persist = true); // for event
+    void AddVendorItem(uint32 entry, uint32 item, uint32 maxcount, uint32 incrtime, uint32 extendedCost, bool persist = true); // for event
     bool RemoveVendorItem(uint32 entry, uint32 item, bool persist = true); // for event
-    bool IsVendorItemValid(uint32 vendor_entry, uint32 item, int32 maxcount, uint32 ptime, uint32 ExtendedCost, Player* player = nullptr, std::set<uint32>* skip_vendors = nullptr, uint32 ORnpcflag = 0) const;
+    bool IsVendorItemValid(uint32 vendor_entry, uint32 item, uint32 maxcount, uint32 ptime, uint32 ExtendedCost, Player* player = nullptr, std::set<uint32>* skip_vendors = nullptr, uint32 ORnpcflag = 0) const;
 
     void LoadScriptNames();
     ScriptNameContainer& GetScriptNames() { return _scriptNamesStore; }
@@ -1567,11 +1634,11 @@ private:
     PageTextContainer _pageTextStore;
     InstanceTemplateContainer _instanceTemplateStore;
 
-    CreatureSparringContainer _creatureSparringStore;
-
 #ifdef MOD_NPCERBOTS
     CreatureOutfitContainer _creatureOutfitStore;
 #endif
+
+    CreatureSparringContainer _creatureSparringStore;
 
 private:
     void LoadScripts(ScriptsType type);
@@ -1590,7 +1657,7 @@ private:
 
     void BuildPlayerLevelInfo(uint8 race, uint8 class_, uint8 level, PlayerLevelInfo* plinfo) const;
 
-    PlayerInfo* _playerInfo[MAX_RACES][MAX_CLASSES];
+    std::vector<std::vector<PlayerInfo*>> _playerInfo;
 
     typedef std::vector<uint32> PlayerXPperLevel;       // [level]
     PlayerXPperLevel _playerXPperLevel;
@@ -1629,11 +1696,15 @@ private:
     LinkedRespawnContainer _linkedRespawnStore;
     CreatureLocaleContainer _creatureLocaleStore;
     GameObjectDataContainer _gameObjectDataStore;
+    SpawnGroupDataContainer _spawnGroupDataStore;
+    SpawnGroupLinkContainer _spawnGroupMapStore;
     GameObjectLocaleContainer _gameObjectLocaleStore;
     GameObjectTemplateContainer _gameObjectTemplateStore;
     GameObjectTemplateAddonContainer _gameObjectTemplateAddonStore;
     /// Stores temp summon data grouped by summoner's entry, summoner's type and group id
     TempSummonDataContainer _tempSummonDataStore;
+    /// Stores gameobject summon data grouped by summoner's entry, summoner's type and group id
+    GameObjectSummonDataContainer _goSummonDataStore;
 
     BroadcastTextContainer _broadcastTextStore;
     ItemTemplateContainer _itemTemplateStore;
@@ -1651,7 +1722,9 @@ private:
     PointOfInterestLocaleContainer _pointOfInterestLocaleStore;
 
     CacheVendorItemContainer _cacheVendorItemStore;
-    CacheTrainerSpellContainer _cacheTrainerSpellStore;
+    std::unordered_map<uint32, Trainer::Trainer> _trainers;
+    std::unordered_map<uint8, std::vector<Trainer::Trainer const*>> _classTrainers;
+    std::unordered_map<uint32, uint32> _creatureDefaultTrainers;
 
     std::set<uint32> _difficultyEntries[MAX_DIFFICULTY - 1]; // already loaded difficulty 1 value in creatures, used in CheckCreatureTemplate
     std::set<uint32> _hasDifficultyEntries[MAX_DIFFICULTY - 1]; // already loaded creatures with difficulty 1 values, used in CheckCreatureTemplate

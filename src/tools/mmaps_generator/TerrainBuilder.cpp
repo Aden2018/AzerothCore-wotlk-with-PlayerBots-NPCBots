@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -676,24 +676,20 @@ namespace MMAP
     /**************************************************************************/
     bool TerrainBuilder::loadVMap(uint32 mapID, uint32 tileX, uint32 tileY, MeshData& meshData)
     {
-        IVMapMgr* vmapMgr = new VMapMgr2();
-        int result = vmapMgr->loadMap(m_vmapsPath.c_str(), mapID, tileX, tileY);
+        std::string const mapFileName = VMapMgr2::getMapFileName(mapID);
+        std::unique_ptr<StaticMapTree> staticTree = std::make_unique<StaticMapTree>(mapID, m_vmapsPath);
+        if (!staticTree->InitMap(mapFileName))
+            return false;
+
+        staticTree->LoadMapTile(tileX, tileY);
+
         bool retval = false;
 
         do
         {
-            if (result == VMAP_LOAD_RESULT_ERROR)
-                break;
-
-            InstanceTreeMap instanceTrees;
-            ((VMapMgr2*)vmapMgr)->GetInstanceMapTree(instanceTrees);
-
-            if (!instanceTrees[mapID])
-                break;
-
             ModelInstance* models = nullptr;
             uint32 count = 0;
-            instanceTrees[mapID]->GetModelInstances(models, count);
+            staticTree->GetModelInstances(models, count);
 
             if (!models)
                 break;
@@ -828,9 +824,6 @@ namespace MMAP
                 }
             }
         } while (false);
-
-        vmapMgr->unloadMap(mapID, tileX, tileY);
-        delete vmapMgr;
 
         return retval;
     }

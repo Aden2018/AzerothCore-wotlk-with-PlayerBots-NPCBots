@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -704,14 +704,14 @@ public:
             if (_instance->GetBossState(DATA_ICECROWN_GUNSHIP_BATTLE) != IN_PROGRESS)
                 return;
 
+            // Blizzlike: ship wipes when all players are in cannons (vehicles) with nobody on deck
+            // See: azerothcore/azerothcore-wotlk#17856
             bool playerOnDeck = false;
             me->GetMap()->DoForAllPlayers([&](Player* player)
                 {
                     if (!player->GetVehicle() && player->IsAlive())
                         playerOnDeck = true;
                 });
-
-            // Wipe if no player is on the deck
             if (!playerOnDeck)
             {
                 // Script runs on enemy ship. We want to kill our ship.
@@ -996,7 +996,7 @@ public:
                         for (Map::PlayerList::const_iterator itr = pl.begin(); itr != pl.end(); ++itr)
                             if (Player* p = itr->GetSource())
                                 if (!p->IsGameMaster())
-                                    p->SetInCombatState(true);
+                                    p->SetInCombatWith(me);
                         _events.ScheduleEvent(EVENT_KEEP_PLAYER_IN_COMBAT, 4s);
                     }
                     break;
@@ -1335,7 +1335,7 @@ public:
                         for (Map::PlayerList::const_iterator itr = pl.begin(); itr != pl.end(); ++itr)
                             if (Player* p = itr->GetSource())
                                 if (!p->IsGameMaster())
-                                    p->SetInCombatState(true);
+                                    p->SetInCombatWith(me);
                         _events.ScheduleEvent(EVENT_KEEP_PLAYER_IN_COMBAT, 4s);
                     }
                     break;
@@ -2324,7 +2324,7 @@ class spell_igb_overheat_aura : public AuraScript
                     WorldPacket data(SMSG_CLIENT_CONTROL_UPDATE, GetUnitOwner()->GetPackGUID().size() + 1);
                     data << GetUnitOwner()->GetPackGUID();
                     data << uint8(value);
-                    player->GetSession()->SendPacket(&data);
+                    player->SendDirectMessage(&data);
                 }
             }
         }

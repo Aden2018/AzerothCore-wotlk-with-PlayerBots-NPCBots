@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -23,6 +23,7 @@
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "TotemPackets.h"
+
 #ifdef MOD_NPCERBOTS
 //npcbot
 #include "botmgr.h"
@@ -47,7 +48,7 @@ void Totem::Update(uint32 time)
 
     if (botOwner)
     {
-        if (!botOwner->IsAlive() || !IsAlive() || m_duration <= time)
+        if (!IsAlive() || m_duration <= time || (!botOwner->IsAlive() && !(m_Properties && m_Properties->Type == SUMMON_TYPE_LIGHTWELL)))
         {
             UnSummon();
             return;
@@ -56,9 +57,16 @@ void Totem::Update(uint32 time)
     else
     //end npcbot
 #endif
-    if (!owner || !owner->IsAlive() || !IsAlive() || m_duration <= time)
+    if (!owner || !IsAlive() || m_duration <= time)
     {
         UnSummon();                                         // remove self
+        return;
+    }
+
+    // If owner is dead and this is not a lightwell, despawn
+    if (!owner->IsAlive() && !(m_Properties && m_Properties->Type == SUMMON_TYPE_LIGHTWELL))
+    {
+        UnSummon();
         return;
     }
 
@@ -86,7 +94,7 @@ void Totem::InitStats(uint32 duration)
 #ifdef MOD_NPCERBOTS
             //npcbot: handled in class AI for bot totems
             if (!(GetCreatorGUID().IsCreature() && owner->ToPlayer()->HaveBot() && owner->ToPlayer()->GetBotMgr()->GetBot(GetCreatorGUID())))
-            //end npcbot
+			//end npcbot
 #endif
             SetDisplayId(sObjectMgr->GetModelForTotem(SummonSlot(slot), Races(owner->getRace())));
         }
@@ -206,7 +214,7 @@ void Totem::UnSummon(Milliseconds msTime)
     AddObjectToRemoveList();
 }
 
-bool Totem::IsImmunedToSpellEffect(SpellInfo const* spellInfo, uint32 index) const
+bool Totem::IsImmunedToSpellEffect(SpellInfo const* spellInfo, uint32 index, Unit const* caster /*= nullptr*/) const
 {
     // xinef: immune to all positive spells, except of stoneclaw totem absorb, sentry totem bind sight and intervene
     // totems positive spells have unit_caster target
@@ -236,5 +244,5 @@ bool Totem::IsImmunedToSpellEffect(SpellInfo const* spellInfo, uint32 index) con
             break;
     }
 
-    return Creature::IsImmunedToSpellEffect(spellInfo, index);
+    return Creature::IsImmunedToSpellEffect(spellInfo, index, caster);
 }

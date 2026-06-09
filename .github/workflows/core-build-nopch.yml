@@ -1,8 +1,10 @@
 name: nopch-build
+
 on:
   push:
     branches:
       - 'master'
+      - 'test-staging'
   pull_request:
     types:
       - opened
@@ -10,7 +12,7 @@ on:
       - synchronize
 
 concurrency:
-  group: ${{ github.head_ref }} || concat(${{ github.ref_name }}, ${{ github.workflow }})
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -37,7 +39,7 @@ jobs:
               CXX: g++-14
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }}-${{ matrix.compiler.CC }}-nopch
-    if: github.repository == 'mod-playerbots/azerothcore-wotlk' && !github.event.pull_request.draft
+    if: github.repository == 'Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots' && !github.event.pull_request.draft
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/linux-build
@@ -45,3 +47,4 @@ jobs:
           CC: ${{ matrix.compiler.CC }}
           CXX: ${{ matrix.compiler.CXX }}
           pch: false
+          modules: true  # optional: include module compilation if desired

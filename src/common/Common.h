@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -49,7 +49,7 @@ constexpr auto HOUR = MINUTE * 60;
 constexpr auto DAY = HOUR * 24;
 constexpr auto WEEK = DAY * 7;
 constexpr auto MONTH = DAY * 30;
-constexpr auto YEAR = MONTH * 12;
+constexpr auto YEAR = DAY * 365;
 constexpr auto IN_MILLISECONDS = 1000;
 
 enum AccountTypes
@@ -113,7 +113,11 @@ constexpr uint32 ACCOUNT_FLAGS_ALL =
     ACCOUNT_FLAG_OVERMIND_LINKED | ACCOUNT_FLAG_DEMOS | ACCOUNT_FLAG_DEATH_KNIGHT_OK |
     ACCOUNT_FLAG_S2_REQUIRE_IGR | ACCOUNT_FLAG_S2_TRIAL;
 
-enum LocaleConstant : uint8
+#ifdef MOD_NPCERBOTS
+enum LocaleConstant: uint8
+#else
+enum LocaleConstant
+#endif
 {
     LOCALE_enUS = 0,
     LOCALE_koKR = 1,
