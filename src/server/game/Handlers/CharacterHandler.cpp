@@ -584,7 +584,7 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
                         newChar->SaveToDB(characterTransaction, true, false);
                         createInfo->CharCount++;
 
-#ifdef MODPLAYERBOTS
+#ifdef MOD_PLAYERBOTS
                         LoginDatabasePreparedStatement* stmt = LoginDatabase.GetPreparedStatement(LOGIN_DEL_REALM_CHARACTERS_BY_REALM);
                         stmt->SetData(0, GetAccountId());
                         stmt->SetData(1, realm.Id.Realm);

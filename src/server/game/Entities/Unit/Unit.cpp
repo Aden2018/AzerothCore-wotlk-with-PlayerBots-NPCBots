@@ -13564,7 +13564,7 @@ void Unit::CleanupsBeforeDelete(bool finalCleanup)
         m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
     }
 
-#ifdef MODNPCERBOTS
+#ifdef MOD_NPCERBOTS
     //npcbot
     if (IsNPCBot() && IsSummon() && !ToCreature()->IsTempBot())
         if (Unit const* creator = GetCreator())

@@ -627,7 +627,7 @@ void BattlegroundAV::AddPlayer(Player* player)
     PlayerScores.emplace(player->GetGUID().GetCounter(), new BattlegroundAVScore(player->GetGUID()));
 }
 
-#ifdef MOD_NPCERBOS
+#ifdef MOD_NPCERBOTS
 //npcbot
 void BattlegroundAV::AddBot(Creature* bot)
 {
@@ -1376,7 +1376,7 @@ void BattlegroundAV::EventPlayerAssaultsPoint(Player* player, uint32 object)
     player->KilledMonsterCredit((IsTower(node)) ? BG_AV_QUEST_CREDIT_TOWER : BG_AV_QUEST_CREDIT_GRAVEYARD);
 }
 
-#ifdef NPCERBOTS
+#ifdef MOD_NPCERBOTS
 //npcbot
 void BattlegroundAV::EventBotAssaultsPoint(Creature* bot, uint32 object)
 {
