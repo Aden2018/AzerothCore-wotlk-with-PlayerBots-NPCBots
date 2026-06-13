@@ -3391,6 +3391,16 @@ DungeonAccessRequirements.OptionalStringID = 0
 JoinBGAndLFG.Enable = 0
 
 #
+#     LFG.MailItemOnFullInventory
+#        Description: When a player wins a group roll but their inventory is full, mail
+#                     the item to them instead of leaving it on the corpse.
+#        Default:     0 - Disabled
+#                     1 - Only in LFG/RDF groups
+#                     2 - In all group types
+
+LFG.MailItemOnFullInventory = 0
+
+#
 #     DungeonFinder.OptionsMask
 #        Description: Dungeon and raid finder system.
 #        Value is a bitmask consisting of:
@@ -4810,6 +4820,38 @@ NpcBot.MaxBotsPerAccount = 0
 NpcBot.Botgiver.FilterRaces = 0
 
 #
+#    NpcBot.SharedOwnership.Options
+#        Description: Bitmask describing enabled shared ownership options.
+#        Note:        WARNING! SHARED BOT OWNERSHIP ENABLES EXPLOITS! USE ON YOUR OWN RISK!
+#        Note2:       Term 'share' below refers to a player whom ownership is being shared with
+#        Values:
+#                     0 - Disable completely (default)
+#                     1 - Enable (allows bot owner to share their bots)
+#                     2 - Shared equipment management (including soulbound items)
+#                     4 - Shared ownership extension (allow shares to share the bot further)
+#                     8 - Shared ownership removal (allows shares to remove other shares)
+#        Notes:
+#                     Initially only bot owner can add new shares
+#                     Shares cannot remove bot owner from shared owneship list (or add to it)
+#                     Shares cannot dismiss the bot. If bot ownership expires due to bot expiry
+#                       timer equipment is always returned to the original owner. If share's bot
+#                       ownership expires due to rent cost the bot becomes unbound instead.
+#                     Bots will accept any player from total ownership list as current master,
+#                       whoever is logged in currently and will not switch until they log out,
+#                       original owner takes priority but only if bot has no master currently.
+
+NpcBot.SharedOwnership.Options = 0
+
+#
+#    NpcBot.SharedOwnership.MaxOwners
+#        Description: Maximum number of players a bot can be shared with (NOT counting the owner)
+#        Note:        WARNING! SHARED BOT OWNERSHIP ENABLES EXPLOITS! USE ON YOUR OWN RISK!
+#        Default:     0
+#        Max:         39
+
+NpcBot.SharedOwnership.MaxOwners = 0
+
+#
 #    NpcBot.BaseFollowDistance
 #        Description: Default bot follow distance.
 #        Note:        This parameter determines bots' formation size, distance at which bots
@@ -4820,25 +4862,37 @@ NpcBot.Botgiver.FilterRaces = 0
 NpcBot.BaseFollowDistance = 30
 
 #
-#    NpcBot.XpReduction.Amount
-#    NpcBot.XpReduction.StartingNumber
-#    NpcBot.XpReduction.Blizzlike.Enable
-#    NpcBot.XpReduction.Blizzlike.GroupOnly
-#        Description: XP percent penalty for each bot used starting with <StartingNumber>.
-#                     <Blizzlike> enables group size based XP reduction counting either any bots
-#                     or bots in group only, combines multiplicatively
-#        Example:     Group of 4, 3 bots, reduction is 20, start is 2, blizzlike enabled:
-#                     (100 - ((3-(2-1))*20)) * 1.3 / 4 = 19.5% exp gained.
-#        Note:        Maximum overall xp reduction is 90%.
-#        Default:     0 - (NpcBot.XpReduction.Amount)
-#                     2 - (NpcBot.XpReduction.StartingNumber)
-#                     1 - (NpcBot.XpReduction.Blizzlike.Enable)
-#                     0 - (NpcBot.XpReduction.Blizzlike.GroupOnly)
+#    NpcBot.XpReduction.Enable
+#    NpcBot.XpReduction.GroupOnly
+#    NpcBot.XpReduction.Extra.Amount
+#    NpcBot.XpReduction.Extra.StartingNumber
+#        Description: Enable Blizzlike XP penalty for using bots counting
+#                     either all participating bots or in <GroupOnly>.
+#                     Additional XP reduction <Amount> applies on top of that,
+#                     starting with <StartingNumber>'th bot
+#        Example:     Group of 4, 3 bots, reduction is 20, start is 2:
+#                     (100% - ((3-(2-1))*20)) * 1.3 / 4 = 19.5% exp gained
+#        Note:        Maximum extra xp reduction factor is 90%.
+#        Default:     0 - (NpcBot.XpReduction.Enable)
+#                     0 - (NpcBot.XpReduction.GroupOnly)
+#                     0 - (NpcBot.XpReduction.Extra.Amount)
+#                     2 - (NpcBot.XpReduction.Extra.StartingNumber)
 
-NpcBot.XpReduction.Amount              = 0
-NpcBot.XpReduction.StartingNumber      = 2
-NpcBot.XpReduction.Blizzlike.Enable    = 1
-NpcBot.XpReduction.Blizzlike.GroupOnly = 0
+NpcBot.XpReduction.Enable               = 0
+NpcBot.XpReduction.GroupOnly            = 0
+NpcBot.XpReduction.Extra.Amount         = 0
+NpcBot.XpReduction.Extra.StartingNumber = 2
+
+#
+#    NpcBot.HonorReduction.Enable
+#    NpcBot.HonorReduction.GroupOnly
+#        Description: Enable Blizzlike honor gain reduction when using bots counting
+#                     either all participating bots or in <GroupOnly>.
+#        Default:     0 - (NpcBot.HonorReduction.Enable)
+#                     0 - (NpcBot.HonorReduction.GroupOnly)
+
+NpcBot.HonorReduction.Enable    = 0
+NpcBot.HonorReduction.GroupOnly = 0
 
 #
 #    NpcBot.MoneyShare.Enable
@@ -5263,7 +5317,26 @@ NpcBot.OwnershipExpireMode = 0
 #                     0 - (Disabled)
 
 NpcBot.EnrageOnDismiss = 1
- 
+
+#
+#    NpcBot.DungeonBots.Enable
+#        Description: Allow autogenerating bots for non-full LFG groups entering non-raid dungeons
+#        Default:     0 - (NpcBot.DungeonBots.Enable)
+
+NpcBot.DungeonBots.Enable = 0
+
+#
+#    NpcBot.DungeonBots.MaxItemLevel.Ratio
+#        Description: Maximum item ilevel to generate for dungeon bots per level bracket compared
+#                     to dungeon max item level.
+#        Note:        If item generation attempt fails becuse of item ilevel restriction
+#                     the item will be generated again with this restriction ignored
+#        Example:     0,0,0,0,0,0,0,0,90 makes dungeon bots for Halls of Reflection only generate
+#                     items of ilevel 198N/209H or less instead of default max 219/232
+#        Default:     0,0,0,0,0,0,0,0,0
+
+NpcBot.DungeonBots.MaxItemLevel.Ratio = 0,0,0,0,0,0,0,0,0
+
 #
 #    NpcBot.WanderingBots.Continents.Count
 #        Description: Desired number of free wandering bots to generate. Wandering bots roam
