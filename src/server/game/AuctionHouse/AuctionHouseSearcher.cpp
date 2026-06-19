@@ -506,11 +506,13 @@ void SearchableAuctionEntry::SetItemNames()
                 // Append the suffix (ie: of the Monkey) to the name using localization
                 // or default enUS if localization is invalid
                 itemName += ' ';
-#ifdef MOD_NPCERBOTS   //NPCBots
-                itemName += (*suffix)[locdbc_idx > LOCALE_enUS ? locdbc_idx : LOCALE_enUS];
-#else
+#ifndef MOD_NPCERBOTS
                 itemName += (*suffix)[locdbc_idx >= 0 ? locdbc_idx : LOCALE_enUS];
-#endif   // end NPCBots
+#else
+                //npcbot
+                itemName += (*suffix)[locdbc_idx > LOCALE_enUS ? locdbc_idx : LOCALE_enUS];
+                //end npcbot
+#endif
             }
         }
 

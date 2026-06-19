@@ -464,8 +464,8 @@ bool Vehicle::AddPassenger(Unit* unit, int8 seatId)
             BotMgr::OnBotOwnerEnterVehicle(unit->ToPlayer(), this);
         //end npcbot
 #endif
-
     }
+
 
     if (_me->IsInWorld())
     {
@@ -673,20 +673,20 @@ void Vehicle::InitMovementInfoForBase()
         _me->AddExtraUnitMovementFlag(MOVEMENTFLAG2_FULL_SPEED_PITCHING);
 }
 
-#ifdef MOD_NPCERBOTS
+#ifndef MOD_NPCERBOTS
 //npcbot
+VehicleSeatEntry const* Vehicle::GetSeatForPassenger(Unit const* passenger)
+#else
 VehicleSeatEntry const* Vehicle::GetSeatForPassenger(Unit const* passenger) const
 //end npcbot
-#else
-VehicleSeatEntry const* Vehicle::GetSeatForPassenger(Unit const* passenger)
 #endif
 {
-#ifdef MOD_NPCERBOTS
+#ifndef MOD_NPCERBOTS
     //npcbot
+    SeatMap::iterator itr;
+#else
     SeatMap::const_iterator itr;
     //end npcbot
-#else
-    SeatMap::iterator itr;
 #endif
     for (itr = Seats.begin(); itr != Seats.end(); ++itr)
         if (itr->second.Passenger.Guid == passenger->GetGUID())

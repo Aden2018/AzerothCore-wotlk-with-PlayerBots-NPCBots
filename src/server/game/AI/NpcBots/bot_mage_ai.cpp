@@ -72,7 +72,6 @@ enum MageBaseSpells
     LIVING_BOMB_DAMAGE_1                = 44461,
     CONJURE_MANA_GEM_1                  = 759,
     MANA_GEM_1                          = 5405,
-    RITUAL_OF_REFRESHMENT_1             = 43987,
 
     SUMMON_WATER_ELEMENTAL_1            = 31687
 };
@@ -307,7 +306,7 @@ public:
 
         bool BuffTarget(Unit* target, uint32 /*diff*/) override
         {
-            if (me->IsInCombat() && !master->GetMap()->IsRaid()) return false;
+            if ((me->IsInCombat() || !CanDoNonCombatActions()) && !master->GetMap()->IsRaid()) return false;
 
             if (GetSpell(ARCANEINTELLECT_1) && target->GetMaxPower(POWER_MANA) > 1 &&
                 !target->HasAuraTypeWithFamilyFlags(SPELL_AURA_MOD_STAT, SPELLFAMILY_MAGE, 0x400)

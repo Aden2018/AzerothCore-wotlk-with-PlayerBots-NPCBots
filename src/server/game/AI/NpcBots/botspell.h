@@ -27,6 +27,11 @@ enum BotSpells : uint32
     ARENA_FLAG_TEAM_A_GREEN             = 32725,
     ARENA_FLAG_TEAM_H_GOLD              = 35774,
     ARENA_FLAG_TEAM_H_GREEN             = 35775,
+///Rank 1 spells used outside of class ai
+//MAGE
+    RITUAL_OF_REFRESHMENT_1             = 43987,
+//WARLOCK
+    RITUAL_OF_SOULS_1                   = 29893,
 ///Portals
     PORTAL_STORMWIND                    = 10059,
     PORTAL_IRONFORGE                    = 11416,
@@ -184,6 +189,7 @@ enum BotSpells : uint32
     SPELL_IMPALE_VISUAL                 = 59446,
     SPELL_CARRION_BEETLES               = 53520,
     SPELL_LOCUST_SWARM                  = 28785,
+    SPELL_TAUNT_CRYPT_LORD              = 54794,
     SPELL_SOUL_BITE                     = 11016, //special - pet
     SPELL_ENERGIZE_VISUAL               = 59198,
     SPELL_BURROW                        = 68394, //special - pet (NYI) //SPELL_EFFECT_FORCE_DESELECT

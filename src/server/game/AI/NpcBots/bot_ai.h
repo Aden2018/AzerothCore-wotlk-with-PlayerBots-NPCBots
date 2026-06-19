@@ -65,6 +65,7 @@ public:
     void KilledUnit(Unit* u) override;
     void AttackStart(Unit* u) override;
     void JustEngagedWith(Unit* u) override;
+    void JustExitedCombat() override;
     void MoveInLineOfSight(Unit* u) override;
     void DamageDealt(Unit* victim, uint32& damage, DamageEffectType damageType, SpellSchoolMask /*damageSchoolMask*/) override;
     //void DamageTaken(Unit* /*attacker*/, uint32& /*damage*/, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo*/) override { }
@@ -74,6 +75,9 @@ public:
     void OnSpellStart(SpellInfo const* spellInfo) override { OnBotSpellStart(spellInfo); }
     bool CanRespawn() override { return IAmFree(); }
     void OnDeath(Unit* attacker = nullptr);
+    bool CanDoNonCombatActions() const { return _nonCombatActionsTimer <= lastdiff; }
+
+    bool SummonGameobject(uint32 entry, uint32 spell_id, int32 life_time, uint32 cooldown = 0, uint32 text_id = 0, Player* forPlayer = nullptr, bool report_fail = false);
 
     virtual void OnBotSummon(Creature* /*summon*/) {}
     virtual void OnBotDespawn(Creature* /*summon*/) {}
@@ -128,6 +132,8 @@ public:
     bool SetBotOwner(Player* newowner);
     void CheckOwnerExpiry();
     uint8 GetBotClass() const { return _botclass; }
+    uint32 GetBotClassMask0() const { return 1ul << (_botclass - 1u); }
+    uint32 GetBotClassMask1() const { return 1ul << _botclass; }
     uint32 GetLastDiff() const { return lastdiff; }
     virtual void UpdateDeadAI(uint32 diff);
     void ReturnHome() { _atHome = false; }
@@ -432,6 +438,8 @@ protected:
     virtual bool removeShapeshiftForm() { return true; }
 
     bool CanRemoveReflectSpells(Unit const* target, uint32 spellId) const;
+    bool CanTauntTarget(Unit const* target, float dist) const;
+    bool CanTauntDistantTarget(Unit const* target) const;
 
     bool IsMelee() const;
     bool IsRanged() const;
@@ -715,6 +723,7 @@ private:
     uint32 evadeDelayTimer{};
     uint32 indoorsTimer{};
     uint32 outdoorsTimer{};
+    uint32 _nonCombatActionsTimer{};
     uint32 _contestedPvPTimer{};
     uint32 _groupUpdateTimer{BOT_GROUP_UPDATE_TIMER};
     //save timers

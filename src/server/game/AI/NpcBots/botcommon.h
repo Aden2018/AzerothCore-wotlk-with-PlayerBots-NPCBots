@@ -59,6 +59,8 @@ enum BotCommonValues
     REVIVE_TIMER_DEFAULT                = 180000, //3 Minutes
     REVIVE_TIMER_MEDIUM                 = 90000, //1.5 Minutes
     REVIVE_TIMER_SHORT                  = 60000, //1 Minute
+    REVIVE_TIMER_BG                     = 30000, //30 seconds
+    NON_COMBAT_ACTIONS_TIMER_DEFAULT    = 5000,
     INOUTDOORS_ENSURE_TIMER             = 1500,
     BOT_GROUP_UPDATE_TIMER              = 2000,
     RENT_TIMER                          = 3600000, //1 Hour
@@ -260,6 +262,7 @@ inline constexpr uint32 HEALING_BOT_CLASSES_MASK =
 inline constexpr uint32 HUMANOID_BOT_CLASSES_MASK = (ALL_BOT_CLASSES_MASK & ~(1 << BOT_CLASS_SPHYNX));
 inline constexpr uint32 HERO_BOT_CLASSES_MASK =
     ((1 << BOT_CLASS_BM)|(1 << BOT_CLASS_ARCHMAGE)|(1 << BOT_CLASS_DREADLORD)|(1 << BOT_CLASS_DARK_RANGER)|(1 << BOT_CLASS_SEA_WITCH)|(1 << BOT_CLASS_CRYPT_LORD));
+inline constexpr uint32 BOT_CLASS_MASK_MAGE_OR_WARLOCK = ((1 << BOT_CLASS_MAGE)|(1 << BOT_CLASS_WARLOCK));
 
 enum BotStances
 {

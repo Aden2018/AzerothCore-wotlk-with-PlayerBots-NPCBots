@@ -29,13 +29,13 @@
  * Scriptnames of files in this file should be prefixed with "spell_dru_".
  */
 
- #ifdef MOD_NPCERBOTS
+#ifdef MOD_NPCERBOTS
 //npcbot
 #include "Creature.h"
 #include "Group.h"
 //end npcbot
 #endif
- 
+
 enum DruidSpells
 {
     SPELL_DRUID_GLYPH_OF_WILD_GROWTH        = 62970,
@@ -884,7 +884,6 @@ class spell_dru_rip : public AuraScript
 
         if (Unit* caster = GetCaster())
         {
-
 #ifdef MOD_NPCERBOTS
             //npcbot
             if (caster && caster->IsNPCBot())

@@ -359,7 +359,6 @@ public:
     //end npcbots
 #endif
 
-
 protected:
     void _homebindIfInstance(Player* player);
     void _cancelHomebindIfInstance(Player* player);

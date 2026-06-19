@@ -1025,10 +1025,11 @@ BG_AV_Nodes BattlegroundAV::GetNodeThroughObject(uint32 object)
     return BG_AV_Nodes(0);
 }
 
-#ifdef MOD_NPCERBOTS
-uint32 BattlegroundAV::GetObjectThroughNode(BG_AV_Nodes node, bool log) const
-#else
+#ifndef MOD_NPCERBOTS
+//npcbot
 uint32 BattlegroundAV::GetObjectThroughNode(BG_AV_Nodes node)
+#else
+uint32 BattlegroundAV::GetObjectThroughNode(BG_AV_Nodes node, bool log) const
 #endif
 {
     //this function is the counterpart to GetNodeThroughObject()
@@ -1982,7 +1983,10 @@ uint8 BattlegroundAV::GetAttackString(BG_AV_Nodes node, TeamId teamId)
             strId = AV_TEXT_H_HERALD_SNOWFALL_GRAVEYARD_ATTACK;
         break;
     case BG_AV_NODES_ICEBLOOD_TOWER:
-        strId = AV_TEXT_A_HERALD_ICEBLOOD_TOWER_ATTACK;
+        if (teamId == TEAM_ALLIANCE)
+            strId = AV_TEXT_A_HERALD_ICEBLOOD_TOWER_ATTACK;
+        else
+            strId = AV_TEXT_H_HERALD_ICEBLOOD_TOWER_ATTACK;
         break;
     case BG_AV_NODES_ICEBLOOD_GRAVE:
         if (teamId == TEAM_ALLIANCE)
@@ -2081,7 +2085,10 @@ uint8 BattlegroundAV::GetDefendString(BG_AV_Nodes node, TeamId teamId)
             strId = AV_TEXT_H_HERALD_SNOWFALL_GRAVEYARD_TAKEN;
         break;
     case BG_AV_NODES_ICEBLOOD_TOWER:
-        strId = AV_TEXT_A_HERALD_ICEBLOOD_TOWER_TAKEN;
+        if (teamId == TEAM_ALLIANCE)
+            strId = AV_TEXT_A_HERALD_ICEBLOOD_TOWER_TAKEN;
+        else
+            strId = AV_TEXT_H_HERALD_ICEBLOOD_TOWER_TAKEN;
         break;
     case BG_AV_NODES_ICEBLOOD_GRAVE:
         if (teamId == TEAM_ALLIANCE)

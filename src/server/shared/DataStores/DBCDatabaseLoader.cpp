@@ -120,9 +120,7 @@ char* DBCDatabaseLoader::Load(uint32& records, char**& indexTable)
                     }
                     else
 #endif
-                    {
                         *reinterpret_cast<char**>(&dataValue[dataOffset]) = CloneStringToPool(fields[sqlColumnNumber].Get<std::string>());
-                    }
                     dataOffset += sizeof(char*);
                     break;
                 case FT_SORT:

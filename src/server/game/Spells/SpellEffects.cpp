@@ -2869,10 +2869,11 @@ void Spell::EffectDispel(SpellEffIndex effIndex)
                 bool alreadyListed = false;
                 for (DispelChargesList::iterator successItr = success_list.begin(); successItr != success_list.end(); ++successItr)
                 {
-                    if (successItr->first->GetId() == itr->first->GetId())
+                    if (successItr->first == itr->first)
                     {
                         ++successItr->second;
                         alreadyListed = true;
+                        break;
                     }
                 }
                 if (!alreadyListed)
@@ -5158,6 +5159,13 @@ void Spell::EffectSkinning(SpellEffIndex /*effIndex*/)
     int32 targetLevel = creature->GetLevel();
 
     uint32 skill = creature->GetCreatureTemplate()->GetRequiredLootSkill();
+
+#ifdef MOD_NPCERBOTS
+    //npcbot: skinning nobody's kill
+    if (!creature->hasLootRecipient())
+        creature->SetLootRecipient(m_caster);
+    //end npcbot
+#endif
 
     creature->RemoveUnitFlag(UNIT_FLAG_SKINNABLE);
     creature->SetDynamicFlag(UNIT_DYNFLAG_LOOTABLE);

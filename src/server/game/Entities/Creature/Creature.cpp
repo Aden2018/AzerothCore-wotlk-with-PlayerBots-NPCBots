@@ -1413,7 +1413,9 @@ void Creature::SetLootRecipient(Unit* unit, bool withGroup)
         ResetAllowedLooters();
         return;
     }
-#ifdef MOD_NPCERBOTS
+#ifndef MOD_NPCERBOTS
+    Player* player = unit->GetCharmerOrOwnerPlayerOrPlayerItself();
+#else
     //npcbot - loot recipient of bot's vehicle is owner
     Player* player = nullptr;
     if (unit->IsVehicle() && unit->GetCharmerGUID().IsCreature() && unit->GetCreator() && unit->GetCreator()->IsPlayer())
@@ -1421,8 +1423,6 @@ void Creature::SetLootRecipient(Unit* unit, bool withGroup)
     else
         player = unit->GetCharmerOrOwnerPlayerOrPlayerItself();
     //end npcbot
-#else
-    Player* player = unit->GetCharmerOrOwnerPlayerOrPlayerItself();
 #endif
     if (!player)                                             // normal creature, no player involved
         return;
@@ -2077,17 +2077,17 @@ bool Creature::CanStartAttack(Unit const* who, bool force) const
         return false;
 
     // This set of checks is should be done only for creatures
-#ifdef MOD_NPCERBOTS
+#ifndef MOD_NPCERBOTS
     //npcbot
+    if ((IsImmuneToNPC() && !who->IsPlayer()) ||
+        (IsImmuneToPC() && who->IsPlayer()))
         //npcbot: allow attacking PvP free bots
+        return false;
+#else
     if ((IsImmuneToNPC() && !(who->IsPlayer() || who->IsNPCBotOrPet())) ||
         (IsImmuneToPC() && (who->IsPlayer() || who->IsNPCBotOrPet())))
         return false;
     //end npcbot
-#else
-    if ((IsImmuneToNPC() && !who->IsPlayer()) ||
-        (IsImmuneToPC() && who->IsPlayer()))
-        return false;
 #endif
 
     if (Unit* owner = who->GetOwner())
@@ -2467,12 +2467,12 @@ void Creature::LoadTemplateImmunities(int32 creatureImmunitiesId)
         _creatureImmunitiesId = 0;
 }
 
-#ifdef MOD_NPCERBOTS
+#ifndef MOD_NPCERBOTS
 //npcbot
+bool Creature::IsImmunedToSpell(SpellInfo const* spellInfo, Spell const* spell)
+#else
 bool Creature::IsImmunedToSpell(SpellInfo const* spellInfo, Spell const* spell) const
 //end npcbot
-#else
-bool Creature::IsImmunedToSpell(SpellInfo const* spellInfo, Spell const* spell)
 #endif
 {
     if (!spellInfo)

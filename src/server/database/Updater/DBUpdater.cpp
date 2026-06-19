@@ -193,7 +193,7 @@ std::string DBUpdater<CharacterDatabaseConnection>::GetBaseFilesDirectory()
 template<>
 std::string DBUpdater<CharacterDatabaseConnection>::GetBaseFilesDirectory()
 {
-    return DBUpdater<CharacterDatabaseConnection>::GetSourceDirectory() + "/data/sql/base/db_characters/";
+    return BuiltInConfig::GetSourceDirectory() + "/data/sql/base/db_characters/";
 }
 #endif
 

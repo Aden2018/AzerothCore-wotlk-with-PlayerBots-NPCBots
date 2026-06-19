@@ -1591,7 +1591,7 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->Speed = 8.0f;
     });
 
-    // Spell Absorption
+    // Shadowmoon Reaver - Spell Absorption
     ApplySpellFix({ 41034 }, [](SpellInfo* spellInfo)
     {
         spellInfo->Effects[EFFECT_2].Effect = SPELL_EFFECT_APPLY_AURA;
@@ -1600,12 +1600,13 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->Effects[EFFECT_2].MiscValue = SPELL_SCHOOL_MASK_MAGIC;
     });
 
-    // Shared Bonds
+    // Priestess of Delight and Priestess of Torment - Shared Bonds
     ApplySpellFix({ 41363 }, [](SpellInfo* spellInfo)
     {
         spellInfo->AttributesEx &= ~SPELL_ATTR1_IS_CHANNELED;
     });
 
+    // Illidari Council - Veras Darkshadow
     ApplySpellFix({
         41485,  // Deadly Poison
         41487   // Envenom
@@ -1634,13 +1635,13 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->RangeEntry = sSpellRangeStore.LookupEntry(13); // 0-50000yd
     });
 
-    // Watery Grave Explosion
+    // Morogrim Tidewalker - Watery Grave Explosion
     ApplySpellFix({ 37852 }, [](SpellInfo* spellInfo)
     {
         spellInfo->AttributesEx5 |= SPELL_ATTR5_ALLOW_WHILE_STUNNED;
     });
 
-    // Amplify Damage
+    // Prince Malchezaar - Amplify Damage
     ApplySpellFix({ 39095 }, [](SpellInfo* spellInfo)
     {
         spellInfo->MaxAffectedTargets = 1;
@@ -1653,6 +1654,7 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->AttributesCu |= SPELL_ATTR0_CU_SINGLE_AURA_STACK;
     });
 
+    // Archimonde
     ApplySpellFix({
         31984,  // Finger of Death
         35354   // Hand of Death
@@ -1662,10 +1664,16 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->Attributes = SPELL_ATTR0_IS_ABILITY;
     });
 
-    // Finger of Death
+    // Archimonde - Finger of Death
     ApplySpellFix({ 32111 }, [](SpellInfo* spellInfo)
     {
         spellInfo->CastTimeEntry = sSpellCastTimesStore.LookupEntry(0); // We only need the animation, no damage
+    });
+
+    // Archimonde - Doomfire
+    ApplySpellFix({ 31944, 31969 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->AttributesEx4 |= SPELL_ATTR4_NO_CAST_LOG;
     });
 
     // Flame Breath, catapult spell

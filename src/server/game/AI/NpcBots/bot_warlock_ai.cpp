@@ -68,8 +68,7 @@ enum WarlockBaseSpells
 
     CHAOTIC_MIND                        = 61188, //8 sec duration, no cd
 
-    RITUAL_OF_SUMMONING_1               = 698,
-    RITUAL_OF_SOULS_1                   = 29893
+    RITUAL_OF_SUMMONING_1               = 698
 };
 enum WarlockPassives
 {
@@ -553,7 +552,7 @@ public:
         bool BuffTarget(Unit* target, uint32 /*diff*/) override
         {
             if (!target->IsPlayer()) return false;
-            if (me->IsInCombat() && !master->GetMap()->IsRaid()) return false;
+            if ((me->IsInCombat() || !CanDoNonCombatActions()) && !master->GetMap()->IsRaid()) return false;
 
             if (GetSpell(UNENDING_BREATH_1) && target->HasUnitMovementFlag(MOVEMENTFLAG_SWIMMING) &&
                 !target->HasAuraType(SPELL_AURA_WATER_BREATHING))

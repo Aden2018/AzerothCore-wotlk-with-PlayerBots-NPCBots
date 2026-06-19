@@ -1193,12 +1193,12 @@ public:
 
     // Resilience
     static void ApplyResilience(Unit const* victim, float* crit, int32* damage, bool isCrit, CombatRating type);
-#ifdef MOD_NPCERBOTS
+#ifndef MOD_NPCERBOTS
     //npcbot
+    [[nodiscard]] bool CanApplyResilience() const { return m_applyResilience; }
+#else
     [[nodiscard]] bool CanApplyResilience() const;
     //end npcbot
-#else
-    [[nodiscard]] bool CanApplyResilience() const { return m_applyResilience; }
 #endif
 
     // Skills values
@@ -1681,14 +1681,18 @@ public:
 
     // Spells immunities
     void ApplySpellImmune(uint32 spellId, uint32 op, uint32 type, bool apply, SpellImmuneBlockType blockType = SPELL_BLOCK_TYPE_ALL);
-#ifdef MOD_NPCERBOTS
+#ifndef MOD_NPCERBOTS
     //npcbot
-    virtual bool IsImmunedToSpell(SpellInfo const* spellInfo, Spell const* spell = nullptr) const;
-    bool IsImmunedToSpell(SpellInfo const* spellInfo, uint32 effectMask, Unit const* caster = nullptr) const;
-    //end npcbot
-#else
     virtual bool IsImmunedToSpell(SpellInfo const* spellInfo, Spell const* spell = nullptr);
     bool IsImmunedToSpell(SpellInfo const* spellInfo, uint32 effectMask, Unit const* caster = nullptr);
+    bool IsImmunedToSpell(SpellInfo const* spellInfo, Unit const* caster);
+    bool IsImmunedToSpell(SpellInfo const* spellInfo, Unit const* caster, SpellSchoolMask spellSchoolMask);
+#else
+    virtual bool IsImmunedToSpell(SpellInfo const* spellInfo, Spell const* spell = nullptr) const;
+    bool IsImmunedToSpell(SpellInfo const* spellInfo, uint32 effectMask, Unit const* caster = nullptr) const;
+    bool IsImmunedToSpell(SpellInfo const* spellInfo, Unit const* caster) const;
+    bool IsImmunedToSpell(SpellInfo const* spellInfo, Unit const* caster, SpellSchoolMask spellSchoolMask) const;
+    //end npcbot
 #endif
     bool IgnoresSchoolImmunityFromFriendlyCaster(Unit const* caster, uint32 immunityAuraId, SpellInfo const* immunitySpellInfo) const;
     [[nodiscard]] bool IsImmunedToDamage(SpellSchoolMask schoolMask) const;
@@ -1847,12 +1851,12 @@ public:
     void  RemoveStandFlags(uint8 flags) { RemoveByteFlag(UNIT_FIELD_BYTES_1,  UNIT_BYTES_1_OFFSET_VIS_FLAG, flags); }
 
     // DeathState
-#ifdef MOD_NPCERBOTS
+#ifndef MOD_NPCERBOTS
     //npcbot
+    DeathState getDeathState() { return m_deathState; };
+#else
     DeathState getDeathState() const { return m_deathState; };
     //end npcbot
-#else
-    DeathState getDeathState() { return m_deathState; };
 #endif
     virtual void setDeathState(DeathState s, bool despawn = false);           // overwrited in Creature/Player/Pet
 

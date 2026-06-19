@@ -114,12 +114,12 @@ public:
     bool isCanInteractWithBattleMaster(Player* player, bool msg) const;
     bool CanResetTalents(Player* player) const;
     bool CanCreatureAttack(Unit const* victim, bool skipDistCheck = false) const;
-#ifdef MOD_NPCERBOTS
+#ifndef MOD_NPCERBOTS
     //npcbot
+    bool IsImmunedToSpell(SpellInfo const* spellInfo, Spell const* spell = nullptr) override;
+#else
     bool IsImmunedToSpell(SpellInfo const* spellInfo, Spell const* spell = nullptr) const override;
     //end npcbot
-#else
-    bool IsImmunedToSpell(SpellInfo const* spellInfo, Spell const* spell = nullptr) override;
 #endif
 
     [[nodiscard]] bool HasMechanicTemplateImmunity(uint64 mask) const;

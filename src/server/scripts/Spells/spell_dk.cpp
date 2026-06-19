@@ -27,7 +27,6 @@
 #include "UnitAI.h"
 
 #ifdef MOD_NPCERBOTS
-
 //npcbot
 #include "botmgr.h"
 //end npcbot
@@ -577,8 +576,9 @@ class spell_dk_rune_of_the_fallen_crusader : public SpellScript
     {
         std::list<TargetInfo>* targetsInfo = GetSpell()->GetUniqueTargetInfo();
         for (std::list<TargetInfo>::iterator ihit = targetsInfo->begin(); ihit != targetsInfo->end(); ++ihit)
+        {
             if (ihit->targetGUID == GetCaster()->GetGUID())
-
+            {
 #ifdef MOD_NPCERBOTS
                 //npcbot: get bot's crit
                 if (GetCaster()->IsNPCBot())
@@ -587,6 +587,8 @@ class spell_dk_rune_of_the_fallen_crusader : public SpellScript
                 //end npcbot
 #endif
                 ihit->crit = roll_chance_f(GetCaster()->GetFloatValue(PLAYER_CRIT_PERCENTAGE));
+            }
+        }
     }
 
     void Register() override
@@ -2402,7 +2404,6 @@ class spell_dk_spell_deflection : public AuraScript
         else
         //end npcbot
 #endif
-
         if ((dmgInfo.GetDamageType() == SPELL_DIRECT_DAMAGE) && roll_chance_f(chance))
             absorbAmount = CalculatePct(dmgInfo.GetDamage(), absorbPct);
     }

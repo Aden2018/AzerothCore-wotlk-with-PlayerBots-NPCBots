@@ -2361,6 +2361,7 @@ TempSummon* Map::SummonCreature(uint32 entry, Position const& pos, SummonPropert
     //end npcbot
 #endif
 
+
     return summon;
 }
 
