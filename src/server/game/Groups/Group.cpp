@@ -468,9 +468,7 @@ void Group::RemoveInvite(Player* player)
     if (player->GetGroupInvite() != this)
         return;
 
-    auto itr = m_invitees.find(player);
-    if (itr != m_invitees.end())
-        m_invitees.erase(itr);
+    m_invitees.erase(player);
 
     player->SetGroupInvite(nullptr);
 	//end playerbots
