@@ -3,13 +3,14 @@ name: pch-build
 on:
   push:
     branches:
-      - 'master'
-      - 'test-staging'
+      - 'Playerbot'
   pull_request:
     types:
       - opened
       - reopened
       - synchronize
+    branches:
+      - 'Playerbot'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -35,7 +36,7 @@ jobs:
               CXX: clang++-18
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }}-${{ matrix.compiler.CC }}-pch
-    if: github.repository == 'mod-playerbots/azerothcore-wotlk' && !github.event.pull_request.draft
+    if: github.repository == 'Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots' && !github.event.pull_request.draft
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/linux-build

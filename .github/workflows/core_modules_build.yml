@@ -2,7 +2,7 @@ name: nopch-module-build
 on:
   push:
     branches:
-      - 'master'
+      - 'Playerbot'
       - 'test-staging'
   pull_request:
     types:
@@ -47,7 +47,7 @@ jobs:
               CXX: clang++-18
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }}-${{ matrix.compiler.CC }}-nopch-modules
-    if: github.repository == 'mod-playerbots/azerothcore-wotlk' && !github.event.pull_request.draft
+    if: github.repository == 'Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots' && !github.event.pull_request.draft
     steps:
       - uses: actions/checkout@v4
         # This script installs a general list of modules to compile with

@@ -3,13 +3,14 @@ name: nopch-build
 on:
   push:
     branches:
-      - 'master'
-      - 'test-staging'
+      - 'Playerbot'
   pull_request:
     types:
       - opened
       - reopened
       - synchronize
+    branches:
+      - 'Playerbot'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

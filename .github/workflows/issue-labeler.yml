@@ -5,7 +5,7 @@ on:
 
 jobs:
   issue_labeler:
-    if: github.repository == 'azerothcore/azerothcore-wotlk' && !github.event.pull_request.draft
+    if: github.repository == 'Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots' && !github.event.pull_request.draft
     runs-on: ubuntu-latest
     name: Issue Labeler
     steps:

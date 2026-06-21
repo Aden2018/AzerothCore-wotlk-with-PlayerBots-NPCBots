@@ -2,7 +2,7 @@ name: import-pending
 on:
   push:
     branches:
-      - master
+      - Playerbot
       - test-staging   # add this if you want pending SQL imported on this branch too
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write  # 'write-all' is not a valid permission, should specify what is needed
-    if: github.repository == 'azerothcore/azerothcore-wotlk' && !github.event.pull_request.draft
+    if: github.repository == 'Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots' && !github.event.pull_request.draft
     steps:
       - uses: actions/checkout@v4
         with:
