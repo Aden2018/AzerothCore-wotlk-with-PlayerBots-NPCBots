@@ -1,5 +1,9 @@
 # ![logo](https://raw.githubusercontent.com/azerothcore/azerothcore.github.io/master/images/logo-github.png) AzerothCore
 
+# AzerothCore with PlayerBots & NPCBots
+
+> **🚀 This fork integrates PlayerBots and NPCBots modules** into AzerothCore, allowing you to play with AI-controlled companions and opponents. Perfect for solo players, testing, or small-scale servers.
+
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 [![CodeFactor](https://www.codefactor.io/repository/github/azerothcore/azerothcore-wotlk/badge)](https://www.codefactor.io/repository/github/azerothcore/azerothcore-wotlk)
 [![StackOverflow](http://img.shields.io/badge/stackoverflow-azerothcore-blue.svg?logo=stackoverflow)](https://stackoverflow.com/questions/tagged/azerothcore?sort=newest "Ask / browse questions here")
@@ -8,20 +12,26 @@
 
 ## Build Status
 
-[![nopch-build](https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/core-build-nopch.yml/badge.svg?branch=master)](https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/core-build-nopch.yml?query=branch%3Amaster)
-[![pch-build](https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/core-build-pch.yml/badge.svg?branch=master)](https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/core-build-pch.yml?query=branch%3Amaster)
-[![core-modules-build](https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/core_modules_build.yml/badge.svg?branch=master)](https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/core_modules_build.yml?query=branch%3Amaster)
-[![windows-build](https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/windows_build.yml/badge.svg?branch=master)](https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/windows_build.yml?query=branch%3Amaster)
-[![macos-build](https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/macos_build.yml/badge.svg?branch=master)](https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/macos_build.yml?query=branch%3Amaster)
-[![docker-build](https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/docker_build.yml/badge.svg?branch=master)](https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/docker_build.yml?query=branch%3Amaster)
-[![tools-build](https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/tools_build.yml/badge.svg?branch=master)](https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/tools_build.yml?query=branch%3Amaster)
-[![dashboard-ci](https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/dashboard-ci.yml/badge.svg?branch=master)](https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/dashboard-ci.yml?query=branch%3Amaster)
+[![nopch-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core-build-nopch.yml/badge.svg?branch=master)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core-build-nopch.yml?query=branch%3Amaster)
+[![pch-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core-build-pch.yml/badge.svg?branch=master)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core-build-pch.yml?query=branch%3Amaster)
+[![core-modules-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core_modules_build.yml/badge.svg?branch=master)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core_modules_build.yml?query=branch%3Amaster)
+[![windows-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/windows_build.yml/badge.svg?branch=master)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/windows_build.yml?query=branch%3Amaster)
+[![macos-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/macos_build.yml/badge.svg?branch=master)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/macos_build.yml?query=branch%3Amaster)
+[![docker-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/docker_build.yml/badge.svg?branch=master)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/docker_build.yml?query=branch%3Amaster)
+[![tools-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/tools_build.yml/badge.svg?branch=master)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/tools_build.yml?query=branch%3Amaster)
+[![dashboard-ci](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/dashboard-ci.yml/badge.svg?branch=master)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/dashboard-ci.yml?query=branch%3Amaster)
 
 ## Introduction
 
-AzerothCore is an open-source game server application and framework designed for hosting massively multiplayer online role-playing games (MMORPGs). It is based on the popular MMORPG World of Warcraft (WoW) and seeks to recreate the gameplay experience of the original game from patch 3.3.5a.
+AzerothCore is an open-source game server application and framework designed for hosting massively multiplayer online role-playing games (MMORPGs). It is based on World of Warcraft (WoW) patch 3.3.5a.
 
 The original code is based on MaNGOS, TrinityCore, and SunwellCore and has since then had extensive development to improve stability, in-game mechanics, and modularity to the game. AC has also grown into a community-driven project with a significant number of contributors and developers. It is written in C++ and provides a solid foundation for creating private servers that mimic the mechanics and behavior of the official WoW servers.
+
+**This fork** additionally includes:
+- 🤖 **PlayerBots**: AI-controlled player characters that can accompany you, form parties, and raid dungeons.
+- 🧟 **NPCBots**: AI-controlled NPCs that behave like real players, enabling solo dungeon and raid experiences.
+
+These features make this fork ideal for **solo play**, **testing**, and **small private servers** that want to simulate a populated world without requiring many real players.
 
 ## Philosophy
 
@@ -57,7 +67,7 @@ AzerothCore can also serve as a learning resource for aspiring developers who wa
 
 If you want to contribute to the project, you will find a lot of resources that will guide you in our [wiki](https://www.azerothcore.org/wiki/contribute).
 
-We also recommend you read our [Contributor Covenant Code of Conduct](https://github.com/azerothcore/azerothcore-wotlk/blob/master/.github/CODE_OF_CONDUCT.md).
+We also recommend you read our [Contributor Covenant Code of Conduct](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/blob/master/.github/CODE_OF_CONDUCT.md).
 
 Feel free to join our [Discord server](https://discord.gg/gkt4y2x).
 
@@ -67,7 +77,7 @@ Click on the "⭐ Star" button to help us gain more visibility on Github!
 
 The project was born in 2016 based on SunwellCore. Unfortunately, SunwellCore was published without any git history, so on git there are no credits for all the contributors before 2016.
 
-You can check the [authors](https://github.com/azerothcore/azerothcore-wotlk/blob/master/AUTHORS) file for more details.
+You can check the [authors](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/blob/master/AUTHORS) file for more details.
 
 ## Important Links
 
