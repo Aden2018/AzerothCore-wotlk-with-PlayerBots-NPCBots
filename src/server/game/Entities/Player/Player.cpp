@@ -11443,7 +11443,7 @@ void Player::CorrectMetaGemEnchants(uint8 exceptslot, bool apply)
 void Player::ToggleMetaGemsActive(uint8 exceptslot, bool apply)
 {
     //cycle all equipped items
-    for (uint8_t slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
+    for (int slot = EQUIPMENT_SLOT_START; slot < static_cast<int>(EQUIPMENT_SLOT_END); ++slot)
     {
         //enchants for the slot being socketed are handled by WorldSession::HandleSocketOpcode(WorldPacket& recvData)
         if (slot == exceptslot)
@@ -16165,7 +16165,7 @@ float Player::GetAverageItemLevelForDF()
     uint32 count = 0;
     uint8 level = GetLevel();
 
-    for (int i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+    for (int i = EQUIPMENT_SLOT_START; i < static_cast<int>(EQUIPMENT_SLOT_END); ++i)
     {
         // don't check tabard, ranged, offhand or shirt
         if (i == EQUIPMENT_SLOT_TABARD || i == EQUIPMENT_SLOT_RANGED || i == EQUIPMENT_SLOT_OFFHAND || i == EQUIPMENT_SLOT_BODY)
