@@ -12,14 +12,14 @@
 
 ## Build Status
 
-[![nopch-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core-build-nopch.yml/badge.svg?branch=master)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core-build-nopch.yml?query=branch%3Amaster)
-[![pch-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core-build-pch.yml/badge.svg?branch=master)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core-build-pch.yml?query=branch%3Amaster)
-[![core-modules-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core_modules_build.yml/badge.svg?branch=master)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core_modules_build.yml?query=branch%3Amaster)
-[![windows-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/windows_build.yml/badge.svg?branch=master)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/windows_build.yml?query=branch%3Amaster)
-[![macos-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/macos_build.yml/badge.svg?branch=master)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/macos_build.yml?query=branch%3Amaster)
-[![docker-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/docker_build.yml/badge.svg?branch=master)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/docker_build.yml?query=branch%3Amaster)
-[![tools-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/tools_build.yml/badge.svg?branch=master)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/tools_build.yml?query=branch%3Amaster)
-[![dashboard-ci](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/dashboard-ci.yml/badge.svg?branch=master)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/dashboard-ci.yml?query=branch%3Amaster)
+[![nopch-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core-build-nopch.yml/badge.svg?branch=Playerbot)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core-build-nopch.yml?query=branch%3APlayerbot)
+[![pch-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core-build-pch.yml/badge.svg?branch=Playerbot)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core-build-pch.yml?query=branch%3APlayerbot)
+[![core-modules-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core_modules_build.yml/badge.svg?branch=Playerbot)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/core_modules_build.yml?query=branch%3APlayerbot)
+[![windows-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/windows_build.yml/badge.svg?branch=Playerbot)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/windows_build.yml?query=branch%3APlayerbot)
+[![macos-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/macos_build.yml/badge.svg?branch=Playerbot)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/macos_build.yml?query=branch%3APlayerbot)
+[![docker-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/docker_build.yml/badge.svg?branch=Playerbot)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/docker_build.yml?query=branch%3APlayerbot)
+[![tools-build](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/tools_build.yml/badge.svg?branch=Playerbot)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/tools_build.yml?query=branch%3APlayerbot)
+[![dashboard-ci](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/dashboard-ci.yml/badge.svg?branch=Playerbot)](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/actions/workflows/dashboard-ci.yml?query=branch%3APlayerbot)
 
 ## Introduction
 
@@ -40,7 +40,7 @@ Our main goal is to create a playable game server, offering a fully working in-g
 Here are the main points we focus on:
 
 * Stability
-  * We make sure all changes pass the CIs before being merged into the master branch.
+  * We make sure all changes pass the CIs before being merged into the Playerbot branch.
 
 * Blizzlike content
   * We strive to make all in-game content to be blizzlike. Therefore we have a high standard for fixes being made.
@@ -67,7 +67,7 @@ AzerothCore can also serve as a learning resource for aspiring developers who wa
 
 If you want to contribute to the project, you will find a lot of resources that will guide you in our [wiki](https://www.azerothcore.org/wiki/contribute).
 
-We also recommend you read our [Contributor Covenant Code of Conduct](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/blob/master/.github/CODE_OF_CONDUCT.md).
+We also recommend you read our [Contributor Covenant Code of Conduct](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/blob/Playerbot/.github/CODE_OF_CONDUCT.md).
 
 Feel free to join our [Discord server](https://discord.gg/gkt4y2x).
 
@@ -77,7 +77,7 @@ Click on the "⭐ Star" button to help us gain more visibility on Github!
 
 The project was born in 2016 based on SunwellCore. Unfortunately, SunwellCore was published without any git history, so on git there are no credits for all the contributors before 2016.
 
-You can check the [authors](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/blob/master/AUTHORS) file for more details.
+You can check the [authors](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/blob/Playerbot/AUTHORS) file for more details.
 
 ## Important Links
 
