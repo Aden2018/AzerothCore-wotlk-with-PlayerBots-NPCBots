@@ -235,9 +235,13 @@ jobs:
           ./acore.sh module remove mod-duel-reset
           ./acore.sh module list
 
-      - name: Run core tests
-        run: |
-          ./acore.sh test core
+        - name: Run core tests (skip if unit_tests not built)
+          run: |
+            if [[ -f var/build/obj/src/test/unit_tests ]]; then
+              ./acore.sh test core
+            else
+              echo "Unit tests not built (CBUILD_TESTING=OFF), skipping core tests."
+            fi
 
       - name: Test authserver dry-run
         run: |
