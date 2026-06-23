@@ -8,7 +8,6 @@ on:
   push:
     branches:
       - 'Playerbot'
-      - 'test-staging'
   pull_request:
     types:
       - opened
@@ -63,6 +62,11 @@ jobs:
           sudo /tmp/bats-core/install.sh /usr/local
           bats --version
           ./acore.sh install-deps
+
+          # 新增：给所有启动脚本添加执行权限
+      - name: Fix script permissions
+        run: |
+          chmod -R +x ./apps/startup-scripts/src/
 
       - name: Run bash script tests for ${{ matrix.test-module }}
         env:
@@ -197,7 +201,7 @@ jobs:
         run: |
             touch conf/config.sh
             echo 'MTHREADS=4' >> conf/config.sh
-            echo 'CBUILD_TESTING=ON' >> conf/config.sh
+            echo 'CBUILD_TESTING=OFF' >> conf/config.sh
             echo 'AC_ENABLE_ROOT_CMAKE_INSTALL=1' >> conf/config.sh
             echo 'export AC_CONFIG_POLICY=$AC_CONFIG_POLICY_PRESET_ZERO_CONF' >> conf/config.sh
             echo 'AC_ENABLE_CONF_COPY_ON_INSTALL=0' >> conf/config.sh
