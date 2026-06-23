@@ -20,6 +20,7 @@
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "GossipDef.h"
+#include "ScriptedGossip.h"
 
 class TeleportBook : public ItemScript
 {

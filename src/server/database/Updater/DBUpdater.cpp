@@ -90,6 +90,7 @@ std::string DBUpdater<LoginDatabaseConnection>::GetBaseFilesDirectory()
     return DBUpdater<LoginDatabaseConnection>::GetSourceDirectory() + "/data/sql/base/db_auth/";
 }
 #else
+template<>
 std::string DBUpdater<LoginDatabaseConnection>::GetBaseFilesDirectory()
 {
     return BuiltInConfig::GetSourceDirectory() + "/data/sql/base/db_auth/";
@@ -140,6 +141,7 @@ std::string DBUpdater<WorldDatabaseConnection>::GetBaseFilesDirectory()
     return DBUpdater<WorldDatabaseConnection>::GetSourceDirectory() + "/data/sql/base/db_world/";
 }
 #else
+template<>
 std::string DBUpdater<WorldDatabaseConnection>::GetBaseFilesDirectory()
 {
     return BuiltInConfig::GetSourceDirectory() + "/data/sql/base/db_world/";
