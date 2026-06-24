@@ -9,13 +9,6 @@ on:
       - synchronize
 
 concurrency:
-  # One concurrency group per workflow + ref.
-  #
-  # - PRs use `refs/pull/<PR_NUMBER>/merge`, so new commits cancel older
-  #   in-progress runs for the same PR.
-  # - When a PR is merged, a push to the target branch starts a new group,
-  #   canceling any still-running PR CI.
-  # - Branch pushes are isolated by ref.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
@@ -26,22 +19,24 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
-            compiler:
-              CC: clang-18
-              CXX: clang++-18
+            cc: clang-18
+            cxx: clang++-18
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }}-${{ matrix.compiler.CC }}
+    name: ${{ matrix.os }}-${{ matrix.cc }}
     if: |
-      github.repository == 'Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots' && !github.event.pull_request.draft
+      github.repository == 'Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots'
       && (
-        contains(github.event.pull_request.labels.*.name, 'run-build')
-        || github.event.label.name == 'run-build'
+        github.event_name == 'push' && github.ref == 'refs/heads/Playerbot'
+        ||
+        (github.event_name == 'pull_request'
+          && !github.event.pull_request.draft
+          && contains(github.event.pull_request.labels.*.name, 'run-build'))
       )
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/linux-build
         with:
-          CC: ${{ matrix.compiler.CC }}
-          CXX: ${{ matrix.compiler.CXX }}
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
           tools: all
           pch: false
