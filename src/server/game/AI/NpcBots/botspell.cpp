@@ -1,3 +1,4 @@
+#include <cstddef>
 #include "botdefine.h"
 #include "botspell.h"
 #include "DBCStores.h"
