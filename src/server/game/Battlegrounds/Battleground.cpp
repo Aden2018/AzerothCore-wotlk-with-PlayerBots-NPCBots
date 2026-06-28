@@ -1240,9 +1240,13 @@ void Battleground::RemovePlayerAtLeave(Player* player)
 
         // remove from raid group if player is member
         if (Group* group = GetBgRaid(teamId))
+        {
             if (group->IsMember(player->GetGUID()))
+            {
                 if (!group->RemoveMember(player->GetGUID())) // group was disbanded
                     SetBgRaid(teamId, nullptr);
+            }
+        }
 
         // let others know
         sBattlegroundMgr->BuildPlayerLeftBattlegroundPacket(&data, player->GetGUID());

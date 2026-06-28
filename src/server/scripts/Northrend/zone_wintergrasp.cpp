@@ -816,6 +816,7 @@ public:
                 return true;
             //end npcbot
 #endif
+
             if (passenger->HasAura(SPELL_LIEUTENANT))
                 return true;
 

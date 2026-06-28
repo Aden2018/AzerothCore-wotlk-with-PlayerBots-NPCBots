@@ -468,7 +468,9 @@ void Group::RemoveInvite(Player* player)
     if (player->GetGroupInvite() != this)
         return;
 
-    m_invitees.erase(player);
+    auto itr = m_invitees.find(player);
+    if (itr != m_invitees.end())
+        m_invitees.erase(itr);
 
     player->SetGroupInvite(nullptr);
 	//end playerbots
@@ -582,7 +584,7 @@ bool Group::AddMember(Creature* creature)
 //end npcbot
 #endif
 
-bool Group::AddMember(Player* player)
+bool Group::AddMember(Player* player, uint8 roles /* = 0 */)
 {
     if (!player)
         return false;
@@ -610,7 +612,7 @@ bool Group::AddMember(Player* player)
     member.name      = player->GetName();
     member.group     = subGroup;
     member.flags     = 0;
-    member.roles     = 0;
+    member.roles     = roles;
     m_memberSlots.push_back(member);
 
     if (!isBGGroup() && !isBFGroup())
@@ -1692,20 +1694,32 @@ bool Group::CountRollVote(ObjectGuid playerGUID, ObjectGuid Guid, uint8 Choice)
 
     if (roll->totalPass + roll->totalNeed + roll->totalGreed >= roll->totalPlayersRolling)
     {
+#ifdef MOD_PLAYERBOTS
         CountTheRoll(rollI, nullptr);
+#else
+        CountTheRoll(rollI);
+#endif
         return true;
     }
     return false;
 }
 
 //called when roll timer expires
+#ifdef MOD_PLAYERBOTS
 void Group::EndRoll(Loot* pLoot, Map* allowedMap)
+#else
+void Group::EndRoll(Loot* pLoot)
+#endif
 {
     for (Rolls::iterator itr = RollId.begin(); itr != RollId.end();)
     {
         if ((*itr)->getLoot() == pLoot)
         {
+#ifdef MOD_PLAYERBOTS
             CountTheRoll(itr, allowedMap);           //i don't have to edit player votes, who didn't vote ... he will pass
+#else
+            CountTheRoll(itr);           //i don't have to edit player votes, who didn't vote ... he will pass
+#endif
             itr = RollId.begin();
         }
         else
@@ -1744,7 +1758,11 @@ void Group::RemovePlayerFromRolls(ObjectGuid guid)
     }
 }
 
+#ifdef MOD_PLAYERBOTS
 void Group::CountTheRoll(Rolls::iterator rollI, Map* allowedMap)
+#else
+void Group::CountTheRoll(Rolls::iterator rollI)
+#endif
 {
     Roll* roll = *rollI;
     if (!roll->isValid())                                   // is loot already deleted ?
@@ -1769,7 +1787,11 @@ void Group::CountTheRoll(Rolls::iterator rollI, Map* allowedMap)
                     continue;
 
                 player = ObjectAccessor::FindPlayer(itr->first);
+#ifdef MOD_PLAYERBOTS
                 if (!player || (allowedMap != nullptr && player->FindMap() != allowedMap))
+#else
+                if (!player)
+#endif
                 {
                     --roll->totalNeed;
                     continue;
@@ -1833,7 +1855,7 @@ void Group::CountTheRoll(Rolls::iterator rollI, Map* allowedMap)
                 roll->totalNeed = 0;
         }
     }
-    if (roll->totalNeed == 0 && roll->totalGreed > 0) // pussywizard: if (roll->totalNeed == 0 && ...), not else if, because numbers can be modified above if player is on a different map
+    if (roll->totalNeed == 0 && roll->totalGreed > 0) // if (roll->totalNeed == 0 && ...), not else if, because totalNeed can be decremented above when a needing player is offline
     {
         if (!roll->playerVote.empty())
         {
@@ -1849,7 +1871,11 @@ void Group::CountTheRoll(Rolls::iterator rollI, Map* allowedMap)
                     continue;
 
                 player = ObjectAccessor::FindPlayer(itr->first);
+#ifdef MOD_PLAYERBOTS
                 if (!player || (allowedMap != nullptr && player->FindMap() != allowedMap))
+#else
+                if (!player)
+#endif
                 {
                     --roll->totalGreed;
                     continue;
@@ -1947,7 +1973,7 @@ void Group::CountTheRoll(Rolls::iterator rollI, Map* allowedMap)
                 roll->totalGreed = 0;
         }
     }
-    if (roll->totalNeed == 0 && roll->totalGreed == 0) // pussywizard: if, not else, because numbers can be modified above if player is on a different map
+    if (roll->totalNeed == 0 && roll->totalGreed == 0) // if, not else, because the totals can be decremented above when a rolling player is offline
     {
         SendLootAllPassed(*roll);
 

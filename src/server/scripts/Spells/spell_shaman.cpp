@@ -648,6 +648,7 @@ class spell_sha_earthbind_totem : public AuraScript
     {
         if (!GetCaster())
             return;
+
 #ifdef MOD_NPCERBOTS
         //npcbot: workaround for bots
         if (ObjectGuid creatorGuid = GetCaster()->GetCreatorGUID())
@@ -658,6 +659,7 @@ class spell_sha_earthbind_totem : public AuraScript
                             GetTarget()->CastSpell((Unit*)nullptr, SPELL_SHAMAN_TOTEM_EARTHEN_POWER, true);
         //end npcbot
 #endif
+
         if (Player* owner = GetCaster()->GetCharmerOrOwnerPlayerOrPlayerItself())
             if (AuraEffect* aur = owner->GetDummyAuraEffect(SPELLFAMILY_SHAMAN, 2289, 0))
                 if (roll_chance_i(aur->GetBaseAmount()))

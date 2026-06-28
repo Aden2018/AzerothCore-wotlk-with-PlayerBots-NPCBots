@@ -106,7 +106,7 @@ void GroupMgr::LoadGroups()
         CharacterDatabase.DirectExecute("DELETE FROM `groups` WHERE leaderGuid NOT IN (SELECT guid FROM characters)");
 
         // Delete all groups with less than 2 members
-#ifdef MOD_NPCERBOTS
+#ifndef MOD_NPCERBOTS
         //npcbot
         CharacterDatabase.DirectExecute("DELETE FROM `groups` WHERE guid NOT IN (SELECT guid FROM group_member GROUP BY guid HAVING COUNT(guid) > 1)");
 #else

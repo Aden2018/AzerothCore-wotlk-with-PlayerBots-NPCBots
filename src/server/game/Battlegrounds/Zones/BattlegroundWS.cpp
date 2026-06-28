@@ -305,6 +305,7 @@ void BattlegroundWS::EventBotCapturedFlag(Creature* bot)
 }
 //end npcbot
 #endif
+
 void BattlegroundWS::EventPlayerDroppedFlag(Player* player)
 {
     if (GetFlagPickerGUID(TEAM_HORDE) != player->GetGUID() && GetFlagPickerGUID(TEAM_ALLIANCE) != player->GetGUID())

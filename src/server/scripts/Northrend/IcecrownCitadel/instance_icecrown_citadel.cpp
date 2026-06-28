@@ -545,7 +545,7 @@ public:
 
         uint32 GetCreatureEntry(ObjectGuid::LowType /*guidLow*/, CreatureData const* data) override
         {
-            uint32 entry = data->id1;
+            uint32 entry = data->id;
             switch (entry)
             {
                 case NPC_HORDE_GUNSHIP_CANNON:
@@ -1722,6 +1722,7 @@ public:
                                 FrozenThronePlatformDestructionEvent(this, platform->GetPosition())();
                             //end npcbot
 #endif
+
                             if (GameObject* platform = instance->GetGameObject(ArthasPlatformGUID))
                                 platform->SetDestructibleState(GO_DESTRUCTIBLE_DAMAGED);
                             if (GameObject* edge = instance->GetGameObject(FrozenThroneEdgeGUID))

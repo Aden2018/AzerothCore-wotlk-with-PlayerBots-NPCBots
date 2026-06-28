@@ -901,6 +901,7 @@ class spell_dru_rip : public AuraScript
             }
             //end npcbot
 #endif
+
             // 0.01 * $AP * cp
             uint8 cp = caster->ToPlayer()->GetComboPoints();
 
@@ -1226,6 +1227,7 @@ class spell_dru_t10_restoration_4p_bonus : public SpellScript
         }
         //end npcbot
 #endif
+
         if (!GetCaster()->ToPlayer()->GetGroup())
         {
             targets.clear();

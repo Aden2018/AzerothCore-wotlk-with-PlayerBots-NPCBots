@@ -616,6 +616,7 @@ public:
                         continue;
                     (*itr)->ToCreature()->CastSpell((*itr)->ToCreature(), explosionSpell, true);
                 }
+
 #ifdef MOD_NPCERBOTS
                 //npcbot: kill bots
                 Transport::PassengerSet const& allpassengers = t->GetPassengers();

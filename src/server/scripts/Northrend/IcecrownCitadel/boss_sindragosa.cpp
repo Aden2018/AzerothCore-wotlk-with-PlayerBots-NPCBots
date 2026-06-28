@@ -764,6 +764,7 @@ public:
                 }
                 //end npcbot
 #endif
+
                 Player* player = ObjectAccessor::GetPlayer(*me, _trappedPlayerGUID);
                 if (!player || !player->IsAlive() || !player->HasAura(SPELL_ICE_TOMB_DAMAGE))
                 {
@@ -1041,6 +1042,7 @@ public:
             return true;
         //end npcbot
 #endif
+
         return unit->HasAura(SPELL_FROST_IMBUED_BLADE) || unit->IsImmunedToDamageOrSchool(SPELL_SCHOOL_MASK_ALL);
     }
 
@@ -1052,6 +1054,7 @@ public:
             return true;
         //end npcbot
 #endif
+
         return object->ToUnit() && (object->ToUnit()->HasAura(SPELL_FROST_IMBUED_BLADE) || object->ToUnit()->IsImmunedToDamageOrSchool(SPELL_SCHOOL_MASK_ALL));
     }
 };

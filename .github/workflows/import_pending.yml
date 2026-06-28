@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - Playerbot
-      - test-staging   # add this if you want pending SQL imported on this branch too
 
 jobs:
   import-pending:

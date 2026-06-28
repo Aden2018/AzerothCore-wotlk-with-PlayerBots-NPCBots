@@ -24,6 +24,7 @@ add_executable(
 )
 
 # ============ 1. 先添加模块测试源文件（如果有） ============
+# Add module test sources if any modules registered tests
 get_property(MODULE_TEST_SOURCES GLOBAL PROPERTY ACORE_MODULE_TEST_SOURCES)
 get_property(MODULE_TEST_INCLUDES GLOBAL PROPERTY ACORE_MODULE_TEST_INCLUDES)
 

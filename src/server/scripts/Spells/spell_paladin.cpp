@@ -28,6 +28,7 @@
  * Ordered alphabetically using scriptname.
  * Scriptnames of files in this file should be prefixed with "spell_pal_".
  */
+
 #ifdef MOD_NPCERBOTS
 //npcbot
 #include "Creature.h"
@@ -344,12 +345,14 @@ private:
     {
         healPct = GetSpellInfo()->Effects[EFFECT_1].CalcValue();
         absorbPct = GetSpellInfo()->Effects[EFFECT_0].CalcValue();
+
 #ifdef MOD_NPCERBOTS
         //npcbot - allow for npcbots
         if (GetUnitOwner()->IsNPCBot())
             return true;
         //end npcbot
 #endif
+
         return GetUnitOwner()->IsPlayer();
     }
 
@@ -364,6 +367,7 @@ private:
         Unit* victim = GetTarget();
         int32 remainingHealth = victim->GetHealth() - dmgInfo.GetDamage();
         uint32 allowedHealth = victim->CountPctFromMaxHealth(35);
+
 #ifdef MOD_NPCERBOTS
         //npcbot - calc for bots
         if (victim->GetTypeId() == TYPEID_UNIT/* && victim->ToCreature()->IsNPCBot()*/)
@@ -397,6 +401,7 @@ private:
         }
         //end npcbot
 #endif
+
         // If damage kills us
         if (remainingHealth <= 0 && !victim->ToPlayer()->HasAura(PAL_SPELL_ARDENT_DEFENDER_DEBUFF))
         {

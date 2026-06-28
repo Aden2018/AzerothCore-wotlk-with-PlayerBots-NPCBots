@@ -28,6 +28,7 @@
  * Ordered alphabetically using scriptname.
  * Scriptnames of files in this file should be prefixed with "spell_rog_".
  */
+
 #ifdef MOD_NPCERBOTS
 //npcbot
 #include "Creature.h"
@@ -221,6 +222,7 @@ class spell_rog_cheat_death : public AuraScript
         }
         //end npcbot
 #endif
+
         Player* target = GetTarget()->ToPlayer();
         if (dmgInfo.GetDamage() < target->GetHealth() || target->HasSpellCooldown(SPELL_ROGUE_CHEAT_DEATH_COOLDOWN) || !roll_chance_i(absorbChance))
             return;
@@ -637,6 +639,7 @@ class spell_rog_rupture : public AuraScript
             }
             //end npcbot
 #endif
+
             uint8 cp = caster->ToPlayer()->GetComboPoints();
             if (cp > 5)
                 cp = 5;

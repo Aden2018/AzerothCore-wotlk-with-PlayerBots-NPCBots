@@ -216,7 +216,7 @@ public:
     void   RemoveInvite(Player* player);
     void   RemoveAllInvites();
     bool   AddLeaderInvite(Player* player);
-    bool   AddMember(Player* player);
+    bool   AddMember(Player* player, uint8 roles = 0);
     bool   RemoveMember(ObjectGuid guid, const RemoveMethod& method = GROUP_REMOVEMETHOD_DEFAULT, ObjectGuid kicker = ObjectGuid::Empty, const char* reason = nullptr);
     void   ChangeLeader(ObjectGuid guid);
     void   SetLootMethod(LootMethod method);
@@ -320,9 +320,17 @@ public:
     void NeedBeforeGreed(Loot* loot, WorldObject* pLootedObject);
     void MasterLoot(Loot* loot, WorldObject* pLootedObject);
     Rolls::iterator GetRoll(ObjectGuid Guid);
+#ifdef MOD_PLAYERBOTS
     void CountTheRoll(Rolls::iterator roll, Map* allowedMap);
+#else
+    void CountTheRoll(Rolls::iterator roll);
+#endif
     bool CountRollVote(ObjectGuid playerGUID, ObjectGuid Guid, uint8 Choise);
+#ifdef MOD_PLAYERBOTS
     void EndRoll(Loot* loot, Map* allowedMap);
+#else
+    void EndRoll(Loot* loot);
+#endif
     void RemovePlayerFromRolls(ObjectGuid guid);
 
 #ifdef MOD_PLAYERBOTS

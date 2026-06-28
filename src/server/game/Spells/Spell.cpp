@@ -575,7 +575,7 @@ SpellValue::SpellValue(SpellInfo const* proto)
 }
 
 Spell::Spell(Unit* caster, SpellInfo const* info, TriggerCastFlags triggerFlags, ObjectGuid originalCasterGUID, bool skipCheck) :
-#ifdef MOD_NPCERBOTS
+#ifndef MOD_NPCERBOTS
 //npcbot: override spellInfo
     m_spellInfo(sSpellMgr->GetSpellForDifficultyFromSpell(info, caster)),
 #else

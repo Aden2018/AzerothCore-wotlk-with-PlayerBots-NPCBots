@@ -31,6 +31,7 @@
 #include "botmgr.h"
 //end npcbot
 #endif
+
 /*
  * Scripts for spells with SPELLFAMILY_DEATHKNIGHT and SPELLFAMILY_GENERIC spells used by deathknight players.
  * Ordered alphabetically using scriptname.
@@ -695,6 +696,7 @@ class spell_dk_dancing_rune_weapon : public AuraScript
         }
         //end npcbot
 #endif
+
         if (!eventInfo.GetActor() || !eventInfo.GetActionTarget() || !eventInfo.GetActionTarget()->IsAlive() || !eventInfo.GetActor()->IsPlayer())
             return false;
 

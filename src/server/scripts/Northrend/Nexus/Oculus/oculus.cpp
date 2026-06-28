@@ -386,6 +386,7 @@ public:
             }
             //end npcbot
 #endif
+
             if (!passenger->IsPlayer())
                 return;
 

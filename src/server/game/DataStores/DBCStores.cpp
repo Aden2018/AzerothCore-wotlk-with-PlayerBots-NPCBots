@@ -1000,6 +1000,7 @@ const std::vector<SkillLineAbilityEntry const*>& GetSkillLineAbilitiesBySkillLin
     return it->second;
 }
 
+#ifdef MOD_PLAYERBOTS
 uint32 GetAreaFlagByMapId(uint32 mapid)
 {
     AreaFlagByMapID::iterator i = sAreaFlagByMapID.find(mapid);
@@ -1008,7 +1009,6 @@ uint32 GetAreaFlagByMapId(uint32 mapid)
     return i->second;
 }
 
-#ifdef MOD_PLAYERBOTS
 int32 GetAreaFlagByAreaID(uint32 area_id)
 {
     AreaFlagByAreaID::iterator i = sAreaFlagByAreaID.find(area_id);

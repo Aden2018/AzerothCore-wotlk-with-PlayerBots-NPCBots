@@ -365,12 +365,7 @@ bool Vehicle::AddPassenger(Unit* unit, int8 seatId)
             return false;
 
         if (!seat->second.IsEmpty())
-        {
-            if (Unit* passenger = ObjectAccessor::GetUnit(*GetBase(), seat->second.Passenger.Guid))
-                passenger->ExitVehicle();
-
-            seat->second.Passenger.Guid.Clear();
-        }
+            return false;
 
         ASSERT(seat->second.IsEmpty());
     }
@@ -393,7 +388,6 @@ bool Vehicle::AddPassenger(Unit* unit, int8 seatId)
         else
             _me->SetNpcFlag(_me->IsPlayer() ?  UNIT_NPC_FLAG_PLAYER_VEHICLE : UNIT_NPC_FLAG_SPELLCLICK);
     }
-
 #ifdef MOD_NPCERBOTS
         //npcbot: do not allow other passengers on bot vehicles
         if (unit->IsNPCBot()/* &&
@@ -458,6 +452,7 @@ bool Vehicle::AddPassenger(Unit* unit, int8 seatId)
             LOG_INFO("vehicles", "Crash recovered in Unit::SetCharmedBy(). Unit {}, typeid: {}, in world: {}, duringremove: {} has wrong CharmType! Charmer {}, typeid: {}, in world: {}, duringremove: {}.", _me->GetName(), _me->GetTypeId(), _me->IsInWorld(), _me->IsDuringRemoveFromWorld(), unit->GetName(), unit->GetTypeId(), unit->IsInWorld(), unit->IsDuringRemoveFromWorld());
             return false;
         }
+
 #ifdef MOD_NPCERBOTS
         //npcbot
         if (unit->ToPlayer()->HaveBot())

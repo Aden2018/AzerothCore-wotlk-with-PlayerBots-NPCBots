@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - 'Playerbot'
-      - 'test-staging'
   pull_request:
     types:
       - opened

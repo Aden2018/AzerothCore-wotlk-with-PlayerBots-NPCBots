@@ -3710,6 +3710,7 @@ class spell_gen_tournament_pennant : public AuraScript
             return true;
         //end npcbot
 #endif
+
         return GetCaster() && GetCaster()->IsPlayer();
     }
 
