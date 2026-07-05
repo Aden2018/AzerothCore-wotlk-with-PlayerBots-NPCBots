@@ -27,7 +27,7 @@ jobs:
       - name: Checkout Playerbot Module
         uses: actions/checkout@v4
         with:
-          repository: mod-playerbots/mod-playerbots
+          repository: Aden2018/mod-playerbots
           ref: ${{ github.ref_name == 'Playerbot' && 'master' || 'test-staging' }}
           path: modules/mod-playerbots
 

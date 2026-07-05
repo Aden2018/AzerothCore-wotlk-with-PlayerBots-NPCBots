@@ -28,6 +28,11 @@
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "Util.h"
+#ifdef MOD_NPCERBOTS
+//npcbots start
+#include "botmgr.h"
+//npcbots end
+#endif
 
 int32 PetAI::Permissible(Creature const* creature)
 {
@@ -185,7 +190,11 @@ void PetAI::UpdateAI(uint32 diff)
     }
     else if (!me->GetCharmInfo() || (!me->GetCharmInfo()->GetForcedSpell() && !(me->IsPet() && me->ToPet()->HasTempSpell()) && !me->HasUnitState(UNIT_STATE_CASTING)))
     {
+#ifdef MOD_NPCERBOTS
+        if (me->HasReactState(REACT_AGGRESSIVE) || me->HasReactState(REACT_DEFENSIVE) || me->GetCharmInfo()->IsAtStay())
+#else
         if (me->HasReactState(REACT_AGGRESSIVE) || me->GetCharmInfo()->IsAtStay())
+#endif
         {
             // Every update we need to check targets only in certain cases
             // Aggressive - Allow auto select if owner or pet don't have a target
@@ -512,11 +521,90 @@ Unit* PetAI::SelectNextTarget(bool allowAutoSelect) const
         if (!ownerAttacker->HasBreakableByDamageCrowdControlAura() && me->CanCreatureAttack(ownerAttacker))
             return ownerAttacker;
 
+#ifdef MOD_NPCERBOTS
+    // ============【第一段新增】主人空闲，支援队伍被攻击的队员（修复Unit无GetGroup）============
+    if (!owner->GetVictim())
+    {
+        Player* ownerPlayer = owner->ToPlayer();
+        if (ownerPlayer)
+        {
+            Group* group = ownerPlayer->GetGroup();
+            if (group)
+            {
+                Group::MemberSlotList const& slots = group->GetMemberSlots();
+                for (auto const& slot : slots)
+                {
+                    Player* member = ObjectAccessor::FindPlayer(slot.guid);
+                    if (!member || member == ownerPlayer || !member->IsAlive() || member->GetMapId() != owner->GetMapId())
+                        continue;
+
+                    // 距离检查：队员必须在宠物视野范围内
+                    if (!member->IsInMap(me) || member->GetDistance(me) > me->GetVisibilityRange())
+                        continue;
+
+                    for (Unit* atk : member->getAttackers())
+                    {
+                        if (!atk || !atk->IsAlive() || atk->HasBreakableByDamageCrowdControlAura())
+                            continue;
+                        if (me->CanCreatureAttack(atk))
+                            return atk;
+                    }
+                }
+            }
+        }
+    }
+    // =====================================================================================
+#endif
+
     // Check owner victim
     // 3.0.2 - Pets now start attacking their owners victim in defensive mode as soon as the hunter does
-    if (Unit* ownerVictim = owner->GetVictim())
-        if (me->CanCreatureAttack(ownerVictim))
-            return ownerVictim;
+    Unit* ownerVictim = owner->GetVictim();
+    if (ownerVictim && me->CanCreatureAttack(ownerVictim))
+        return ownerVictim;
+
+#ifdef MOD_NPCERBOTS
+    /*/ ============【第二段新增】主人无自身目标，跟随主人NPCBots攻击目标 ============
+    for (Unit::ControlSet::const_iterator it = owner->m_Controlled.begin(); it != owner->m_Controlled.end(); ++it)
+    {
+        Creature* ctrl = dynamic_cast<Creature*>(*it);
+        if (!ctrl)
+            continue;
+
+        Unit* botTar = ctrl->GetVictim();
+        if (botTar && botTar->IsAlive() && me->CanCreatureAttack(botTar))
+            return botTar;
+    }
+    // =====================================================================================*/
+    // Check owner's NPCBots victims (for passive pets assisting NPCBots)
+    if (owner->IsPlayer())
+    {
+        Player* playerOwner = owner->ToPlayer();
+        if (playerOwner->HaveBot())
+        {
+            for (auto const& [_, bot] : *playerOwner->GetBotMgr()->GetBotMap())
+            {
+                if (!bot || !bot->IsInWorld() || !bot->IsAlive())
+                    continue;
+
+                // 距离检查：NPCBot必须在宠物视野范围内
+                if (!bot->IsInMap(me) || bot->GetDistance(me) > me->GetVisibilityRange())
+                    continue;
+
+                if (Unit* botVictim = bot->GetVictim())
+                {
+                    // 目标有效性检查
+                    if (botVictim->IsAlive() && me->CanCreatureAttack(botVictim))
+                        return botVictim;
+                }
+
+            }
+        }
+    }
+
+    // Passive pets don't do next target selection beyond this point
+    if (me->HasReactState(REACT_PASSIVE))
+        return nullptr;
+#endif
 
     // Neither pet or owner had a target and aggressive pets can pick any target
     // To prevent aggressive pets from chain selecting targets and running off, we

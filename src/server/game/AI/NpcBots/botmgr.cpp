@@ -1978,12 +1978,139 @@ void BotMgr::OnVehicleAttackedBy(Unit* attacker, Unit const* victim)
 void BotMgr::OnBotDamageTaken(Unit* attacker, Unit* victim, uint32 damage, CleanDamage const* cleanDamage, DamageEffectType damagetype, SpellInfo const* spellInfo)
 {
     victim->ToCreature()->GetBotAI()->OnBotDamageTaken(attacker, damage, cleanDamage , damagetype, spellInfo);
+
+#ifdef MOD_NPCERBOTS
+    if (!attacker || !victim->IsAlive())
+        return;
+
+    Player* botOwner = victim->ToCreature()->GetBotOwner();
+    if (!botOwner || !botOwner->HaveBot())
+        return;
+
+    for (Unit* controlled : botOwner->m_Controlled)
+    {
+        if (Creature* cControlled = controlled->ToCreature())
+        {
+            if (cControlled->IsPet() && cControlled->IsAlive() &&
+                cControlled->HasReactState(REACT_PASSIVE) &&
+                cControlled->IsValidAttackTarget(attacker))
+            {
+                cControlled->AI()->OwnerAttackedBy(attacker);
+            }
+        }
+    }
+
+    Group* group = botOwner->GetGroup();
+    if (group)
+    {
+        for (GroupReference const* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+        {
+            Player* member = itr->GetSource();
+            if (!member || !member->IsAlive() || member == botOwner)
+                continue;
+
+            if (member->GetMapId() != botOwner->GetMapId())
+                continue;
+
+            if (member->GetDistance(botOwner) > World::GetMaxVisibleDistanceOnContinents())
+                continue;
+
+            for (Unit* controlled : member->m_Controlled)
+            {
+                if (Creature* cControlled = controlled->ToCreature())
+                {
+                    if (cControlled->IsPet() && cControlled->IsAlive() &&
+                        cControlled->HasReactState(REACT_PASSIVE) &&
+                        cControlled->IsValidAttackTarget(attacker))
+                    {
+                        cControlled->AI()->OwnerAttackedBy(attacker);
+                    }
+                }
+            }
+
+            if (member->HaveBot())
+            {
+                for (auto const& [_, bot] : *member->GetBotMgr()->GetBotMap())
+                {
+                    if (!bot || !bot->IsInWorld() || !bot->IsAlive() || bot->IsDuringRemoveFromWorld())
+                        continue;
+
+                    if (bot == victim)
+                        continue;
+
+                    if (bot->GetBotAI() && !bot->GetBotAI()->HasBotCommandState(BOT_COMMAND_FULLSTOP | BOT_COMMAND_INACTION))
+                    {
+                        if (bot->GetBotAI()->CanBotAttack(attacker))
+                        {
+                            bot->GetBotAI()->OnOwnerDamagedBy(attacker);
+                        }
+                    }
+                }
+            }
+        }
+    }
+#endif
 }
 
 void BotMgr::OnBotDamageDealt(Unit* attacker, Unit* victim, uint32 damage, CleanDamage const* cleanDamage, DamageEffectType damagetype, SpellInfo const* spellInfo)
 {
     attacker->ToCreature()->GetBotAI()->OnBotDamageDealt(victim, damage, cleanDamage, damagetype, spellInfo);
 }
+
+#ifdef MOD_NPCERBOTS
+void BotMgr::OnPlayerDamageTaken(Unit* attacker, Player* victim)
+{
+    if (!attacker || !victim || !victim->IsAlive())
+        return;
+
+    Group* group = victim->GetGroup();
+    if (!group)
+        return;
+
+    for (GroupReference const* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+    {
+        Player* member = itr->GetSource();
+        if (!member || !member->IsAlive() || member == victim)
+            continue;
+
+        if (member->GetMapId() != victim->GetMapId())
+            continue;
+
+        if (member->GetDistance(victim) > World::GetMaxVisibleDistanceOnContinents())
+            continue;
+
+        for (Unit* controlled : member->m_Controlled)
+        {
+            if (Creature* cControlled = controlled->ToCreature())
+            {
+                if (cControlled->IsPet() && cControlled->IsAlive() &&
+                    cControlled->HasReactState(REACT_PASSIVE) &&
+                    cControlled->IsValidAttackTarget(attacker))
+                {
+                    cControlled->AI()->OwnerAttackedBy(attacker);
+                }
+            }
+        }
+
+        if (member->HaveBot())
+        {
+            for (auto const& [_, bot] : *member->GetBotMgr()->GetBotMap())
+            {
+                if (!bot || !bot->IsInWorld() || !bot->IsAlive() || bot->IsDuringRemoveFromWorld())
+                    continue;
+
+                if (bot->GetBotAI() && !bot->GetBotAI()->HasBotCommandState(BOT_COMMAND_FULLSTOP | BOT_COMMAND_INACTION))
+                {
+                    if (bot->GetBotAI()->CanBotAttack(attacker))
+                    {
+                        bot->GetBotAI()->OnOwnerDamagedBy(attacker);
+                    }
+                }
+            }
+        }
+    }
+}
+#endif
 
 void BotMgr::OnBotDispelDealt(Unit* dispeller, Unit* dispelled, uint8 num)
 {

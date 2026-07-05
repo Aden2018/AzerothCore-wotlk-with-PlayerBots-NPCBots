@@ -159,6 +159,9 @@ public:
     bool IsInBotParty(ObjectGuid guid) const;
     bool CanBotAttack(Unit const* target, int8 byspell = 0, bool secondary = false) const;
     bool CanBotAttackOnVehicle() const;
+#ifdef MOD_NPCERBOTS
+    void OnOwnerDamagedBy(Unit* attacker);
+#endif
     void ApplyBotDamageMultiplierMelee(uint32& damage, CalcDamageInfo& damageinfo) const;
     void ApplyBotDamageMultiplierMelee(int32& damage, SpellNonMeleeDamage& damageinfo, SpellInfo const* spellInfo, WeaponAttackType attackType, bool iscrit) const;
     void ApplyBotDamageMultiplierSpell(int32& damage, SpellNonMeleeDamage& damageinfo, SpellInfo const* spellInfo, WeaponAttackType attackType, bool iscrit) const;
@@ -390,7 +393,9 @@ protected:
     void DefaultInit();
     void InitUnitFlags(); // call only in constructor
 
+#ifndef MOD_NPCERBOTS
     void OnOwnerDamagedBy(Unit* attacker);
+#endif
 
     static uint32 InitSpell(Unit const* caster, uint32 spell);
     void InitSpellMap(uint32 basespell, bool forceadd = false, bool forwardRank = true);

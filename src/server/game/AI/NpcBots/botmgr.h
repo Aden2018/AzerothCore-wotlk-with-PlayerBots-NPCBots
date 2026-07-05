@@ -131,6 +131,9 @@ public:
     static void OnBotDamageTaken(Unit* attacker, Unit* victim, uint32 damage, CleanDamage const* cleanDamage, DamageEffectType damagetype, SpellInfo const* spellInfo);
     static void OnBotDamageDealt(Unit* attacker, Unit* victim, uint32 damage, CleanDamage const* cleanDamage, DamageEffectType damagetype, SpellInfo const* spellInfo);
     static void OnBotDispelDealt(Unit* dispeller, Unit* dispelled, uint8 num);
+#ifdef MOD_NPCERBOTS
+    static void OnPlayerDamageTaken(Unit* attacker, Player* victim);
+#endif
     static void OnBotEnterVehicle(Creature const* passenger, Vehicle const* vehicle);
     static void OnBotExitVehicle(Creature const* passenger, Vehicle const* vehicle);
     static void OnBotOwnerEnterVehicle(Player const* passenger, Vehicle const* vehicle);

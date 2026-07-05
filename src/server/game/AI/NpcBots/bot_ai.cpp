@@ -4401,6 +4401,60 @@ std::pair<Unit*, Unit*> bot_ai::_getTargets(bool byspell, bool ranged, bool &res
             }
         }
     }
+#ifdef MOD_NPCERBOTS
+    // ========== Master空闲时，支援被攻击的队伍成员与成员NPCBots ==========
+    if (!master->GetVictim() && gr)
+    {
+        for (GroupReference const* ref = gr->GetFirstMember(); ref != nullptr; ref = ref->next())
+        {
+            Player const* member = ref->GetSource();
+            if (!member || !member->IsInWorld() || member == master)
+                continue;
+            if (me->GetMap() != member->FindMap() || !member->InSamePhase(me))
+                continue;
+            if (IsTank() && IsTank(member))
+                continue;
+
+            // 1. 队员自身被怪物攻击，优先支援
+            for (Unit* atkUnit : member->getAttackers())
+            {
+                if (!atkUnit || !atkUnit->IsAlive())
+                    continue;
+                // 距离检查：攻击者必须在视野范围内
+                if (!atkUnit->IsInMap(me) || me->GetDistance(atkUnit) > me->GetVisibilityRange())
+                    continue;
+                if (!CanBotAttack(atkUnit, byspell))
+                    continue;
+                //BOT_LOG_ERROR("entities.player", "bot %s assist attacked party member %s, target %s",
+                //    me->GetName().c_str(), member->GetName().c_str(), atkUnit->GetName().c_str());
+                return { atkUnit, atkUnit };
+            }
+
+            // 2. 队员名下所有NPCBots被攻击，一并支援
+            if (!member->HaveBot())
+                continue;
+            for (auto const& [_, bot] : *member->GetBotMgr()->GetBotMap())
+            {
+                if (!bot || bot == me || !bot->InSamePhase(me) || me->GetMap() != bot->FindMap())
+                    continue;
+                for (Unit* atkUnit : bot->getAttackers())
+                {
+                    if (!atkUnit || !atkUnit->IsAlive())
+                        continue;
+                    // 距离检查：攻击者必须在视野范围内
+                    if (!atkUnit->IsInMap(me) || me->GetDistance(atkUnit) > me->GetVisibilityRange())
+                        continue;
+                    if (!CanBotAttack(atkUnit, byspell))
+                        continue;
+                    //BOT_LOG_ERROR("entities.player", "bot %s assist attacked party bot %s, target %s",
+                    //    me->GetName().c_str(), bot->GetName().c_str(), atkUnit->GetName().c_str());
+                    return { atkUnit, atkUnit };
+                }
+            }
+        }
+    }
+    // ======================================================================
+#endif
     else if (!canAttack)
     {
         //check attackers
@@ -11559,20 +11613,20 @@ void bot_ai::OnOwnerDamagedBy(Unit* attacker)
     bool byspell = false;
     switch (_botclass)
     {
-        case BOT_CLASS_DRUID:
-            byspell = GetBotStance() == BOT_STANCE_NONE || GetBotStance() == DRUID_MOONKIN_FORM;
-            break;
-        case BOT_CLASS_PRIEST:
-        case BOT_CLASS_MAGE:
-        case BOT_CLASS_WARLOCK:
-        case BOT_CLASS_SHAMAN:
-        case BOT_CLASS_SPHYNX:
-        case BOT_CLASS_ARCHMAGE:
-            byspell = true;
-            break;
-        default:
-            //BOT_LOG_ERROR("entities.player", "minion_ai: OnOwnerDamagedBy() - unknown bot class %u", uint8(_botclass));
-            break;
+    case BOT_CLASS_DRUID:
+        byspell = GetBotStance() == BOT_STANCE_NONE || GetBotStance() == DRUID_MOONKIN_FORM;
+        break;
+    case BOT_CLASS_PRIEST:
+    case BOT_CLASS_MAGE:
+    case BOT_CLASS_WARLOCK:
+    case BOT_CLASS_SHAMAN:
+    case BOT_CLASS_SPHYNX:
+    case BOT_CLASS_ARCHMAGE:
+        byspell = true;
+        break;
+    default:
+        //BOT_LOG_ERROR("entities.player", "minion_ai: OnOwnerDamagedBy() - unknown bot class %u", uint8(_botclass));
+        break;
     }
 
     if (!_canSwitchToTarget(me->GetVictim(), attacker, byspell))
@@ -11580,6 +11634,37 @@ void bot_ai::OnOwnerDamagedBy(Unit* attacker)
 
     SetBotCommandState(BOT_COMMAND_COMBATRESET); //reset AttackStart()
     me->Attack(attacker, !HasRole(BOT_ROLE_RANGED));
+
+#ifdef MOD_NPCERBOTS
+    //=========== 新增：检测同队队友是否被攻击并协助 ============
+    Group* grp = GetGroup();
+    if (grp)
+    {
+        for (GroupReference* itr = grp->GetFirstMember(); itr != nullptr; itr = itr->next())
+        {
+            Player* member = itr->GetSource();
+            if (!member || member == master || !member->IsAlive())
+                continue;
+            if (me->GetMap() != member->FindMap())
+                continue;
+            if (me->GetDistance(member) > 40.0f)
+                continue;
+
+            Unit::AttackerSet const& attackers = member->getAttackers();
+            for (Unit* atk : attackers)
+            {
+                if (atk && atk->IsAlive() &&
+                    !atk->IsFriendlyTo(me) &&
+                    me->CanCreatureAttack(atk))
+                {
+                    StartAttack(atk, true);
+                    break;
+                }
+            }
+        }
+    }
+    //=============================================================
+#endif
 }
 //force vehicle targeting and attack if vehicle is damaged
 void bot_ai::OnOwnerVehicleDamagedBy(Unit* attacker)

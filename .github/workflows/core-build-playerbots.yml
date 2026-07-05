@@ -42,7 +42,7 @@ jobs:
       - name: Checkout Playerbot Module
         uses: actions/checkout@v3
         with:
-          repository: mod-playerbots/mod-playerbots
+          repository: Aden2018/mod-playerbots
           # Map AC branch → PB branch
           ref: ${{ github.ref_name == 'Playerbot' && 'master' || 'test-staging' }}
           path: modules/mod-playerbots

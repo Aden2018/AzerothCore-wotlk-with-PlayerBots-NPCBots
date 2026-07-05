@@ -1059,7 +1059,14 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
     //npcbot
     if (victim->IsNPCBot())
         BotMgr::OnBotDamageTaken(attacker, victim, damage, cleanDamage , damagetype, spellProto);
+    else if (victim->IsPlayer())
+        BotMgr::OnPlayerDamageTaken(attacker, victim->ToPlayer());
     //end npcbot
+    else if (victim->IsPet())
+    {
+        if (Player* petOwner = victim->ToPet()->GetOwner())
+            BotMgr::OnPlayerDamageTaken(attacker, petOwner);
+    }
     //npcbot: damage dealt hook for crits and spells
     if (attacker && attacker->IsNPCBot())
         BotMgr::OnBotDamageDealt(attacker, victim, damage, cleanDamage, damagetype, spellProto);
@@ -1069,7 +1076,8 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
     if (damage > 0 && damage < victim->GetHealth())
     {
         Player const* botowner = victim->GetTypeId() == TYPEID_PLAYER ? victim->ToPlayer() :
-            victim->IsNPCBot() && !victim->ToCreature()->IsFreeBot() ? victim->ToCreature()->GetBotOwner() : nullptr;
+            victim->IsNPCBot() && !victim->ToCreature()->IsFreeBot() ? victim->ToCreature()->GetBotOwner() :
+            victim->IsPet() ? victim->ToPet()->GetOwner() : nullptr;
 
         if (botowner && botowner->GetBotMgr() && (botowner->HaveBot() || (botowner->GetGroup() && botowner->GetGroup()->IsMember(victim->GetGUID()))))
             botowner->GetBotMgr()->TrackDamage(victim, damage);
