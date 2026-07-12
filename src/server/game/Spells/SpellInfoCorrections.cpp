@@ -2080,7 +2080,6 @@ void SpellMgr::LoadSpellInfoCorrections()
     // Potent Pheromones
     ApplySpellFix({ 64321 }, [](SpellInfo* spellInfo)
     {
-        spellInfo->AttributesEx3 |= SPELL_ATTR3_ONLY_ON_PLAYER;
         spellInfo->AttributesEx |= SPELL_ATTR1_IMMUNITY_PURGES_EFFECT;
     });
 
