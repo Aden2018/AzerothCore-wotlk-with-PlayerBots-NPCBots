@@ -43,6 +43,9 @@ class Creature;
 class GameObject;
 class InstanceSave;
 class Item;
+#ifndef MOD_PLAYERBOTS
+class LoginQueryHolder;
+#endif
 class LoadPetFromDBQueryHolder;
 class Object;
 class Pet;

@@ -44,4 +44,4 @@ jobs:
           CC: ${{ matrix.compiler.CC }}
           CXX: ${{ matrix.compiler.CXX }}
           pch: true
-          modules: true   # optional: include modules in PCH build
+          # modules: true   # optional: include modules in PCH build

@@ -804,11 +804,7 @@ void Creature::Update(uint32 diff)
                 {
                     Group* group = sGroupMgr->GetGroupByGUID(lootingGroupLowGUID);
                     if (group)
-#ifdef MOD_PLAYERBOTS
-                        group->EndRoll(&loot, GetMap());
-#else
                         group->EndRoll(&loot);
-#endif
                     m_groupLootTimer = 0;
                     lootingGroupLowGUID = 0;
                 }

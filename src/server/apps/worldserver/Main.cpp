@@ -582,6 +582,7 @@ void WorldUpdateLoop()
 #ifdef MOD_PLAYERBOTS
     sScriptMgr->OnDatabaseWarnAboutSyncQueries(true);
 #endif
+
     ///- While we have not World::m_stopEvent, update the world
     while (!World::IsStopped())
     {
@@ -613,6 +614,7 @@ void WorldUpdateLoop()
 #ifdef MOD_PLAYERBOTS
     sScriptMgr->OnDatabaseWarnAboutSyncQueries(false);
 #endif
+
     LoginDatabase.WarnAboutSyncQueries(false);
     CharacterDatabase.WarnAboutSyncQueries(false);
     WorldDatabase.WarnAboutSyncQueries(false);

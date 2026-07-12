@@ -312,6 +312,7 @@ void Battleground::Update(uint32 diff)
     }
     //end npcbot
 #endif
+
     switch (GetStatus())
     {
         case STATUS_WAIT_JOIN:
@@ -425,7 +426,8 @@ inline void Battleground::_ProcessResurrect(uint32 diff)
                         continue;
                     }
                     //end npcbot
-#endif    
+#endif
+
                     Player* player = ObjectAccessor::FindPlayer(guid);
                     if (!player)
                         continue;
@@ -745,6 +747,7 @@ inline void Battleground::_ProcessJoin(uint32 diff)
 
             sScriptMgr->OnBattlegroundStart(this);
         }
+
 #ifdef MOD_NPCERBOTS
         //npcbot: activate bots
         for (auto const& kv : m_Bots)
@@ -1010,6 +1013,7 @@ void Battleground::EndBattleground(PvPTeamId winnerTeamId)
     }
     //end npcbot
 #endif
+
     for (auto const& [playerGuid, player] : m_Players)
     {
         TeamId bgTeamId = player->GetBgTeamId();
@@ -1201,6 +1205,7 @@ void Battleground::RemovePlayerAtLeave(Player* player)
         player->ResurrectPlayer(1.0f);
         player->SpawnCorpseBones();
     }
+
 #ifdef MOD_NPCERBOTS
     //npcbot
     if (player->HaveBot())
@@ -2179,6 +2184,7 @@ void Battleground::HandleKillPlayer(Player* victim, Player* killer)
             if (creditedPlayer->GetBgTeamId() == killer->GetBgTeamId() && (creditedPlayer == killer || creditedPlayer->IsAtGroupRewardDistance(victim)))
                 UpdatePlayerScore(creditedPlayer, SCORE_HONORABLE_KILLS, 1);
         }
+
 #ifdef MOD_NPCERBOTS
         //npcbot
         TeamId team = killer->GetBgTeamId();
@@ -2332,7 +2338,6 @@ bool Battleground::IsPlayerInBattleground(ObjectGuid guid) const
     }
     //end npcbot
 #endif
-
     BattlegroundPlayerMap::const_iterator itr = m_Players.find(guid);
     if (itr != m_Players.end())
         return true;
@@ -2408,6 +2413,7 @@ GraveyardStruct const* Battleground::GetClosestGraveyard(Player* player)
 {
     return sGraveyard->GetClosestGraveyard(player, player->GetBgTeamId());
 }
+
 #ifdef MOD_NPCERBOTS
 //npcbot
 GraveyardStruct const* Battleground::GetClosestGraveyardForBot(Creature* bot) const

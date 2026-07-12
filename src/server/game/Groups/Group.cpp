@@ -1694,32 +1694,20 @@ bool Group::CountRollVote(ObjectGuid playerGUID, ObjectGuid Guid, uint8 Choice)
 
     if (roll->totalPass + roll->totalNeed + roll->totalGreed >= roll->totalPlayersRolling)
     {
-#ifdef MOD_PLAYERBOTS
-        CountTheRoll(rollI, nullptr);
-#else
         CountTheRoll(rollI);
-#endif
         return true;
     }
     return false;
 }
 
 //called when roll timer expires
-#ifdef MOD_PLAYERBOTS
-void Group::EndRoll(Loot* pLoot, Map* allowedMap)
-#else
 void Group::EndRoll(Loot* pLoot)
-#endif
 {
     for (Rolls::iterator itr = RollId.begin(); itr != RollId.end();)
     {
         if ((*itr)->getLoot() == pLoot)
         {
-#ifdef MOD_PLAYERBOTS
-            CountTheRoll(itr, allowedMap);           //i don't have to edit player votes, who didn't vote ... he will pass
-#else
             CountTheRoll(itr);           //i don't have to edit player votes, who didn't vote ... he will pass
-#endif
             itr = RollId.begin();
         }
         else
@@ -1758,11 +1746,7 @@ void Group::RemovePlayerFromRolls(ObjectGuid guid)
     }
 }
 
-#ifdef MOD_PLAYERBOTS
-void Group::CountTheRoll(Rolls::iterator rollI, Map* allowedMap)
-#else
 void Group::CountTheRoll(Rolls::iterator rollI)
-#endif
 {
     Roll* roll = *rollI;
     if (!roll->isValid())                                   // is loot already deleted ?
@@ -1787,11 +1771,7 @@ void Group::CountTheRoll(Rolls::iterator rollI)
                     continue;
 
                 player = ObjectAccessor::FindPlayer(itr->first);
-#ifdef MOD_PLAYERBOTS
-                if (!player || (allowedMap != nullptr && player->FindMap() != allowedMap))
-#else
                 if (!player)
-#endif
                 {
                     --roll->totalNeed;
                     continue;
@@ -1871,11 +1851,7 @@ void Group::CountTheRoll(Rolls::iterator rollI)
                     continue;
 
                 player = ObjectAccessor::FindPlayer(itr->first);
-#ifdef MOD_PLAYERBOTS
-                if (!player || (allowedMap != nullptr && player->FindMap() != allowedMap))
-#else
                 if (!player)
-#endif
                 {
                     --roll->totalGreed;
                     continue;

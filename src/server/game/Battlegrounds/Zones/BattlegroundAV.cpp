@@ -706,6 +706,7 @@ void BattlegroundAV::RemovePlayer(Player* player)
     player->RemoveAurasDueToSpell(AV_BUFF_A_CAPTAIN);
     player->RemoveAurasDueToSpell(AV_BUFF_H_CAPTAIN);
 }
+
 #ifdef MOD_NPCERBOTS
 //npcbot
 void BattlegroundAV::RemoveBot(ObjectGuid guid)

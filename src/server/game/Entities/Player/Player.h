@@ -2100,6 +2100,7 @@ public:
 #ifdef MOD_PLAYERBOTS
     void SetMovement(PlayerMovementType pType);
 #endif
+
     bool CanJoinConstantChannelInZone(ChatChannelsEntry const* channel, AreaTableEntry const* zone);
 
     void JoinedChannel(Channel* c);
@@ -2617,6 +2618,7 @@ public:
     Spell* m_spellModTakingSpell;
 
     float GetAverageItemLevel();
+    [[nodiscard]] float GetTotalItemLevel() const;
     float GetAverageItemLevelForDF();
     bool isDebugAreaTriggers;
 
