@@ -55,12 +55,13 @@ jobs:
           repository: azerothcore/mod-ale
           path: modules/mod-ale
 
-      - name: Login to Docker Hub
+      - name: Login to GHCR
         if: github.repository == 'Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots' && github.ref_name == 'Playerbot'
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get version
         id: version
@@ -113,16 +114,3 @@ jobs:
           version: ${{ steps.version.outputs.version }}
           push: ${{ env.RUNNING_ON_PRIMARY_BRANCH }}
           dockerfile: apps/docker/Dockerfile.dev-server
-
-      - name: Trigger acore-docker CI
-        if: github.repository == 'Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots' && github.ref_name == 'Playerbot'
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.ACORE_DOCKER_REPO_ACCESS_TOKEN }}
-          repository: azerothcore/acore-docker
-          event-type: azerothcore-new-images
-          client-payload: >
-            {
-              "ref": "${{ github.ref_name }}",
-              "sha": "${{ github.sha }}"
-            }
