@@ -35,7 +35,7 @@ git clone --depth=1 --branch=master https://github.com/azerothcore/mod-detailed-
 git clone --depth=1 --branch=main   https://github.com/azerothcore/mod-dmf-switch modules/mod-dmf-switch
 git clone --depth=1 --branch=master https://github.com/azerothcore/mod-duel-reset modules/mod-duel-reset
 git clone --depth=1 --branch=master https://github.com/azerothcore/mod-dynamic-xp modules/mod-dynamic-xp
-git clone --depth=1 --branch=master https://github.com/azerothcore/mod-ale modules/mod-ale
+git clone --depth=1 --branch=master https://github.com/Aden2018/mod-ale modules/mod-ale
 git clone --depth=1 --branch=master https://github.com/azerothcore/mod-emblem-transfer modules/mod-emblem-transfer
 git clone --depth=1 --branch=master https://github.com/azerothcore/mod-fireworks-on-level modules/mod-fireworks-on-level
 git clone --depth=1 --branch=main   https://github.com/azerothcore/mod-global-chat modules/mod-global-chat
@@ -71,7 +71,7 @@ git clone --depth=1 --branch=master https://github.com/azerothcore/mod-npc-talen
 git clone --depth=1 --branch=master https://github.com/azerothcore/mod-npc-titles-tokens modules/mod-npc-titles-tokens
 git clone --depth=1 --branch=master https://github.com/azerothcore/mod-phased-duels modules/mod-phased-duels
 # outdated
-# git clone --depth=1 --branch=master https://github.com/azerothcore/mod-playerbots modules/mod-playerbots
+# git clone --depth=1 --branch=master https://github.com/Aden2018/mod-playerbots modules/mod-playerbots
 git clone --depth=1 --branch=master https://github.com/azerothcore/mod-pocket-portal modules/mod-pocket-portal
 git clone --depth=1 --branch=master https://github.com/azerothcore/mod-premium modules/mod-premium
 git clone --depth=1 --branch=main   https://github.com/azerothcore/mod-progression-system.git modules/mod-progression-system

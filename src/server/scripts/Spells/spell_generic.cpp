@@ -2569,6 +2569,7 @@ class spell_gen_vehicle_scaling_aura: public AuraScript
 
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
     {
+#ifdef MOD_NPCERBOTS
         //npcbot
         if (!GetCaster()->IsPlayer())
         {
@@ -2598,6 +2599,7 @@ class spell_gen_vehicle_scaling_aura: public AuraScript
             return;
         }
         //end npcbot
+#endif
 
         Player* player = GetCaster()->ToPlayer();
 
