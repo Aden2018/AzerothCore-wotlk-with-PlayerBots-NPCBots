@@ -28,6 +28,6 @@ if [[ -z $CONTINUOUS_INTEGRATION ]]; then
     choco install -y --skip-checksums "${INSTALL_ARGS[@]}" visualstudio2022-workload-nativedesktop
 fi
 
-choco install -y --skip-checksums "${INSTALL_ARGS[@]}"  openssl --force --version=3.6.2
+choco install -y --skip-checksums "${INSTALL_ARGS[@]}"  openssl --force --version=3.6.3
 choco install -y --skip-checksums "${INSTALL_ARGS[@]}"  boost-msvc-14.3 --force --version=1.87.0
 choco install -y --skip-checksums "${INSTALL_ARGS[@]}"  mysql --force --version=8.4.9
