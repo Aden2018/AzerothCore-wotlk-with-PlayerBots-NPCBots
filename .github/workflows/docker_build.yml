@@ -52,7 +52,7 @@ jobs:
         if: github.repository == 'Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots' && github.ref_name == 'Playerbot'
         uses: actions/checkout@v4
         with:
-          repository: azerothcore/mod-ale
+          repository: Aden2018/mod-ale
           path: modules/mod-ale
 
       - name: Login to GHCR
@@ -61,7 +61,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_PAT }}
 
       - name: Get version
         id: version
