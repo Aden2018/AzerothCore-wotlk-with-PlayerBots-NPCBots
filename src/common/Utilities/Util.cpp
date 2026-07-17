@@ -510,6 +510,29 @@ void vutf8printf(FILE* out, const char* str, va_list* ap)
 {
 #if AC_PLATFORM == AC_PLATFORM_WINDOWS
     char temp_buf[32 * 1024];
+#ifdef DIY_ADEN2008
+
+    std::size_t temp_len = vsnprintf(temp_buf, 32 * 1024, str, *ap);
+    if (temp_len == std::size_t(-1))
+    {
+        temp_len = 32 * 1024 - 1;
+    }
+
+    HANDLE hOut = GetStdHandle(out == stdout ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE);
+    if (hOut != INVALID_HANDLE_VALUE && GetFileType(hOut) == FILE_TYPE_CHAR)
+    {
+        int wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, temp_buf, (int)temp_len, nullptr, 0);
+        if (wlen > 0)
+        {
+            wchar_t* wbuf = new wchar_t[wlen];
+            MultiByteToWideChar(CP_UTF8, 0, temp_buf, (int)temp_len, wbuf, wlen);
+            DWORD written = 0;
+            WriteConsoleW(hOut, wbuf, (DWORD)wlen, &written, nullptr);
+            delete[] wbuf;
+            return;
+        }
+    }
+#else
     wchar_t wtemp_buf[32 * 1024];
 
     std::size_t temp_len = vsnprintf(temp_buf, 32 * 1024, str, *ap);
@@ -523,6 +546,7 @@ void vutf8printf(FILE* out, const char* str, va_list* ap)
     Utf8toWStr(temp_buf, temp_len, wtemp_buf, wtemp_len);
 
     CharToOemBuffW(&wtemp_buf[0], &temp_buf[0], uint32(wtemp_len + 1));
+#endif
     fprintf(out, "%s", temp_buf);
 #else
     vfprintf(out, str, *ap);

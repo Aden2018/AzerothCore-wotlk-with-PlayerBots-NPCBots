@@ -36,7 +36,7 @@ SKIP_MYSQL_INSTALL=${SKIP_MYSQL_INSTALL:-false}
 # azerothcore's official remote source address to pull from
 # by default git will fetch form the azrothcore remote
 # You can change it to "origin" if you want to fetch/pull from the set remote
-ORIGIN_REMOTE="https://github.com/azerothcore/azerothcore-wotlk.git"
+ORIGIN_REMOTE="https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots.git"
 
 # Branch configuration for the installer to pull from.
 # By default git will select the current working branch
