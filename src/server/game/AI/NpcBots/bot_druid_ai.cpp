@@ -263,71 +263,93 @@ public:
         {
             BotStances myform = _form;
             _form = BOT_STANCE_NONE;
-            //ShapeshiftForm form = me->GetShapeshiftForm();
-            //if (form != FORM_NONE)
+
+            ShapeshiftForm actualForm = me->GetShapeshiftForm();
+            BotStances effectiveForm = BOT_STANCE_NONE;
+
+            switch (actualForm)
             {
-                switch (myform/*form*/)
-                {
-                    //case FORM_DIREBEAR:
-                    //case FORM_BEAR:
-                    case DRUID_BEAR_FORM:
-                        if (IsRegenActive())
-                            return false;
-                        me->RemoveAurasDueToSpell(GetSpell(BEAR_FORM_1));
-                        me->RemoveAurasDueToSpell(MASTER_SHAPESHIFTER_BEAR_BUFF);
-                        me->RemoveAurasDueToSpell(NATURAL_REACTION);
-                        me->RemoveAurasDueToSpell(SURVIVAL_OF_THE_FITTEST_BUFF);
-                        me->RemoveAurasDueToSpell(SAVAGE_DEFENSE_PASSIVE);
-                        break;
-                    //case FORM_CAT:
-                    case DRUID_CAT_FORM:
-                        me->RemoveAurasDueToSpell(GetSpell(CAT_FORM_1));
-                        me->RemoveAurasDueToSpell(FERAL_SWIFTNESS);
-                        me->RemoveAurasDueToSpell(MASTER_SHAPESHIFTER_CAT_BUFF);
-                        me->RemoveAurasDueToSpell(NURTURING_INSTINCT_BUFF);
-                        me->RemoveAurasDueToSpell(PREDATORY_INSTINCTS);
-                        break;
-                    //case FORM_MOONKIN:
-                    case DRUID_MOONKIN_FORM:
-                        me->RemoveAurasDueToSpell(GetSpell(MOONKIN_FORM_1));
-                        me->RemoveAurasDueToSpell(GetSpell(OWLKIN_FRENZY));
-                        me->RemoveAurasDueToSpell(MASTER_SHAPESHIFTER_MOONKIN_BUFF);
-                        break;
-                    //case FORM_TREE:
-                    case DRUID_TREE_FORM:
-                        me->RemoveAurasDueToSpell(GetSpell(TREE_OF_LIFE_FORM_1));
-                        me->RemoveAurasDueToSpell(MASTER_SHAPESHIFTER_TREE_BUFF);
-                        break;
-                    //case FORM_TRAVEL:
-                    case DRUID_TRAVEL_FORM:
-                        me->RemoveAurasDueToSpell(GetSpell(TRAVEL_FORM_1));
-                        break;
-                    //case FORM_AQUA:
-                    case DRUID_AQUATIC_FORM:
-                        me->RemoveAurasDueToSpell(GetSpell(AQUATIC_FORM_1));
-                        break;
-                    //case FORM_FLIGHT:
-                    //case FORM_FLIGHT_EPIC:
-                    case DRUID_FLIGHT_FORM:
-                        me->RemoveAurasDueToSpell(GetSpell(FLIGHT_FORM_1));
-                        break;
-                    default:
-                        break;
-                }
-
-                if (me->GetPowerType() != POWER_MANA)
-                {
-                    //BOT_LOG_ERROR("entities.player", "druid_bot::removeShapeshiftForm(): still has poweType %u!", uint32(me->GetPowerType()));
-                    me->SetPowerType(POWER_MANA);
-                }
-                if (me->GetShapeshiftForm() != FORM_NONE)
-                {
-                    //BOT_LOG_ERROR("entities.player", "druid_bot::removeShapeshiftForm(): still speshifted into %u!", uint32(me->GetShapeshiftForm()));
-                    me->RemoveAurasByType(SPELL_AURA_MOD_SHAPESHIFT, me->GetGUID(), nullptr, false);
-                }
-
-                setStats(BOT_STANCE_NONE);
+            case FORM_BEAR:
+            case FORM_DIREBEAR:
+                effectiveForm = DRUID_BEAR_FORM;
+                break;
+            case FORM_CAT:
+                effectiveForm = DRUID_CAT_FORM;
+                break;
+            case FORM_MOONKIN:
+                effectiveForm = DRUID_MOONKIN_FORM;
+                break;
+            case FORM_TREE:
+                effectiveForm = DRUID_TREE_FORM;
+                break;
+            case FORM_TRAVEL:
+                effectiveForm = DRUID_TRAVEL_FORM;
+                break;
+            case FORM_AQUA:
+                effectiveForm = DRUID_AQUATIC_FORM;
+                break;
+            case FORM_FLIGHT:
+            case FORM_FLIGHT_EPIC:
+                effectiveForm = DRUID_FLIGHT_FORM;
+                break;
+            default:
+                effectiveForm = myform;
+                break;
             }
+
+            switch (effectiveForm)
+            {
+            case DRUID_BEAR_FORM:
+                if (IsRegenActive())
+                    return false;
+                me->RemoveAurasDueToSpell(GetSpell(BEAR_FORM_1));
+                me->RemoveAurasDueToSpell(MASTER_SHAPESHIFTER_BEAR_BUFF);
+                me->RemoveAurasDueToSpell(NATURAL_REACTION);
+                me->RemoveAurasDueToSpell(SURVIVAL_OF_THE_FITTEST_BUFF);
+                me->RemoveAurasDueToSpell(SAVAGE_DEFENSE_PASSIVE);
+                break;
+            case DRUID_CAT_FORM:
+                me->RemoveAurasDueToSpell(GetSpell(CAT_FORM_1));
+                me->RemoveAurasDueToSpell(FERAL_SWIFTNESS);
+                me->RemoveAurasDueToSpell(MASTER_SHAPESHIFTER_CAT_BUFF);
+                me->RemoveAurasDueToSpell(NURTURING_INSTINCT_BUFF);
+                me->RemoveAurasDueToSpell(PREDATORY_INSTINCTS);
+                break;
+            case DRUID_MOONKIN_FORM:
+                me->RemoveAurasDueToSpell(GetSpell(MOONKIN_FORM_1));
+                me->RemoveAurasDueToSpell(GetSpell(OWLKIN_FRENZY));
+                me->RemoveAurasDueToSpell(MASTER_SHAPESHIFTER_MOONKIN_BUFF);
+                break;
+            case DRUID_TREE_FORM:
+                me->RemoveAurasDueToSpell(GetSpell(TREE_OF_LIFE_FORM_1));
+                me->RemoveAurasDueToSpell(MASTER_SHAPESHIFTER_TREE_BUFF);
+                break;
+            case DRUID_TRAVEL_FORM:
+                me->RemoveAurasDueToSpell(GetSpell(TRAVEL_FORM_1));
+                break;
+            case DRUID_AQUATIC_FORM:
+                me->RemoveAurasDueToSpell(GetSpell(AQUATIC_FORM_1));
+                break;
+            case DRUID_FLIGHT_FORM:
+                me->RemoveAurasDueToSpell(GetSpell(FLIGHT_FORM_1));
+                break;
+            default:
+                break;
+            }
+
+            if (me->GetPowerType() != POWER_MANA)
+            {
+                //BOT_LOG_ERROR("entities.player", "druid_bot::removeShapeshiftForm(): still has poweType %u!", uint32(me->GetPowerType()));
+                me->SetPowerType(POWER_MANA);
+            }
+            if (me->GetShapeshiftForm() != FORM_NONE)
+            {
+                //BOT_LOG_ERROR("entities.player", "druid_bot::removeShapeshiftForm(): still speshifted into %u!", uint32(me->GetShapeshiftForm()));
+                me->RemoveAurasByType(SPELL_AURA_MOD_SHAPESHIFT, me->GetGUID(), nullptr, false);
+            }
+
+            setStats(BOT_STANCE_NONE);
+
             return true;
         }
 

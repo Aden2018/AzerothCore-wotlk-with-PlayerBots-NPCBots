@@ -1155,6 +1155,10 @@ void bot_ai::SetBotCommandState(uint32 st, bool force, Position* newpos, float* 
         else if (st & BOT_COMMAND_STAY)
         {
             RemoveBotCommandState(BOT_COMMAND_FOLLOW | BOT_COMMAND_FULLSTOP);
+            // Clear shapeshift forms (e.g. druid travel/aquatic form) so the bot
+            // stands still in its native form instead of a weird animal model
+            if (me->GetShapeshiftForm() != FORM_NONE)
+                removeShapeshiftForm();
             if (mover->isMoving())
                 mover->ToCreature()->BotStopMovement();
         }
