@@ -404,6 +404,8 @@ bool InstanceScript::SetBossState(uint32 id, EncounterState state)
     if (id < bosses.size())
     {
         BossInfo* bossInfo = &bosses[id];
+        MinionSet minions = bossInfo->minion;
+
         sScriptMgr->OnBeforeSetBossState(id, state, bossInfo->state, instance);
         if (bossInfo->state == TO_BE_DECIDED) // loading
         {
@@ -416,8 +418,8 @@ bool InstanceScript::SetBossState(uint32 id, EncounterState state)
                 return false;
 
             if (state == DONE)
-                for (MinionSet::iterator i = bossInfo->minion.begin(); i != bossInfo->minion.end(); ++i)
-                    if ((*i)->isWorldBoss() && (*i)->IsAlive())
+                for (Creature* minion : minions)
+                    if (minion && minion->isWorldBoss() && minion->IsAlive())
                         return false;
 
             bossInfo->state = state;
@@ -428,8 +430,9 @@ bool InstanceScript::SetBossState(uint32 id, EncounterState state)
             for (DoorSet::iterator i = bossInfo->door[type].begin(); i != bossInfo->door[type].end(); ++i)
                 UpdateDoorState(*i);
 
-        for (MinionSet::iterator i = bossInfo->minion.begin(); i != bossInfo->minion.end(); ++i)
-            UpdateMinionState(*i, state);
+        for (Creature* minion : minions)
+            if (minion)
+                UpdateMinionState(minion, state);
 
         return true;
     }

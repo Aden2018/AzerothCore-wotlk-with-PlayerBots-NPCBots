@@ -11883,6 +11883,12 @@ void Player::SendInitialPacketsAfterAddToMap()
             auraList.front()->HandleEffect(this, AURA_EFFECT_HANDLE_SEND_FOR_CLIENT, true);
     }
 
+    // Explicitly synchronize CAN_FLY state with client on login to prevent
+    // players from retaining flight ability after disconnecting during a
+    // teleport from a flyable to non-flyable zone (e.g. entering an instance).
+    if (!HasIncreaseMountedFlightSpeedAura() && !HasFlyAura())
+        SetCanFly(false);
+
     // Fix mount, update block gets messed somewhere
     {
         if (!isBeingLoaded() && GetMountBlockId() && !HasMountedAura())
@@ -13960,6 +13966,21 @@ LootItem* Player::StoreLootItem(uint8 lootSlot, Loot* loot, InventoryResult& msg
             sLootItemStorage->RemoveStoredLootItem(loot->containerGUID, item->itemid, item->count, loot, item->itemIndex);
 
         sScriptMgr->OnPlayerLootItem(this, newitem, item->count, this->GetLootGUID());
+
+#ifdef DIY_ADEN2008
+        // PlayerBots: Sync quest item progress to group members with the same quest
+        if (qitem && GetGroup())
+        {
+            for (GroupReference* ref = GetGroup()->GetFirstMember(); ref; ref = ref->next())
+            {
+                Player* member = ref->GetSource();
+                if (member && member != this && member->HasQuestForItem(item->itemid))
+                {
+                    member->ItemAddedQuestCheck(item->itemid, item->count);
+                }
+            }
+        }
+#endif
     }
     else
     {
