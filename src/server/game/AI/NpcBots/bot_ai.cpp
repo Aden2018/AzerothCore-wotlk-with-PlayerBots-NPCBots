@@ -888,11 +888,50 @@ void bot_ai::_calculatePos(Unit const* followUnit, Position& pos, float* speed/*
         mydist = 0.5f;
     }
 
+#ifdef DIY_ADEN2008
+    // 玩家骑坐骑奔跑赶路时，坦克从前方线性映射到后侧方弧跟随，避免阻挡视线
+    if (HasRole(BOT_ROLE_TANK) && !IAmFree() && !me->IsInCombat() && followUnit->IsMounted() && master && master->IsInWorld())
+    {
+        uint32 moveFlags = followUnit->m_movementInfo.GetMovementFlags();
+        if (moveFlags & MOVEMENTFLAG_FORWARD)
+        {
+            // 原角度范围 [-PI/6, +PI/6]（前方60度），线性映射到后侧方弧 [PI*5/6, PI*7/6]（120度）
+            float const srcRange = float(M_PI) / 6.0f;       // 源范围 ±30度
+            float const rearCenter = float(M_PI);              // 正后方180度
+            float const rearRange = float(M_PI) / 3.0f;        // 后方弧半径 ±60度
+            float normalized = std::fabs(angle) / srcRange;     // 0~1
+            float sign = (angle >= 0.0f) ? 1.0f : -1.0f;
+            angle = rearCenter + sign * normalized * rearRange;
+        }
+    }
+#endif
+
     mydist += std::max<int32>(int32(followdist) - 30, 5) / 7.f; //1.f-10.f
     mydist = std::max<float>(mydist - 2.f, 0.0f); //get bots closer
 
     if (me->GetVehicle())
         mydist *= 2.f;
+
+#ifdef DIY_ADEN2008
+    if (!IAmFree() && !me->IsInCombat() && !HasRole(BOT_ROLE_TANK) && master && master->IsInWorld())
+    {
+        time_t now = time(nullptr);
+        if (!_followChaosTimer || (now - _followChaosTimer) >= 3)
+        {
+            _followChaosTimer = now;
+            float chaosRange = std::max<float>(mydist * 0.25f, 0.8f);
+            _followChaosTargetDx = ((urand(0, 100) / 100.0f) - 0.5f) * 2.0f * chaosRange;
+            _followChaosTargetDy = ((urand(0, 100) / 100.0f) - 0.5f) * 2.0f * chaosRange;
+            _followChaosTargetAngle = ((urand(0, 100) / 100.0f) - 0.5f) * 2.0f * (M_PI / 12.0f);
+        }
+        // 线性插值：每帧让当前值向目标值靠拢 20%，实现平滑过渡
+        float const lerpFactor = 0.2f;
+        _followChaosDx += (_followChaosTargetDx - _followChaosDx) * lerpFactor;
+        _followChaosDy += (_followChaosTargetDy - _followChaosDy) * lerpFactor;
+        _followChaosAngle += (_followChaosTargetAngle - _followChaosAngle) * lerpFactor;
+        angle += _followChaosAngle;
+    }
+#endif
 
     Position mpos;
     Unit const* bmover = me->GetVehicle() ? me->GetVehicleBase() : me;
@@ -938,8 +977,165 @@ void bot_ai::_calculatePos(Unit const* followUnit, Position& pos, float* speed/*
             mpos.Relocate(tx, ty, tz);
     }
 
+#ifdef DIY_ADEN2008
+    if (!IAmFree() && !me->IsInCombat() && !HasRole(BOT_ROLE_TANK) && master && master->IsInWorld())
+    {
+        float newX = mpos.m_positionX + _followChaosDx;
+        float newY = mpos.m_positionY + _followChaosDy;
+        float newZ = mpos.m_positionZ;
+        if (!bmover->CanFly())
+            bmover->UpdateAllowedPositionZ(newX, newY, newZ);
+        float deltaZ = std::fabs(newZ - mpos.m_positionZ);
+        if (deltaZ < 2.0f)
+        {
+            mpos.m_positionX = newX;
+            mpos.m_positionY = newY;
+            mpos.m_positionZ = newZ;
+        }
+    }
+#endif
+
     if (me->GetPositionZ() < mpos.GetPositionZ())
         mpos.m_positionZ += 0.5f; //prevent going underground while moving
+
+#ifdef DIY_ADEN2008
+    if (!IAmFree())
+    {
+        time_t now = time(nullptr);
+        if (!_avoidPetCheckTimer || now >= (time_t)_avoidPetCheckTimer)
+        {
+            _avoidPetCheckTimer = (uint32)(now + 1);
+            _avoidPetDx = 0.0f;
+            _avoidPetDy = 0.0f;
+
+            float minDist = std::numeric_limits<float>::max();
+            float closeDx = 0.0f, closeDy = 0.0f;
+
+            // 用机器人当前实际位置作为基准，而非 mpos 目标位置
+            float myX = me->GetPositionX();
+            float myY = me->GetPositionY();
+
+            if (master && master->IsInWorld())
+            {
+                // 避开主人的宠物
+                for (Unit::ControlSet::const_iterator itr = master->m_Controlled.begin(); itr != master->m_Controlled.end(); ++itr)
+                {
+                    Unit* pet = *itr;
+                    if (!pet || pet == me || !pet->IsInWorld() || !pet->IsAlive())
+                        continue;
+                    if (!pet->IsPet() && !pet->IsTotem())
+                        continue;
+
+                    float dist = me->GetDistance2d(pet);
+                    if (dist < 4.0f)
+                    {
+                        float dx = myX - pet->GetPositionX();
+                        float dy = myY - pet->GetPositionY();
+                        float d = std::sqrt(dx * dx + dy * dy);
+                        if (d < minDist)
+                        {
+                            minDist = d;
+                            closeDx = dx;
+                            closeDy = dy;
+                        }
+                    }
+                }
+
+                // 避开队友的宠物
+                if (Group const* gr = master->GetGroup())
+                {
+                    for (GroupReference const* gref = gr->GetFirstMember(); gref; gref = gref->next())
+                    {
+                        Player* member = gref->GetSource();
+                        if (!member || !member->IsInWorld() || member == master)
+                            continue;
+
+                        for (Unit::ControlSet::const_iterator pitr = member->m_Controlled.begin(); pitr != member->m_Controlled.end(); ++pitr)
+                        {
+                            Unit* pet = *pitr;
+                            if (!pet || pet == me || !pet->IsInWorld() || !pet->IsAlive())
+                                continue;
+                            if (!pet->IsPet() && !pet->IsTotem())
+                                continue;
+
+                            float dist = me->GetDistance2d(pet);
+                            if (dist < 4.0f)
+                            {
+                                float dx = myX - pet->GetPositionX();
+                                float dy = myY - pet->GetPositionY();
+                                float d = std::sqrt(dx * dx + dy * dy);
+                                if (d < minDist)
+                                {
+                                    minDist = d;
+                                    closeDx = dx;
+                                    closeDy = dy;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 避开同主人的其他 NPCBot，防止机器人之间重叠
+                if (BotMgr* bm = master->GetBotMgr())
+                {
+                    BotMap const* botMap = bm->GetBotMap();
+                    for (BotMap::const_iterator bitr = botMap->begin(); bitr != botMap->end(); ++bitr)
+                    {
+                        Creature* otherBot = bitr->second;
+                        if (!otherBot || otherBot == me || !otherBot->IsInWorld() || !otherBot->IsAlive())
+                            continue;
+
+                        float dist = me->GetDistance2d(otherBot);
+                        if (dist < 3.0f)
+                        {
+                            float dx = myX - otherBot->GetPositionX();
+                            float dy = myY - otherBot->GetPositionY();
+                            float d = std::sqrt(dx * dx + dy * dy);
+                            if (d < minDist)
+                            {
+                                minDist = d;
+                                closeDx = dx;
+                                closeDy = dy;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (minDist < 3.0f)
+            {
+                float pushDist = 3.0f - minDist;
+                if (minDist > 0.01f)
+                {
+                    _avoidPetDx = (closeDx / minDist) * pushDist;
+                    _avoidPetDy = (closeDy / minDist) * pushDist;
+                }
+                else
+                {
+                    float randAngle = float(M_PI) * 2.0f * (urand(0, 100) / 100.0f);
+                    _avoidPetDx = std::cos(randAngle) * pushDist;
+                    _avoidPetDy = std::sin(randAngle) * pushDist;
+                }
+            }
+        }
+
+        if (std::fabs(_avoidPetDx) > 0.01f || std::fabs(_avoidPetDy) > 0.01f)
+        {
+            float newX = mpos.m_positionX + _avoidPetDx;
+            float newY = mpos.m_positionY + _avoidPetDy;
+            float newZ = mpos.m_positionZ;
+            if (!bmover->CanFly())
+                bmover->UpdateAllowedPositionZ(newX, newY, newZ);
+            float deltaZ = std::fabs(newZ - mpos.m_positionZ);
+            if (deltaZ < 2.0f)
+            {
+                mpos.m_positionX = newX;
+                mpos.m_positionY = newY;
+                mpos.m_positionZ = newZ;
+            }
+        }
+    }
+#endif
 
     if (speed && !IAmFree() && player == master)
     {
@@ -18534,7 +18730,11 @@ bool bot_ai::GlobalUpdate(uint32 diff)
                 float speed = 0.0f;
                 _calculatePos(mmover, movepos, &speed);
                 float maxdist = std::max<float>((mmover->IsPlayer() ? float(mmover->ToPlayer()->GetBotMgr()->GetBotFollowDist()) : BotMgr::GetBotFollowDistMax() / 2.f) *
+#ifdef DIY_ADEN2008
+                    ((mmover->m_movementInfo.GetMovementFlags() & MOVEMENTFLAG_FORWARD) ? 0.15f : mmover->isMoving() ? 0.05f : 0.3f), 1.5f);
+#else
                     ((mmover->m_movementInfo.GetMovementFlags() & MOVEMENTFLAG_FORWARD) ? 0.125f : mmover->isMoving() ? 0.03125f : 0.25f), 3.f);
+#endif
                 Position destPos;
                 if (me->isMoving())
                     me->GetMotionMaster()->GetDestination(destPos.m_positionX, destPos.m_positionY, destPos.m_positionZ);

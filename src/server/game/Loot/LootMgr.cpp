@@ -498,6 +498,34 @@ void Loot::AddItem(LootStoreItem const& item)
         lootItems.push_back(generatedLoot);
         count -= proto->GetMaxStackSize();
 
+#ifdef DIY_ADEN2008
+        // In some cases, a dropped item should be visible/lootable only for some players in group
+        bool canSeeItemInLootWindow = false;
+        if (auto player = ObjectAccessor::FindPlayer(lootOwnerGUID))
+        {
+            // PlayerBots: Always check the loot owner first - they are the one who killed the creature
+            // This ensures quest items can drop even if group members (playerbots) are not nearby
+            if (generatedLoot.AllowedForPlayer(player, sourceWorldObjectGUID))
+            {
+                canSeeItemInLootWindow = true;
+            }
+            // Also check other group members
+            else if (auto group = player->GetGroup())
+            {
+                for (auto itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+                {
+                    if (auto member = itr->GetSource())
+                    {
+                        if (generatedLoot.AllowedForPlayer(member, sourceWorldObjectGUID))
+                        {
+                            canSeeItemInLootWindow = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+#else
         // In some cases, a dropped item should be visible/lootable only for some players in group
         bool canSeeItemInLootWindow = false;
         if (auto player = ObjectAccessor::FindPlayer(lootOwnerGUID))
@@ -521,6 +549,7 @@ void Loot::AddItem(LootStoreItem const& item)
                 canSeeItemInLootWindow = true;
             }
         }
+#endif
 
         if (!canSeeItemInLootWindow)
         {

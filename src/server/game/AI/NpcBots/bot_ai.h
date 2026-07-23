@@ -703,6 +703,19 @@ private:
     Position sendpos[MAX_SEND_POINTS]{};
     AoeSpotsVec _aoeSpots;
 
+#ifdef DIY_ADEN2008
+    mutable time_t _followChaosTimer{};
+    mutable float _followChaosDx{};
+    mutable float _followChaosDy{};
+    mutable float _followChaosAngle{};
+    mutable float _followChaosTargetDx{};
+    mutable float _followChaosTargetDy{};
+    mutable float _followChaosTargetAngle{};
+    mutable uint32 _avoidPetCheckTimer{};
+    mutable float _avoidPetDx{};
+    mutable float _avoidPetDy{};
+#endif
+
     uint32 _botCommandState{};
     uint8 _botAwaitState{};
 
