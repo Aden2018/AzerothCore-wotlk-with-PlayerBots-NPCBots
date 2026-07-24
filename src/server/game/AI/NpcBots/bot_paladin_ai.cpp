@@ -1269,6 +1269,19 @@ public:
             }
             //HAND OF RECKONING //No GCD
             Unit* u = mytar->GetVictim();
+#ifdef DIY_ADEN2008
+            // [补丁 6-B-3] 圣骑坦克：目标正在打主人时强制清算之手
+            if (IsSpellReady(HAND_OF_RECKONING_1, diff, false) && can_do_holy && IsTank() &&
+                u == master && u != me &&
+                mytar->IsCreature() && !mytar->IsControlledByPlayer() &&
+                !mytar->HasAuraType(SPELL_AURA_MOD_TAUNT) && !CCed(mytar) &&
+                dist < 30)
+            {
+                if (doCast(mytar, GetSpell(HAND_OF_RECKONING_1)))
+                    return;
+            }
+            // [补丁 6-B-3 结束]
+#endif
             if (IsSpellReady(HAND_OF_RECKONING_1, diff, false) && can_do_holy && u && u != me && Rand() < 50 && dist < 30 &&
                 mytar->IsCreature() && !mytar->IsControlledByPlayer() &&
                 !CCed(mytar) && HasRole(BOT_ROLE_DPS) && !mytar->HasAuraType(SPELL_AURA_MOD_TAUNT) &&

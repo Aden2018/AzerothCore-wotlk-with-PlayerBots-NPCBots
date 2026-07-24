@@ -712,6 +712,19 @@ public:
 
             //RANGED SECTION
 
+#ifdef DIY_ADEN2008
+            // [补丁 6-B-2] DK 坦克：目标正在打主人时强制黑暗指令
+            if (IsSpellReady(DARK_COMMAND_1, diff, false) && IsTank() &&
+                u == master && u != me &&
+                mytar->IsCreature() && !mytar->IsControlledByPlayer() &&
+                !mytar->HasAuraType(SPELL_AURA_MOD_TAUNT) && !CCed(mytar) &&
+                dist < 30)
+            {
+                if (doCast(mytar, GetSpell(DARK_COMMAND_1)))
+                    return;
+            }
+            // [补丁 6-B-2 结束]
+#endif
             //DARK COMMAND
             if (IsSpellReady(DARK_COMMAND_1, diff, false) && u && u != me && dist < 30 &&
                 mytar->IsCreature() && !mytar->IsControlledByPlayer() && Rand() < 50 &&

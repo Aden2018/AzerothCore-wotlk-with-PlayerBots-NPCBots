@@ -4400,6 +4400,72 @@ std::pair<Unit*, Unit*> bot_ai::_getTargets(bool byspell, bool ranged, bool &res
             //BOT_LOG_ERROR("entities.unit", "_getTarget: %s returning %s", me->GetName().c_str(), tankTar->GetName().c_str());
             return { tankTar, tankTar };
         }
+#ifdef DIY_ADEN2008
+        // [补丁 6-A v3] 坦克优先拦截攻击主人的威胁，按"已有仇恨"排序选择最优目标
+                // v3 修复 v2 的"无序取第一个"问题：优先选坦克已有仇恨基础的怪，切过去平砍即可稳仇恨
+        if (!IAmFree() && IsTank())
+        {
+            // 1. 防频繁切换：当前目标正在攻击主人时保持锁定（避免Tab切目标导致TPS抖动）
+            if (Unit* curVictim = me->GetVictim())
+            {
+                if (curVictim->IsAlive() &&
+                    !curVictim->IsControlledByPlayer() &&
+                    curVictim->GetVictim() == master &&
+                    !CCed(curVictim) &&
+                    CanBotAttack(curVictim, byspell))
+                {
+                    return { curVictim, curVictim };
+                }
+            }
+
+            // 2. 扫描主人的攻击者，选"坦克对其仇恨最高且正在打主人"的怪
+            //    语义：仇恨高=切过去平砍立刻稳；正在打主人=需要被接管
+            //    排除：已在打坦克的（GetVictim()==me，无需抢）、被控制的、PvP目标
+            Unit::AttackerSet const& masterAttackers = master->getAttackers();
+            if (!masterAttackers.empty())
+            {
+                Unit* bestTarget = nullptr;
+                float bestThreat = -1.0f;
+                ThreatManager const& myThreatMgr = me->GetThreatMgr();
+
+                for (Unit* attacker : masterAttackers)
+                {
+                    if (!attacker || !attacker->IsAlive()) continue;
+                    if (attacker->IsControlledByPlayer()) continue;
+                    if (attacker == me->GetVictim()) continue;       // 步骤1已处理
+                    if (attacker->GetVictim() == me) continue;        // 已在打坦克，不抢
+                    if (CCed(attacker)) continue;
+                    if (!CanBotAttack(attacker, byspell)) continue;
+                    if (!me->IsValidAttackTarget(attacker)) continue;
+
+                    float threat = myThreatMgr.GetThreat(attacker);
+                    if (threat > bestThreat)
+                    {
+                        bestThreat = threat;
+                        bestTarget = attacker;
+                    }
+                }
+
+                if (bestTarget)
+                    return { bestTarget, bestTarget };
+            }
+
+            // 3. 无紧急威胁时，对齐主人正在攻击的目标（兜底，保留 v1 行为）
+            if (Unit* masterVictim = master->GetVictim())
+            {
+                if (masterVictim != mytar &&
+                    masterVictim->IsAlive() &&
+                    !masterVictim->IsControlledByPlayer() &&
+                    CanBotAttack(masterVictim, byspell) &&
+                    me->IsValidAttackTarget(masterVictim) &&
+                    (master->IsInCombat() || masterVictim->IsInCombat() || me->IsInCombat()))
+                {
+                    return { masterVictim, masterVictim };
+                }
+            }
+        }
+        // [补丁 6-A v3 结束]
+#endif
     }
     if (gr)
     {

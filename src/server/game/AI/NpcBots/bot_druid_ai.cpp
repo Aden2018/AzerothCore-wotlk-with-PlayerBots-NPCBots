@@ -727,6 +727,19 @@ public:
             float dist = me->GetDistance(mytar);
             //GROWL //No GCD
             Unit* u = mytar->GetVictim();
+#ifdef DIY_ADEN2008
+            // [补丁 6-B-4] 德鲁伊坦克：目标正在打主人时强制低吼
+            if (IsSpellReady(GROWL_1, diff, false) && IsTank() &&
+                u == master && u != me &&
+                mytar->IsCreature() && !mytar->IsControlledByPlayer() &&
+                !mytar->HasAuraType(SPELL_AURA_MOD_TAUNT) && !CCed(mytar) &&
+                dist < 30)
+            {
+                if (doCast(mytar, GetSpell(GROWL_1)))
+                    return;
+            }
+            // [补丁 6-B-4 结束]
+#endif
             if (IsSpellReady(GROWL_1, diff, false) && u && u != me && Rand() < 40 && dist < 30 &&
                 mytar->IsCreature() && !mytar->IsControlledByPlayer() &&
                 !CCed(mytar) && !mytar->HasAuraType(SPELL_AURA_MOD_TAUNT) &&

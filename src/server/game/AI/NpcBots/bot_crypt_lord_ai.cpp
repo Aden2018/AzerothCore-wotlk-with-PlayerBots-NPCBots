@@ -287,6 +287,19 @@ public:
             float dist = me->GetDistance(mytar);
             Unit const* u = mytar->GetVictim();
 
+#ifdef DIY_ADEN2008
+            // [补丁 6-B-5] 地穴领主坦克：目标正在打主人时强制嘲讽
+            if (IsSpellReady(TAUNT_1, diff, false) && IsTank() &&
+                u == master && u != me &&
+                mytar->IsCreature() && !mytar->IsControlledByPlayer() &&
+                !mytar->HasAuraType(SPELL_AURA_MOD_TAUNT) && !CCed(mytar) &&
+                dist < 30)
+            {
+                if (doCast(mytar, GetSpell(TAUNT_1)))
+                    return;
+            }
+            // [补丁 6-B-5 结束]
+#endif
             //TAUNT //No GCD
             if (IsSpellReady(TAUNT_1, diff, false) && CanTauntTarget(mytar, dist) &&
                 ((!BotDataMgr::IsTankingClass(u->GetClass()) && GetHealthPCT(u) < 80) || IsTank()) && IsInBotParty(u))
