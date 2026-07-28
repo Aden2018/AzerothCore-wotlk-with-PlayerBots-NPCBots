@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout AzerothCore
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Set reusable strings
         id: strings
@@ -40,7 +40,7 @@ jobs:
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
       - name: Checkout Playerbot Module
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           repository: Aden2018/mod-playerbots
           # Map AC branch → PB branch

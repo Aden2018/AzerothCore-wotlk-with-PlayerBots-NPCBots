@@ -28,6 +28,7 @@
 #include "CircularBuffer.h"
 #include "Common.h"
 #include "DatabaseEnv.h"
+#include "Duration.h"
 #include "GossipDef.h"
 #ifdef MOD_PLAYERBOTS
 #include "QueryHolder.h"
@@ -294,6 +295,20 @@ enum CharterTypes
     ARENA_TEAM_CHARTER_5v5_TYPE                   = 5
 };
 
+constexpr Seconds PLAY_TIME_LIMIT_APPROACHING_PARTIAL = Hours(2) + Minutes(30);
+constexpr Seconds PLAY_TIME_LIMIT_PARTIAL             = Hours(3);
+constexpr Seconds PLAY_TIME_LIMIT_APPROACHING_FULL    = Hours(4) + Minutes(30);
+constexpr Seconds PLAY_TIME_LIMIT_FULL                = Hours(5);
+
+enum PlayTimeFlag : uint32
+{
+    PTF_APPROACHING_PARTIAL_PLAY_TIME = 0x1000,
+    PTF_APPROACHING_NO_PLAY_TIME      = 0x2000,
+    PTF_UNK_1                         = 0x20000000,
+    PTF_UNK_2                         = 0x40000000,
+    PTF_UNHEALTHY_TIME                = 0x80000000,
+};
+
 #ifdef MOD_PLAYERBOTS
 class LoginQueryHolder : public CharacterDatabaseQueryHolder
 {
@@ -437,6 +452,7 @@ public:
     bool IsTrialAccount() const;
     bool IsInternetGameRoomAccount() const;
     bool IsRecurringBillingAccount() const;
+    bool IsAffectedByCAIS() const;
 
     uint8 GetBillingPlanFlags() const;
 
@@ -515,6 +531,16 @@ public:
     /// Session in auth.queue currently
     void SetInQueue(bool state) { m_inQueue = state; }
 
+    // Playtime limit
+    Seconds GetCreateTime() const { return _createTime; }
+    // Measured from session creation (authentication), so login queue and character select count
+    // toward the limits. Matches the VMaNGOS behaviour this is ported from.
+    Seconds GetConsecutivePlayTime(Seconds now) const { return (now - _createTime) + _previousPlayTime; }
+    Seconds GetPreviousPlayedTime() const { return _previousPlayTime; }
+    void SetPreviousPlayedTime(Seconds playedTime) { _previousPlayTime = playedTime; }
+    void CheckPlayedTimeLimit(Seconds now);
+    void SendPlayTimeWarning(PlayTimeFlag flag, int32 playTimeRemaining);
+
     /// Is the user engaged in a log out process?
     bool isLogingOut() const { return _logoutTime || m_playerLogout; }
 
@@ -558,8 +584,6 @@ public:
     void SendTabardVendorActivate(ObjectGuid guid);
     void SendSpiritResurrect();
     void SendBindPoint(Creature* npc);
-
-    void SendAttackStop(Unit const* enemy);
 
     void SendBattleGroundList(ObjectGuid guid, BattlegroundTypeId bgTypeId = BATTLEGROUND_RB);
 
@@ -1273,7 +1297,7 @@ private:
     bool recoveryItem(Item* pItem);
 
     // logging helper
-    void LogUnexpectedOpcode(WorldPacket* packet, char const* status, const char* reason);
+    void LogUnexpectedOpcode(WorldPacket* packet, char const* status, char const* reason);
     void LogUnprocessedTail(WorldPacket* packet);
 
     // EnumData helpers
@@ -1305,6 +1329,9 @@ private:
     // Warden
     std::unique_ptr<Warden> _warden;                    // Remains nullptr if Warden system is not enabled by config
 
+    Seconds _lastUpdateTime;                            // last time session was updated by world
+    Seconds _createTime;                                // when session was created
+    Seconds _previousPlayTime;                          // play time from previous session less than 5 hours ago
     time_t _logoutTime;
     bool m_inQueue;                                     // session wait in auth.queue
     bool m_playerLoading;                               // code processed in LoginPlayer

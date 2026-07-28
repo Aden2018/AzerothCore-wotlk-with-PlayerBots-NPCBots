@@ -384,7 +384,7 @@ public: // pussywizard: public class Member
     };
 
     // pussywizard: public GetMember
-    inline const Member* GetMember(ObjectGuid guid) const
+    inline Member const* GetMember(ObjectGuid guid) const
     {
         auto itr = m_members.find(guid.GetCounter());
         return (itr != m_members.end()) ? &itr->second : nullptr;
@@ -577,7 +577,7 @@ private:
 
         void SetInfo(std::string_view name, std::string_view icon);
         void SetText(std::string_view text);
-        void SendText(const Guild* guild, WorldSession* session) const;
+        void SendText(Guild const* guild, WorldSession* session) const;
 
         std::string const& GetName() const { return m_name; }
         std::string const& GetIcon() const { return m_icon; }
@@ -796,7 +796,7 @@ public:
 
     void ResetTimes();
 
-    [[nodiscard]] bool ModifyBankMoney(CharacterDatabaseTransaction trans, const uint64& amount, bool add) { return _ModifyBankMoney(trans, amount, add); }
+    [[nodiscard]] bool ModifyBankMoney(CharacterDatabaseTransaction trans, uint64 const& amount, bool add) { return _ModifyBankMoney(trans, amount, add); }
     [[nodiscard]] uint32 GetMemberSize() const { return m_members.size(); }
 
 #ifdef MOD_PLAYERBOTS
@@ -827,8 +827,17 @@ protected:
 
 private:
     inline uint8 _GetRanksSize() const { return uint8(m_ranks.size()); }
-    inline const RankInfo* GetRankInfo(uint8 rankId) const { return rankId < _GetRanksSize() ? &m_ranks[rankId] : nullptr; }
+    inline RankInfo const* GetRankInfo(uint8 rankId) const { return rankId < _GetRanksSize() ? &m_ranks[rankId] : nullptr; }
     inline RankInfo* GetRankInfo(uint8 rankId) { return rankId < _GetRanksSize() ? &m_ranks[rankId] : nullptr; }
+#ifndef MOD_PLAYERBOTS
+    inline bool _HasRankRight(Player* player, uint32 right) const
+    {
+        if (player)
+            if (Member const* member = GetMember(player->GetGUID()))
+                return (_GetRankRights(member->GetRankId()) & right) != GR_RIGHT_EMPTY;
+        return false;
+    }
+#endif
 
     inline uint8 _GetLowestRankId() const { return uint8(m_ranks.size() - 1); }
 

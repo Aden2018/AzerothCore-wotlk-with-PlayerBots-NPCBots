@@ -67,6 +67,7 @@ public:
         _updateFlags |= newUpdateFlags;
     }
 #endif
+
 private:
     bool OpenDatabases();
     bool PopulateDatabases();

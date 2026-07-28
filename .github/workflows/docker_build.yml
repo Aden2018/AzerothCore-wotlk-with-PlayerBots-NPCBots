@@ -7,15 +7,15 @@ on:
     types:
       - labeled
       - synchronize
-    branches:
-      - 'Playerbot'
+
 concurrency:
   # One concurrency group per workflow + ref.
   #
   # - PRs use `refs/pull/<PR_NUMBER>/merge`, so new commits cancel older
   #   in-progress runs for the same PR.
-  # - When a PR is merged, a push to the target branch starts a new group,
-  #   canceling any still-running PR CI.
+  # - A merge does NOT cancel the PR's own runs: this group is keyed on
+  #   refs/pull/<N>/merge and the master push on refs/heads/master, so they
+  #   never share a group. See the cancel-pr-runs-on-close workflow.
   # - Branch pushes are isolated by ref.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -41,7 +41,7 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The containers created in this workflow are used by
       # acore-docker, which has a dependency on mod-ale.
@@ -50,7 +50,7 @@ jobs:
       # build them locally (such as with `docker compose build`)
       - name: Download Eluna
         if: github.repository == 'Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots' && github.ref_name == 'Playerbot'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Aden2018/mod-ale
           path: modules/mod-ale

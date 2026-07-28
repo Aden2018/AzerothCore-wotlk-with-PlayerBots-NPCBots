@@ -1819,6 +1819,7 @@ public:
 #if defined(MOD_PLAYERBOTS) || defined(MOD_NPCERBOTS)
     [[nodiscard]] TeamId GetMineOwner(uint8 index) const { return m_Mine_Owner[index]; }
 #endif
+
 private:
     void PostUpdateImpl(uint32 diff) override;
 

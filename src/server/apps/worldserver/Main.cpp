@@ -579,6 +579,7 @@ void WorldUpdateLoop()
     LoginDatabase.WarnAboutSyncQueries(true);
     CharacterDatabase.WarnAboutSyncQueries(true);
     WorldDatabase.WarnAboutSyncQueries(true);
+
 #ifdef MOD_PLAYERBOTS
     sScriptMgr->OnDatabaseWarnAboutSyncQueries(true);
 #endif
@@ -611,6 +612,7 @@ void WorldUpdateLoop()
             Sleep(1000);
 #endif
     }
+
 #ifdef MOD_PLAYERBOTS
     sScriptMgr->OnDatabaseWarnAboutSyncQueries(false);
 #endif
