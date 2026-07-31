@@ -102,3 +102,7 @@ It's important to note that AzerothCore is not an official Blizzard Entertainmen
 [JetBrains](https://www.jetbrains.com/?from=AzerothCore) is providing free [open-source licenses](https://www.jetbrains.com/community/opensource/) to the AzerothCore developers.
 
 [![JetBrains logo.](https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg)](https://jb.gg/OpenSourceSupport)
+
+<a href="https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots" />
+</a>
