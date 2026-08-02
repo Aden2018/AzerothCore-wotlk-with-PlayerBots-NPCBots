@@ -35,10 +35,12 @@
 #include "ObjectMgr.h"
 #include "Pet.h"
 #include "Player.h"
+#include "Realm.h"
 #include "RBAC.h"
 #include "ReputationMgr.h"
 #include "ScriptMgr.h"
 #include "SpellAuras.h"
+#include "TC9Sidecar.h"
 #include "Transport.h"
 #include "Util.h"
 #include "World.h"
@@ -297,6 +299,12 @@ void Battleground::Update(uint32 diff)
         if (!GetInvitedCount(TEAM_HORDE) && !GetInvitedCount(TEAM_ALLIANCE))
         {
             m_SetDeleteThis = true;
+
+            // Only needed for the sidecar notify inside SetStatus; queue and
+            // spectator code read the status within this manager pass, so do
+            // not change it on non-cluster servers.
+            if (sToCloud9Sidecar->ClusterModeEnabled())
+                SetStatus(STATUS_WAIT_LEAVE);
         }
 
         return;
@@ -1209,6 +1217,11 @@ void Battleground::RemovePlayerAtLeave(Player* player)
     // if the player was a match participant
     if (participant)
     {
+        if (sToCloud9Sidecar->ClusterModeEnabled())
+            sToCloud9Sidecar->OnPlayerLeftBattleground(player->GetGUID().GetCounter(),
+                                                       player->GetGUID().GetRealmID(),
+                                                       GetInstanceID());
+
         player->ClearAfkReports();
 
         WorldPacket data;
@@ -2485,4 +2498,12 @@ void Battleground::RewardXPAtKill(Player* killer, Player* victim)
 uint8 Battleground::GetUniqueBracketId() const
 {
     return GetMaxLevel() / 10;
+}
+
+void Battleground::SetStatus(BattlegroundStatus Status)
+{
+    m_Status = Status;
+
+    if (sToCloud9Sidecar->ClusterModeEnabled() && GetInstanceID() != 0)
+        sToCloud9Sidecar->OnBattlegroundStatusChanged(GetInstanceID(), Status);
 }

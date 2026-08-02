@@ -642,6 +642,13 @@ void CharacterDatabaseConnection::DoPrepareStatements()
     PrepareStatement(CHAR_SEL_WORLD_STATE, "SELECT Id, Data FROM world_state", CONNECTION_SYNCH);
     PrepareStatement(CHAR_REP_WORLD_STATE, "REPLACE INTO world_state (Id, Data) VALUES(?, ?)", CONNECTION_ASYNC);
 
+    // CHAR_NO_OP_PROVIDE_REALM_CONTEXT is a no-op query that accepts a single parameter: the realm ID.
+    // This query is used specifically in cross-realm scenarios when the database transaction
+    // lacks sufficient context to determine which realm's database the query should target.
+    // By providing the realm ID explicitly, this ensures that mysql reverse proxy will use
+    // correct realm database for the transaction.
+    PrepareStatement(CHAR_NO_OP_PROVIDE_REALM_CONTEXT, "SELECT ? AS no_op", CONNECTION_ASYNC);
+
 #ifdef MOD_NPCERBOTS
     // NPCBots
     PrepareStatement(CHAR_UPD_NPCBOT_OWNER, "UPDATE characters_npcbot SET owner = ?, hire_time = FROM_UNIXTIME(?) WHERE entry = ?", CONNECTION_ASYNC);
