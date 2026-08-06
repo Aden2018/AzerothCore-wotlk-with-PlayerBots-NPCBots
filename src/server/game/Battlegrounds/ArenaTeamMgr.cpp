@@ -58,11 +58,11 @@ ArenaTeam* ArenaTeamMgr::GetArenaTeamById(uint32 arenaTeamId) const
 ArenaTeam* ArenaTeamMgr::GetArenaTeamByName(std::string const& arenaTeamName) const
 {
     std::string search = arenaTeamName;
-    std::transform(search.begin(), search.end(), search.begin(), ::toupper);
+    std::transform(search.begin(), search.end(), search.begin(), [](unsigned char c) { return ::toupper(c); });
     for (ArenaTeamContainer::const_iterator itr = ArenaTeamStore.begin(); itr != ArenaTeamStore.end(); ++itr)
     {
         std::string teamName = itr->second->GetName();
-        std::transform(teamName.begin(), teamName.end(), teamName.begin(), ::toupper);
+        std::transform(teamName.begin(), teamName.end(), teamName.begin(), [](unsigned char c) { return ::toupper(c); });
         if (search == teamName)
         {
             return itr->second;
@@ -74,7 +74,7 @@ ArenaTeam* ArenaTeamMgr::GetArenaTeamByName(std::string const& arenaTeamName) co
 ArenaTeam* ArenaTeamMgr::GetArenaTeamByName(std::string const& arenaTeamName, const uint32 type) const
 {
     std::string search = arenaTeamName;
-    std::transform(search.begin(), search.end(), search.begin(), ::toupper);
+    std::transform(search.begin(), search.end(), search.begin(), [](unsigned char c) { return ::toupper(c); });
     for (auto itr = ArenaTeamStore.begin(); itr != ArenaTeamStore.end(); ++itr)
     {
         if (itr->second->GetType() != type)
@@ -82,7 +82,7 @@ ArenaTeam* ArenaTeamMgr::GetArenaTeamByName(std::string const& arenaTeamName, co
             continue;
         }
         std::string teamName = itr->second->GetName();
-        std::transform(teamName.begin(), teamName.end(), teamName.begin(), ::toupper);
+        std::transform(teamName.begin(), teamName.end(), teamName.begin(), [](unsigned char c) { return ::toupper(c); });
         if (search == teamName)
         {
             return itr->second;

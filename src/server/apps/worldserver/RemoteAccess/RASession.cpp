@@ -155,12 +155,12 @@ bool RASession::CheckAccessLevel(std::string const& user)
 bool RASession::CheckPassword(std::string const& user, std::string const& pass)
 {
     std::string safe_user = user;
-    std::transform(safe_user.begin(), safe_user.end(), safe_user.begin(), ::toupper);
+    std::transform(safe_user.begin(), safe_user.end(), safe_user.begin(), [](unsigned char c) { return ::toupper(c); });
     Utf8ToUpperOnlyLatin(safe_user);
 
     std::string safe_pass = pass;
     Utf8ToUpperOnlyLatin(safe_pass);
-    std::transform(safe_pass.begin(), safe_pass.end(), safe_pass.begin(), ::toupper);
+    std::transform(safe_pass.begin(), safe_pass.end(), safe_pass.begin(), [](unsigned char c) { return ::toupper(c); });
 
     auto* stmt = LoginDatabase.GetPreparedStatement(LOGIN_SEL_CHECK_PASSWORD_BY_NAME);
 

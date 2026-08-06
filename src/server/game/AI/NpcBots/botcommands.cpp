@@ -2171,7 +2171,7 @@ public:
                 target_guid = group->GetTargetIcons()[6];
             else if (target_token == "skull")
                 target_guid = group->GetTargetIcons()[7];
-            else if (target_token->size() == 1u && std::isdigit(target_token->front()))
+            else if (target_token->size() == 1u && std::isdigit(static_cast<unsigned char>(target_token->front())))
             {
                 uint8 digit = static_cast<uint8>(std::stoi(std::string(*target_token)));
                 switch (digit)
@@ -2380,7 +2380,7 @@ public:
                 target_guid = group->GetTargetIcons()[6];
             else if (target_token == "skull")
                 target_guid = group->GetTargetIcons()[7];
-            else if (target_token->size() == 1u && std::isdigit(target_token->front()))
+            else if (target_token->size() == 1u && std::isdigit(static_cast<unsigned char>(target_token->front())))
             {
                 uint8 digit = static_cast<uint8>(std::stoi(std::string(*target_token)));
                 switch (digit)
@@ -3934,9 +3934,9 @@ public:
         if (!found_bots.empty())
         {
             if (area_str)
-                std::ranges::transform(*area_str, area_str->begin(), ::toupper);
+                std::ranges::transform(*area_str, area_str->begin(), [](unsigned char c) { return std::toupper(c); });
             if (class_str)
-                std::ranges::transform(*class_str, class_str->begin(), ::toupper);
+                std::ranges::transform(*class_str, class_str->begin(), [](unsigned char c) { return std::toupper(c); });
 
             std::vector<std::string> matched_bots;
             matched_bots.reserve(found_bots.size());
@@ -3953,14 +3953,14 @@ public:
                 if (area_str)
                 {
                     zone_name_upper = zone_name;
-                    std::ranges::transform(zone_name_upper, zone_name_upper.begin(), ::toupper);
+                    std::ranges::transform(zone_name_upper, zone_name_upper.begin(), [](unsigned char c) { return std::toupper(c); });
                 }
 
                 std::string bot_class_upper;
                 if (class_str)
                 {
                     bot_class_upper = bot_class_str;
-                    std::ranges::transform(bot_class_upper, bot_class_upper.begin(), ::toupper);
+                    std::ranges::transform(bot_class_upper, bot_class_upper.begin(), [](unsigned char c) { return std::toupper(c); });
                 }
 
                 if ((!area_str || zone_name_upper.find(*area_str) != std::string::npos) &&

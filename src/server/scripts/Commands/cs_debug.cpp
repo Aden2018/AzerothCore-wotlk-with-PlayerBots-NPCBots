@@ -1721,7 +1721,7 @@ public:
         };
 
         // Lowercase the type for case-insensitive matching
-        std::transform(type.begin(), type.end(), type.begin(), ::tolower);
+        std::transform(type.begin(), type.end(), type.begin(), [](unsigned char c) { return ::tolower(c); });
 
         auto itr = lootStoreMap.find(type);
         if (itr == lootStoreMap.end())

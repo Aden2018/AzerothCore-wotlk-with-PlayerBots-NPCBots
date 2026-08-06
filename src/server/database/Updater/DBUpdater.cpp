@@ -603,7 +603,7 @@ void DBUpdater<T>::ApplyFile(DatabaseWorkerPool<T>& pool, std::string const& hos
 
 #else
 
-    if (!std::isdigit(port_or_socket[0]))
+    if (!std::isdigit(static_cast<unsigned char>(port_or_socket[0])))
     {
         // We can't check if host == "." here, because it is named localhost if socket option is enabled
         args.emplace_back("-P0");

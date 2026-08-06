@@ -397,12 +397,12 @@ namespace
             isEnd = i == n - 1;
             if (!isEnd)
             {
-                nextIsUpper = isupper(str[i + 1]);
+                nextIsUpper = isupper(static_cast<unsigned char>(str[i + 1]));
 
                 // handle "aB" to "A_B"
-                if (!isupper(curr) && nextIsUpper)
+                if (!isupper(static_cast<unsigned char>(curr)) && nextIsUpper)
                 {
-                    result += static_cast<char>(std::toupper(curr));
+                    result += static_cast<char>(std::toupper(static_cast<unsigned char>(curr)));
                     result += '_';
                     continue;
                 }
@@ -413,7 +413,7 @@ namespace
                 // handle "a1" to "a_1"
                 if (!currIsNumeric && nextIsNumeric)
                 {
-                    result += static_cast<char>(std::toupper(curr));
+                    result += static_cast<char>(std::toupper(static_cast<unsigned char>(curr)));
                     result += '_';
                     continue;
                 }
@@ -421,13 +421,13 @@ namespace
                 // handle "1a" to "1_a"
                 if (currIsNumeric && !nextIsNumeric)
                 {
-                    result += static_cast<char>(std::toupper(curr));
+                    result += static_cast<char>(std::toupper(static_cast<unsigned char>(curr)));
                     result += '_';
                     continue;
                 }
             }
 
-            result += static_cast<char>(std::toupper(curr));
+            result += static_cast<char>(std::toupper(static_cast<unsigned char>(curr)));
         }
         return result;
     }

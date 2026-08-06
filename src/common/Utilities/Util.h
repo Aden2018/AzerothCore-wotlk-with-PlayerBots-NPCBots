@@ -263,8 +263,8 @@ inline bool isEastAsianString(std::wstring_view wstr, bool numericOrSpace)
     return true;
 }
 
-inline char charToUpper(char c) { return std::toupper(c); }
-inline char charToLower(char c) { return std::tolower(c); }
+inline char charToUpper(char c) { return static_cast<char>(std::toupper(static_cast<unsigned char>(c))); }
+inline char charToLower(char c) { return static_cast<char>(std::tolower(static_cast<unsigned char>(c))); }
 
 inline wchar_t wcharToUpper(wchar_t wchar)
 {

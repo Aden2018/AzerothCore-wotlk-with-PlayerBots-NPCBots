@@ -38,7 +38,7 @@ AC_COMMON_API uint32 Acore::Time::TimeStringTo<Seconds>(std::string_view timestr
 
     for (char itr : timestring)
     {
-        if (isdigit(itr))
+        if (isdigit(static_cast<unsigned char>(itr)))
         {
             buffer *= 10;
             buffer += itr - '0';

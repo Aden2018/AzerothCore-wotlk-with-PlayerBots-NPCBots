@@ -208,7 +208,7 @@ void ChannelMgr::LoadChannelRights()
 ChannelRights const& ChannelMgr::GetChannelRightsFor(std::string const& name)
 {
     std::string nameStr = name;
-    std::transform(nameStr.begin(), nameStr.end(), nameStr.begin(), ::tolower);
+    std::transform(nameStr.begin(), nameStr.end(), nameStr.begin(), [](unsigned char c) { return ::tolower(c); });
     ChannelRightsMap::const_iterator itr = channels_rights.find(nameStr);
     if (itr != channels_rights.end())
         return itr->second;
@@ -218,7 +218,7 @@ ChannelRights const& ChannelMgr::GetChannelRightsFor(std::string const& name)
 void ChannelMgr::SetChannelRightsFor(std::string const& name, uint32 const& flags, uint32 const& speakDelay, std::string const& joinmessage, std::string const& speakmessage, std::set<uint32> const& moderators)
 {
     std::string nameStr = name;
-    std::transform(nameStr.begin(), nameStr.end(), nameStr.begin(), ::tolower);
+    std::transform(nameStr.begin(), nameStr.end(), nameStr.begin(), [](unsigned char c) { return ::tolower(c); });
     channels_rights[nameStr] = ChannelRights(flags, speakDelay, joinmessage, speakmessage, moderators);
 }
 
