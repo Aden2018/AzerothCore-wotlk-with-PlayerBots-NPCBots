@@ -24,7 +24,7 @@ AC_COMMON_API Str Acore::String::Trim(Str const& s, std::locale const& loc /*= s
     typename Str::const_iterator first = s.begin();
     typename Str::const_iterator end = s.end();
 
-    while (first != end && std::isspace(static_cast<unsigned char>(*first), loc))
+    while (first != end && std::isspace(*first, loc))
     {
         ++first;
     }
@@ -39,7 +39,7 @@ AC_COMMON_API Str Acore::String::Trim(Str const& s, std::locale const& loc /*= s
     do
     {
         --last;
-    } while (std::isspace(static_cast<unsigned char>(*last), loc));
+    } while (std::isspace(*last, loc));
 
     if (first != s.begin() || last + 1 != end)
     {
