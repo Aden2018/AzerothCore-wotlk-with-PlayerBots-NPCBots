@@ -889,20 +889,64 @@ void bot_ai::_calculatePos(Unit const* followUnit, Position& pos, float* speed/*
     }
 
 #ifdef DIY_ADEN2008
-    // 玩家骑坐骑奔跑赶路时，坦克从前方线性映射到后侧方弧跟随，避免阻挡视线
-    if (HasRole(BOT_ROLE_TANK) && !IAmFree() && !me->IsInCombat() && followUnit->IsMounted() && master && master->IsInWorld())
+    // 坦克赶路角度按"坐骑 / 走路"分两档，精准对应图示阵型：
+    //
+    //     停止/战斗             坐骑跑步（视线最通畅）       走路跑步（侧后方）
+    //         TTT                    T     T                    T     T
+    //      m       m                m       m                 m       m
+    //     m    M↑    m              m    M↑    m              m    M↑    m
+    //      m       m                m       m                 m  T    m
+    //        rrrrr                     rrr                        rrr
+    //
+    // 角度映射（M 朝 ↑=12 o'clock）：
+    //   停止/战斗  factor=0  → ±30°  (11/1 o'clock, 前方接怪)
+    //   坐骑跑步  factor=0.6→ ±93° ≈ ±90° (9/3 o'clock, 纯侧方, 零挡视线)
+    //   走路跑步  factor=1.0→ ±135° (7:30/4:30 o'clock, 侧后方)
+    //
+    // 用单一 _tankLaneFactor 跨帧累积，目标值按状态切换，零 anchor/零距离检测。
+    if (HasRole(BOT_ROLE_TANK) && !IAmFree() && !me->IsInCombat() && master && master->IsInWorld())
     {
-        uint32 moveFlags = followUnit->m_movementInfo.GetMovementFlags();
-        if (moveFlags & MOVEMENTFLAG_FORWARD)
+        Unit const* mv = followUnit->GetVehicle() ? followUnit->GetVehicleBase() : followUnit;
+        bool const masterRun =
+            (followUnit->IsMounted() &&
+                (mv->m_movementInfo.GetMovementFlags() & MOVEMENTFLAG_FORWARD));
+
+        float targetFactor;
+        float lerpSpeed;
+        if (masterRun)
         {
-            // 原角度范围 [-PI/6, +PI/6]（前方60度），线性映射到后侧方弧 [PI*5/6, PI*7/6]（120度）
-            float const srcRange = float(M_PI) / 6.0f;       // 源范围 ±30度
-            float const rearCenter = float(M_PI);              // 正后方180度
-            float const rearRange = float(M_PI) / 3.0f;        // 后方弧半径 ±60度
-            float normalized = std::fabs(angle) / srcRange;     // 0~1
-            float sign = (angle >= 0.0f) ? 1.0f : -1.0f;
-            angle = rearCenter + sign * normalized * rearRange;
+            targetFactor = 1.0f;        // 骑行 → ±90° 纯侧方
+            lerpSpeed = 0.15f;          // 0.4s 到目标 90%
         }
+        else
+        {
+            targetFactor = 0.0f;        // 停止/走路/战斗 → 回 ±30° 前方
+            lerpSpeed = 0.25f;          // 0.2s 回前方（接怪要快）
+        }
+
+        _tankLaneFactor += (targetFactor - _tankLaneFactor) * lerpSpeed;
+
+        if (_tankLaneFactor > 0.001f)
+        {
+            float const sign = (angle >= 0.0f) ? 1.0f : -1.0f;
+            float const mountedAngle = sign * (float(M_PI) / 2.0f);   // ±90° 纯侧方
+            angle = angle + (mountedAngle - angle) * _tankLaneFactor;
+
+            // 坐骑 collision radius 额外拉开距离，防止挤在一起
+            //   坐骑 radius 约 1.5~2.5（大型坐骑更大），坦克 radius 约 0.5
+            //   安全间距 = (坐骑 radius + 坦克 radius) × 2，用 lerp 只在骑行阶段生效
+            if (_tankLaneFactor > 0.5f)
+            {
+                float const moverRadius = mv->GetCollisionRadius();
+                float const myRadius = me->GetCollisionRadius();
+                float const safeGap = (moverRadius + myRadius) * 2.0f;
+                mydist += safeGap * (_tankLaneFactor - 0.5f) * 2.0f;   // factor 0.5~1.0 线性叠加
+            }
+        }
+    }
+    else
+    {
+        _tankLaneFactor = 0.0f;
     }
 #endif
 
@@ -996,10 +1040,28 @@ void bot_ai::_calculatePos(Unit const* followUnit, Position& pos, float* speed/*
 #endif
 
     if (me->GetPositionZ() < mpos.GetPositionZ())
+#ifdef DIY_ADEN2008
+    {
+        // 仅当目标远高于脚下时，尝试投影到地面，防止浮空
+        float groundZ = mpos.m_positionZ;
+        if (!bmover->CanFly())
+            bmover->UpdateAllowedPositionZ(mpos.m_positionX, mpos.m_positionY, groundZ);
+        // 如果地面高度低于 bot 当前脚底，则取脚底高度（防止掉地）
+        mpos.m_positionZ = std::max(groundZ, me->GetPositionZ() - 0.5f);
+    }
+#else
         mpos.m_positionZ += 0.5f; //prevent going underground while moving
+#endif
 
 #ifdef DIY_ADEN2008
-    if (!IAmFree())
+    // 避让逻辑：跳过坦克侧后方赶路阶段（factor>0.3）
+    // ——坦克已被精确放在 ±90°/±135°，猎人宠物通常在主人侧前方 ±60°，
+    //    两者距离在 5-6 码以上，完全不会撞；跳过避让可避免坦克被"过度推开"
+    //    到主人和宠物之间扎堆。DPS/Ranged 仍保持避让。
+    bool const skipAvoidanceTankLane =
+        _tankLaneFactor > 0.3f && HasRole(BOT_ROLE_TANK);
+
+    if (!IAmFree() && !skipAvoidanceTankLane)
     {
         time_t now = time(nullptr);
         if (!_avoidPetCheckTimer || now >= (time_t)_avoidPetCheckTimer)
@@ -1027,7 +1089,7 @@ void bot_ai::_calculatePos(Unit const* followUnit, Position& pos, float* speed/*
                         continue;
 
                     float dist = me->GetDistance2d(pet);
-                    if (dist < 4.0f)
+                    if (dist < 3.0f)
                     {
                         float dx = myX - pet->GetPositionX();
                         float dy = myY - pet->GetPositionY();
@@ -1059,7 +1121,7 @@ void bot_ai::_calculatePos(Unit const* followUnit, Position& pos, float* speed/*
                                 continue;
 
                             float dist = me->GetDistance2d(pet);
-                            if (dist < 4.0f)
+                            if (dist < 3.0f)
                             {
                                 float dx = myX - pet->GetPositionX();
                                 float dy = myY - pet->GetPositionY();
@@ -1086,7 +1148,7 @@ void bot_ai::_calculatePos(Unit const* followUnit, Position& pos, float* speed/*
                             continue;
 
                         float dist = me->GetDistance2d(otherBot);
-                        if (dist < 3.0f)
+                        if (dist < 2.5f)
                         {
                             float dx = myX - otherBot->GetPositionX();
                             float dy = myY - otherBot->GetPositionY();
@@ -1102,9 +1164,9 @@ void bot_ai::_calculatePos(Unit const* followUnit, Position& pos, float* speed/*
                 }
             }
 
-            if (minDist < 3.0f)
+            if (minDist < 2.5f)
             {
-                float pushDist = 3.0f - minDist;
+                float pushDist = 2.5f - minDist;
                 if (minDist > 0.01f)
                 {
                     _avoidPetDx = (closeDx / minDist) * pushDist;
