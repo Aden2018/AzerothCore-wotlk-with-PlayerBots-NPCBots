@@ -34,6 +34,8 @@ DBCDatabaseLoader::DBCDatabaseLoader(char const* tableName, char const* dbcForma
 #else
     int32 indexPos = -1;
     _recordSize = DBCFileLoader::GetFormatRecordSize(_dbcFormat, &indexPos);
+    if (indexPos >= 0)
+        _sqlIndexPos = indexPos;
 #endif
 
     ASSERT(_recordSize);
