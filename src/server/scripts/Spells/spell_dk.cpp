@@ -1293,19 +1293,27 @@ class spell_dk_blood_gorged : public AuraScript
 
     bool Load() override
     {
-        _procTarget = nullptr;
+        _procTargetGUID.Clear();
         return true;
     }
 
     bool CheckProc(ProcEventInfo& /*eventInfo*/)
     {
-        _procTarget = GetTarget()->GetOwner();
-        return _procTarget;
+        if (Unit* owner = GetTarget()->GetOwner())
+        {
+            _procTargetGUID = owner->GetGUID();
+            return true;
+        }
+        return false;
     }
 
     void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
+
+        Unit* procTarget = ObjectAccessor::GetUnit(*GetTarget(), _procTargetGUID);
+        if (!procTarget)
+            return;
 
         DamageInfo* damageInfo = eventInfo.GetDamageInfo();
 
@@ -1315,7 +1323,7 @@ class spell_dk_blood_gorged : public AuraScript
         }
 
         int32 bp = static_cast<int32>(damageInfo->GetDamage() * 1.5f);
-        GetTarget()->CastCustomSpell(SPELL_DK_BLOOD_GORGED_HEAL, SPELLVALUE_BASE_POINT0, bp, _procTarget, true, nullptr, aurEff);
+        GetTarget()->CastCustomSpell(SPELL_DK_BLOOD_GORGED_HEAL, SPELLVALUE_BASE_POINT0, bp, procTarget, true, nullptr, aurEff);
     }
 
     void Register() override
@@ -1325,7 +1333,7 @@ class spell_dk_blood_gorged : public AuraScript
     }
 
 private:
-    Unit* _procTarget;
+    ObjectGuid _procTargetGUID;
 };
 
 class CorpseExplosionCheck

@@ -77,10 +77,21 @@ Click on the "⭐ Star" button to help us gain more visibility on Github!
 
 The project was born in 2016 based on SunwellCore. Unfortunately, SunwellCore was published without any git history, so on git there are no credits for all the contributors before 2016.
 
+Please take the time to review existing issues before submitting your own to
+prevent duplicates.
+
+
+
+Click on the "⭐ Star" button to help us gain more visibility on GitHub!
+
+C++ fixes are submitted as [pull requests](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/pulls).
+
+
 You can check the [authors](https://github.com/Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots/blob/Playerbot/AUTHORS) file for more details.
 
 ## Important Links
 
+- [NPCBots Readme](https://github.com/trickerer/Trinity-Bots/)
 - [Doxygen documentation](https://www.azerothcore.org/pages/doxygen/index.html)
 - [Website](http://www.azerothcore.org/)
 - [AzerothCore catalogue](http://www.azerothcore.org/catalogue.html  "Modules, tools, and other stuff for AzerothCore") (modules, tools, etc...)

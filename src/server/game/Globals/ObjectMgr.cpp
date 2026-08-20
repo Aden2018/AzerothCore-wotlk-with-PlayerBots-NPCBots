@@ -2395,7 +2395,7 @@ void ObjectMgr::LoadCreatures()
         data.spawnMask          = fields[14].Get<uint8>();
         data.phaseMask          = fields[15].Get<uint32>();
         int16 gameEvent         = fields[16].Get<int16>();
-        uint32 PoolId           = fields[17].Get<uint32>();
+        data.poolId             = fields[17].Get<uint32>();
         data.npcflag            = fields[18].Get<uint32>();
         data.unit_flags         = fields[19].Get<uint32>();
         data.dynamicflags       = fields[20].Get<uint32>();
@@ -2503,8 +2503,9 @@ void ObjectMgr::LoadCreatures()
             WorldDatabase.Execute(stmt);
         }
 
-        // Add to grid if not managed by the game event or pool system
-        if (gameEvent == 0 && PoolId == 0)
+        // Add to grid if not managed by the game event. Pooled spawns are in
+        // the grid data too; the grid loader filters them by pool state.
+        if (gameEvent == 0)
             AddCreatureToGrid(spawnId, &data);
 
         ++count;
@@ -3048,7 +3049,7 @@ void ObjectMgr::LoadGameobjects()
 
         data.phaseMask      = fields[15].Get<uint32>();
         int16 gameEvent     = fields[16].Get<int16>();
-        uint32 PoolId        = fields[17].Get<uint32>();
+        data.poolId         = fields[17].Get<uint32>();
 
         if (data.rotation.x < -1.0f || data.rotation.x > 1.0f)
         {
@@ -3107,7 +3108,7 @@ void ObjectMgr::LoadGameobjects()
             WorldDatabase.Execute(stmt);
         }
 
-        if (gameEvent == 0 && PoolId == 0)                      // if not this is to be managed by GameEvent System or Pool system
+        if (gameEvent == 0)                      // if not this is to be managed by GameEvent System
             AddGameobjectToGrid(guid, &data);
     } while (result->NextRow());
 

@@ -29,14 +29,10 @@ DBCDatabaseLoader::DBCDatabaseLoader(char const* tableName, char const* dbcForma
       _stringPool(stringPool)
 {
     // Get sql index position
-#ifdef MOD_PLAYERBOTS
-    _recordSize = DBCFileLoader::GetFormatRecordSize(_dbcFormat, &_sqlIndexPos);
-#else
     int32 indexPos = -1;
     _recordSize = DBCFileLoader::GetFormatRecordSize(_dbcFormat, &indexPos);
     if (indexPos >= 0)
         _sqlIndexPos = indexPos;
-#endif
 
     ASSERT(_recordSize);
 }
