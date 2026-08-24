@@ -81,6 +81,7 @@ Please take the time to review existing issues before submitting your own to
 prevent duplicates.
 
 
+Agent instructions for this repo live in [AGENTS.md](../AGENTS.md), with task-scoped guides in [.agents/docs/](../.agents/docs/); [.agents/README.md](../.agents/README.md) explains how to hook up your agent.
 
 Click on the "⭐ Star" button to help us gain more visibility on GitHub!
 
