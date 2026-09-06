@@ -9199,6 +9199,95 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             msg2 << "GS: " << uint32(GetBotGearScores().first);
             BotWhisper(msg2.view(), player);
 
+#ifdef DIY_ADEN2008 //NBEM Start
+            //通过NBEM协议发送机器人装备信息供客户端插件使用
+            struct NbemSlot { uint8 slot; char const* key; char const* label; };
+            static constexpr NbemSlot nbemSlots[] =
+            {
+                { BOT_SLOT_MAINHAND,  "MAINHAND",  "Main Hand" },
+                { BOT_SLOT_OFFHAND,   "OFFHAND",   "Off Hand"  },
+                { BOT_SLOT_RANGED,    "RANGED",    "Ranged"    },
+                { BOT_SLOT_HEAD,      "HEAD",      "Head"      },
+                { BOT_SLOT_SHOULDERS, "SHOULDER",  "Shoulder"  },
+                { BOT_SLOT_CHEST,     "CHEST",     "Chest"     },
+                { BOT_SLOT_WAIST,     "WAIST",     "Waist"     },
+                { BOT_SLOT_LEGS,      "LEGS",      "Legs"      },
+                { BOT_SLOT_FEET,      "FEET",      "Feet"      },
+                { BOT_SLOT_WRIST,     "WRIST",     "Wrist"     },
+                { BOT_SLOT_HANDS,     "HANDS",     "Hands"     },
+                { BOT_SLOT_BACK,      "BACK",      "Back"      },
+                { BOT_SLOT_FINGER1,   "FINGER1",   "Finger 1"  },
+                { BOT_SLOT_FINGER2,   "FINGER2",   "Finger 2"  },
+                { BOT_SLOT_TRINKET1,  "TRINKET1",  "Trinket 1" },
+                { BOT_SLOT_TRINKET2,  "TRINKET2",  "Trinket 2" },
+                { BOT_SLOT_NECK,      "NECK",      "Neck"      },
+            };
+
+            //机器人职业ID转英文名称
+            auto classNameFor = [](uint8 botClass) -> char const*
+            {
+                switch (botClass)
+                {
+                    case BOT_CLASS_WARRIOR:      return "Warrior";
+                    case BOT_CLASS_PALADIN:      return "Paladin";
+                    case BOT_CLASS_HUNTER:       return "Hunter";
+                    case BOT_CLASS_ROGUE:        return "Rogue";
+                    case BOT_CLASS_PRIEST:       return "Priest";
+                    case BOT_CLASS_DEATH_KNIGHT: return "Death Knight";
+                    case BOT_CLASS_SHAMAN:       return "Shaman";
+                    case BOT_CLASS_MAGE:         return "Mage";
+                    case BOT_CLASS_WARLOCK:      return "Warlock";
+                    case BOT_CLASS_DRUID:        return "Druid";
+                    default:                    return "Unknown";
+                }
+            };
+
+            ChatHandler nbemChat(player->GetSession());
+
+            //发送扫描开始消息
+            std::ostringstream beginMsg;
+            beginMsg << "NBEM_SCAN_BEGIN " << me->GetName();
+            nbemChat.SendSysMessage(beginMsg.view());
+
+            //发送职业、种族、等级信息
+            std::ostringstream classMsg;
+            classMsg << "NBEM_STAT CLASS Class: " << classNameFor(GetBotClass());
+            nbemChat.SendSysMessage(classMsg.view());
+
+            std::ostringstream raceMsg;
+            raceMsg << "NBEM_STAT RACE Race: " << uint32(me->GetRace());
+            nbemChat.SendSysMessage(raceMsg.view());
+
+            std::ostringstream levelMsg;
+            levelMsg << "NBEM_STAT LEVEL Level: " << uint32(me->GetLevel());
+            nbemChat.SendSysMessage(levelMsg.view());
+
+            //发送各槽位装备信息
+            for (NbemSlot const& s : nbemSlots)
+            {
+                std::ostringstream slotMsg;
+                slotMsg << "NBEM_SLOT " << s.key << " " << s.label << ": ";
+
+                Item const* item = _equips[s.slot];
+                if (item)
+                    _AddItemLink(player, item, slotMsg, /*addIcon=*/false);
+                else
+                    slotMsg << "NONE";
+
+                nbemChat.SendSysMessage(slotMsg.view());
+            }
+
+            //发送装备分数
+            std::ostringstream gsMsg;
+            gsMsg << "NBEM_STAT GS GS: " << uint32(GetBotGearScores().first);
+            nbemChat.SendSysMessage(gsMsg.view());
+
+            //发送扫描结束消息
+            std::ostringstream endMsg;
+            endMsg << "NBEM_SCAN_END " << me->GetName();
+            nbemChat.SendSysMessage(endMsg.view());
+#endif //NBEM End
+
             break;
         }
         case GOSSIP_SENDER_EQUIP_TRANSMOGRIFY_MHAND:     //0 - 1 main hand
