@@ -10,7 +10,6 @@
 #include "ScriptMgr.h"
 #include "Tokenize.h"
 #include "World.h"
-
 /*
 Npc Bot Config by Trickerer (onlysuffering@gmail.com)
 */
@@ -241,6 +240,10 @@ void AddSC_druid_bot_pets();
 void AddSC_script_bot_commands();
 void AddSC_script_bot_giver();
 void AddSC_botdatamgr_scripts();
+#ifdef DIY_ADEN2008 //NBEM Start
+//NBEM 装备扫描脚本
+void AddSC_nbem_scanScripts();
+#endif //NBEM End
 
 void AddNpcBotScripts()
 {
@@ -280,6 +283,11 @@ void AddNpcBotScripts()
     AddSC_script_bot_commands();
     AddSC_script_bot_giver();
     AddSC_botdatamgr_scripts();
+#ifdef DIY_ADEN2008 //NBEM Start
+    //NBEM 装备扫描脚本
+    AddSC_nbem_scanScripts();
+#endif //NBEM End
+
 }
 
 class NPCBotsConfigScript : public WorldScript
