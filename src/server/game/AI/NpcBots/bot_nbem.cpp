@@ -1,5 +1,7 @@
 #include "bot_ai.h"
 #include "botcommon.h"
+#include "botconfig.h"
+#include "botdatamgr.h"
 #include "botgossip.h"
 #include "Chat.h"
 #include "ChatCommand.h"
@@ -425,6 +427,41 @@ void SendScan(ChatHandler* handler, Creature* bot, bot_ai* ai)
     endMsg << "NBEM_SCAN_END " << bot->GetName();
     handler->SendSysMessage(endMsg.view());
 }
+
+// 发送 Bot 的 GearBank 背包物品到客户端
+// 协议：NBEM_BAG_BEGIN <botName> <capacity>
+//       NBEM_BAG_ITEM <index> <itemGuidLow> <itemLink>   (index 为格子序号，0-based)
+//       NBEM_BAG_END <botName> <count>
+void SendBotBag(ChatHandler* handler, Player* player, Creature* bot, bot_ai* ai)
+{
+    uint32 capacity = BotCfg::GetGearBankCapacity();
+
+    std::ostringstream beginMsg;
+    beginMsg << "NBEM_BAG_BEGIN " << bot->GetName() << " " << capacity;
+    handler->SendSysMessage(beginMsg.view());
+
+    BotBankItemContainer const* botBankItems = BotDataMgr::GetBotBankItems(player->GetGUID());
+
+    uint32 index = 0;
+    if (botBankItems)
+    {
+        for (Item const* item : *botBankItems)
+        {
+            if (!item)
+                continue;
+
+            std::string link = BuildItemLink(item);
+            std::ostringstream itemMsg;
+            itemMsg << "NBEM_BAG_ITEM " << index << " " << item->GetGUID().GetCounter() << " " << link;
+            handler->SendSysMessage(itemMsg.view());
+            ++index;
+        }
+    }
+
+    std::ostringstream endMsg;
+    endMsg << "NBEM_BAG_END " << bot->GetName() << " " << index;
+    handler->SendSysMessage(endMsg.view());
+}
 }
 
 class nbem_scan_commandscript : public CommandScript
@@ -437,7 +474,9 @@ public:
         static ChatCommandTable commandTable =
         {
             { "nbem scan", HandleNbemScanCommand, rbac::RBAC_PERM_COMMAND_NPCBOT_INFO, Console::No },
+            { "nbem bag", HandleNbemBagCommand, rbac::RBAC_PERM_COMMAND_NPCBOT_INFO, Console::No },
             { "nbem equip", HandleNbemEquipCommand, rbac::RBAC_PERM_COMMAND_NPCBOT_INFO, Console::No },
+            { "nbem equipbank", HandleNbemEquipBankCommand, rbac::RBAC_PERM_COMMAND_NPCBOT_INFO, Console::No },
             { "nbem unequip", HandleNbemUnequipCommand, rbac::RBAC_PERM_COMMAND_NPCBOT_INFO, Console::No }
         };
         return commandTable;
@@ -452,6 +491,18 @@ public:
             return true;
 
         SendScan(handler, bot, ai);
+        return true;
+    }
+
+    static bool HandleNbemBagCommand(ChatHandler* handler)
+    {
+        Player* player = nullptr;
+        Creature* bot = nullptr;
+        bot_ai* ai = nullptr;
+        if (!GetPlayerBot(handler, player, bot, ai))
+            return true;
+
+        SendBotBag(handler, player, bot, ai);
         return true;
     }
 
@@ -478,6 +529,7 @@ public:
         ai->OnGossipSelect(player, bot, GOSSIP_SENDER_UNEQUIP, NBEM_GOSSIP_ACTION_INFO_DEF + slot->BotSlot);
         CloseBotGossip(player);
         SendScan(handler, bot, ai);
+        SendBotBag(handler, player, bot, ai);
         return true;
     }
 
@@ -540,6 +592,101 @@ public:
         ai->OnGossipSelect(player, bot, GOSSIP_SENDER_EQUIP + slot->BotSlot, NBEM_GOSSIP_ACTION_INFO_DEF + item->GetGUID().GetCounter());
         CloseBotGossip(player);
         SendScan(handler, bot, ai);
+        SendBotBag(handler, player, bot, ai);
+        return true;
+    }
+
+    // 从 Bot 的 GearBank 中装备物品
+    // 用法：.nbem equipbank 槽位 物品GUID
+    static bool HandleNbemEquipBankCommand(ChatHandler* handler, char const* args)
+    {
+        Player* player = nullptr;
+        Creature* bot = nullptr;
+        bot_ai* ai = nullptr;
+        if (!GetPlayerBot(handler, player, bot, ai))
+            return true;
+
+        // _equip() 内部有 ASSERT(receiver == master->GetGUID())，shared owner 会导致崩溃
+        // 这里必须在调用 OnGossipSelect 前拦截 shared owner 情况
+        Player* master = ai->GetBotOwner();
+        if (master != player)
+        {
+            handler->SendSysMessage("NBEM_ERROR 只有雇佣兵的真正主人才能从装备库装备物品。");
+            return true;
+        }
+
+        std::string argsString(args ? args : "");
+        std::istringstream iss(argsString);
+        std::string slotKey;
+        uint32 itemGuidLow = 0;
+        iss >> slotKey >> itemGuidLow;
+
+        NbemSlotInfo const* slot = FindSlot(slotKey);
+        if (!slot || iss.fail() || itemGuidLow == 0)
+        {
+            handler->SendSysMessage("NBEM_ERROR 用法: .nbem equipbank 槽位 物品GUID");
+            return true;
+        }
+
+        // 从 GearBank 中取出物品并临时放入玩家背包，然后通过现有装备逻辑装备
+        Item* item = BotDataMgr::WithdrawBotBankItem(player->GetGUID(), itemGuidLow);
+        if (!item)
+        {
+            handler->SendSysMessage("NBEM_ERROR 在雇佣兵装备库中未找到该物品。");
+            return true;
+        }
+
+        ItemPosCountVec dest;
+        uint32 noSpace = 0;
+        InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, item->GetEntry(), 1, &noSpace);
+        if (msg != EQUIP_ERR_OK)
+        {
+            // 背包已满，把物品放回 GearBank 并提示
+            BotDataMgr::DepositBotBankItem(player->GetGUID(), item);
+            handler->SendSysMessage("NBEM_ERROR 你的背包已满，请先腾出空间再从装备库装备物品。");
+            return true;
+        }
+
+        Item* stored = player->StoreItem(dest, item, true);
+        if (!stored)
+        {
+            BotDataMgr::DepositBotBankItem(player->GetGUID(), item);
+            handler->SendSysMessage("NBEM_ERROR 无法将物品从装备库移到背包。");
+            return true;
+        }
+
+        ObjectGuid::LowType actualGuid = stored->GetGUID().GetCounter();
+
+        ItemTemplate const* proto = stored->GetTemplate();
+        if (!IsAllowedForBotClass(bot, proto))
+        {
+            // 物品放回 GearBank，避免丢失
+            player->MoveItemFromInventory(stored->GetBagSlot(), stored->GetSlot(), true);
+            BotDataMgr::DepositBotBankItem(player->GetGUID(), stored);
+            handler->SendSysMessage("NBEM_ERROR 雇佣兵职业无法使用该物品。");
+            return true;
+        }
+        if (!IsAllowedForBotSlot(*slot, proto))
+        {
+            player->MoveItemFromInventory(stored->GetBagSlot(), stored->GetSlot(), true);
+            BotDataMgr::DepositBotBankItem(player->GetGUID(), stored);
+            handler->SendSysMessage("NBEM_ERROR 该物品不属于此槽位。");
+            return true;
+        }
+        if (!IsAllowedForBotLevel(bot, proto))
+        {
+            player->MoveItemFromInventory(stored->GetBagSlot(), stored->GetSlot(), true);
+            BotDataMgr::DepositBotBankItem(player->GetGUID(), stored);
+            handler->SendSysMessage("NBEM_ERROR 该物品需要更高的雇佣兵等级。");
+            return true;
+        }
+
+        // 通过 Gossip 路径装备：OnGossipSelect 会调用 _equip(slot, item, player GUID, from_bank=false)
+        // 由于前面已确认 player == master，ASSERT(receiver == master->GetGUID()) 通过
+        ai->OnGossipSelect(player, bot, GOSSIP_SENDER_EQUIP + slot->BotSlot, NBEM_GOSSIP_ACTION_INFO_DEF + actualGuid);
+        CloseBotGossip(player);
+        SendScan(handler, bot, ai);
+        SendBotBag(handler, player, bot, ai);
         return true;
     }
 };
