@@ -34,6 +34,11 @@
 //end npcbot
 #endif
 
+enum PowerDisplayIds
+{
+    POWER_DISPLAY_PYRITE = 41
+};
+
 Vehicle::Vehicle(Unit* unit, VehicleEntry const* vehInfo, uint32 creatureEntry) :
     _me(unit), _vehicleInfo(vehInfo), _usableSeatNum(0), _creatureEntry(creatureEntry), _status(STATUS_NONE),
     _accessoriesInstalled(false)
@@ -82,7 +87,14 @@ void Vehicle::Install()
     if (_me->IsCreature())
     {
         if (PowerDisplayEntry const* powerDisplay = sPowerDisplayStore.LookupEntry(_vehicleInfo->m_powerDisplayId))
+        {
             _me->setPowerType(Powers(powerDisplay->PowerType));
+
+            // Pyrite does not regenerate and is only refilled by scripted energizes,
+            // so the Salvaged Demolisher and its Mechanic Seat spawn with a full bar
+            if (_vehicleInfo->m_powerDisplayId == POWER_DISPLAY_PYRITE)
+                _me->SetPower(_me->getPowerType(), _me->GetMaxPower(_me->getPowerType()));
+        }
         else if (_me->IsClass(CLASS_ROGUE, CLASS_CONTEXT_ABILITY))
             _me->setPowerType(POWER_ENERGY);
     }
