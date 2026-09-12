@@ -434,6 +434,7 @@ void SendScan(ChatHandler* handler, Creature* bot, bot_ai* ai)
 //       NBEM_BAG_END <botName> <count>
 void SendBotBag(ChatHandler* handler, Player* player, Creature* bot, bot_ai* ai)
 {
+    (void)ai; // 参数保留以与其它 Send* 接口保持一致，但当前不需要
     uint32 capacity = BotCfg::GetGearBankCapacity();
 
     std::ostringstream beginMsg;
