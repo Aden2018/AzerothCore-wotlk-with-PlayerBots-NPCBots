@@ -9259,6 +9259,10 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             //发送扫描开始消息
             std::ostringstream beginMsg;
             beginMsg << "NBEM_SCAN_BEGIN " << me->GetName();
+            // 第三方查看（非主人且非共享主人）追加 GUEST 标志，
+            // 客户端据此隐藏管理按钮（刷新/背包/扫描）
+            if (player != master && !shared_owner)
+                beginMsg << " GUEST";
             nbemChat.SendSysMessage(beginMsg.view());
 
             //发送职业、种族、等级信息
