@@ -81,6 +81,7 @@ jobs:
           CC: ${{ matrix.compiler.CC }}
           CXX: ${{ matrix.compiler.CXX }}
           pch: false
+          # modules: true  # optional: include module compilation if desired
 
   e2e:
     name: e2e ${{ inputs.scope || 'full' }}
