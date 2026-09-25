@@ -295,20 +295,6 @@ enum CharterTypes
     ARENA_TEAM_CHARTER_5v5_TYPE                   = 5
 };
 
-constexpr Seconds PLAY_TIME_LIMIT_APPROACHING_PARTIAL = Hours(2) + Minutes(30);
-constexpr Seconds PLAY_TIME_LIMIT_PARTIAL             = Hours(3);
-constexpr Seconds PLAY_TIME_LIMIT_APPROACHING_FULL    = Hours(4) + Minutes(30);
-constexpr Seconds PLAY_TIME_LIMIT_FULL                = Hours(5);
-
-enum PlayTimeFlag : uint32
-{
-    PTF_APPROACHING_PARTIAL_PLAY_TIME = 0x1000,
-    PTF_APPROACHING_NO_PLAY_TIME      = 0x2000,
-    PTF_UNK_1                         = 0x20000000,
-    PTF_UNK_2                         = 0x40000000,
-    PTF_UNHEALTHY_TIME                = 0x80000000,
-};
-
 #ifdef MOD_PLAYERBOTS
 class LoginQueryHolder : public CharacterDatabaseQueryHolder
 {
@@ -324,6 +310,20 @@ class LoginQueryHolder : public CharacterDatabaseQueryHolder
         bool Initialize();
 };
 #endif
+
+constexpr Seconds PLAY_TIME_LIMIT_APPROACHING_PARTIAL = Hours(2) + Minutes(30);
+constexpr Seconds PLAY_TIME_LIMIT_PARTIAL             = Hours(3);
+constexpr Seconds PLAY_TIME_LIMIT_APPROACHING_FULL    = Hours(4) + Minutes(30);
+constexpr Seconds PLAY_TIME_LIMIT_FULL                = Hours(5);
+
+enum PlayTimeFlag : uint32
+{
+    PTF_APPROACHING_PARTIAL_PLAY_TIME = 0x1000,
+    PTF_APPROACHING_NO_PLAY_TIME      = 0x2000,
+    PTF_UNK_1                         = 0x20000000,
+    PTF_UNK_2                         = 0x40000000,
+    PTF_UNHEALTHY_TIME                = 0x80000000,
+};
 
 //class to deal with packet processing
 //allows to determine if next packet is safe to be processed
@@ -542,7 +542,7 @@ public:
     void SendPlayTimeWarning(PlayTimeFlag flag, int32 playTimeRemaining);
 
     /// Is the user engaged in a log out process?
-    bool isLogingOut() const { return _logoutTime || m_playerLogout; }
+    bool IsLoggingOut() const { return _logoutTime || m_playerLogout; }
 
     /// Engage the logout process for the user
     void SetLogoutStartTime(time_t requestTime)
@@ -581,6 +581,7 @@ public:
     void SendShowBank(ObjectGuid guid);
     bool CanOpenMailBox(ObjectGuid guid);
     void SendShowMailBox(ObjectGuid guid);
+    void SendMailList();
     void SendTabardVendorActivate(ObjectGuid guid);
     void SendSpiritResurrect();
     void SendBindPoint(Creature* npc);

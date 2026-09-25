@@ -460,34 +460,21 @@ bool Group::AddLeaderInvite(Player* player)
 
 void Group::RemoveInvite(Player* player)
 {
-#ifdef MOD_PLAYERBOTS
-	//mod_playerbots
     if (!player)
-        return;
-
-    // mod_playerbots: double invite hack workaround
-    if (player->GetGroupInvite() != this)
         return;
 
     m_invitees.erase(player);
 
-    player->SetGroupInvite(nullptr);
-	//end playerbots
-#else
-    if (player)
-    {
-        if (!m_invitees.empty())
-            m_invitees.erase(player);
+    // Clear pending invite from current group, Keep an invite from another group.
+    if (player->GetGroupInvite() == this)
         player->SetGroupInvite(nullptr);
-    }
-#endif
 }
 
 void Group::RemoveAllInvites()
 {
-    for (InvitesList::iterator itr = m_invitees.begin(); itr != m_invitees.end(); ++itr)
-        if (*itr)
-            (*itr)->SetGroupInvite(nullptr);
+    for (Player* invitee : m_invitees)
+        if (invitee && invitee->GetGroupInvite() == this)
+            invitee->SetGroupInvite(nullptr);
 
     m_invitees.clear();
 }
@@ -1833,7 +1820,18 @@ void Group::EndRoll(Loot* pLoot)
     {
         if ((*itr)->getLoot() == pLoot)
         {
-            CountTheRoll(itr);           //i don't have to edit player votes, who didn't vote ... he will pass
+            Roll* roll = *itr;
+            for (auto& [playerGuid, vote] : roll->playerVote)
+            {
+                if (vote != NOT_EMITED_YET)
+                    continue;
+
+                vote = PASS;
+                ++roll->totalPass;
+                SendLootRoll(roll->itemGUID, playerGuid, 128, ROLL_PASS, *roll);
+            }
+
+            CountTheRoll(itr);
             itr = RollId.begin();
         }
         else
@@ -1914,7 +1912,7 @@ void Group::CountTheRoll(Rolls::iterator rollI)
 
             if (maxguid) // pussywizard: added condition
             {
-                SendLootRollWon(ObjectGuid::Empty, maxguid, maxresul, ROLL_NEED, *roll);
+                SendLootRollWon(roll->itemGUID, maxguid, maxresul, ROLL_NEED, *roll);
                 player = ObjectAccessor::FindPlayer(maxguid);
 
                 if (player)
@@ -1995,7 +1993,7 @@ void Group::CountTheRoll(Rolls::iterator rollI)
 
             if (maxguid) // pussywizard: added condition
             {
-                SendLootRollWon(ObjectGuid::Empty, maxguid, maxresul, rollvote, *roll);
+                SendLootRollWon(roll->itemGUID, maxguid, maxresul, rollvote, *roll);
                 player = ObjectAccessor::FindPlayer(maxguid);
 
                 if (player)

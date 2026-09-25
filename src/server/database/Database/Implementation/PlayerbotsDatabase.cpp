@@ -15,7 +15,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifdef MOD_PLAYERBOTS
+#ifdef MOD_PLAYERBOTS_
 
 #include "PlayerbotsDatabase.h"
 #include "MySQLPreparedStatement.h"

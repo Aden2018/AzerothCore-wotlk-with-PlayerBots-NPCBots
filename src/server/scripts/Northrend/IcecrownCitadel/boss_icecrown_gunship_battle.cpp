@@ -2529,7 +2529,7 @@ public:
     bool operator()(WorldObject* unit)
     {
         return !unit->IsPlayer() || unit->GetPositionZ() > 478.0f || !unit->GetTransport() || unit->GetTransport()->GetEntry() != _entry
-        || unit->GetMapHeight(unit->GetPhaseMask(), unit->GetPositionX(), unit->GetPositionY(), unit->GetPositionZ()) < 465.0f;
+        || unit->GetMapHeight(unit->GetPositionX(), unit->GetPositionY(), unit->GetPositionZ()) < 465.0f;
     }
 
 private:
@@ -2558,9 +2558,13 @@ class spell_igb_rocket_artillery : public SpellScript
     void HandleScript(SpellEffIndex effIndex)
     {
         PreventHitDefaultEffect(effIndex);
-        GetCaster()->CastSpell(GetHitUnit()->GetPositionX(), GetHitUnit()->GetPositionY(),
-            GetHitUnit()->GetMapHeight(GetCaster()->GetPhaseMask(), GetHitUnit()->GetPositionX(), GetHitUnit()->GetPositionY(), GetHitUnit()->GetPositionZ()),
-            uint32(GetEffectValue()), TRIGGERED_NONE);
+
+        Unit* target = GetHitUnit();
+        float x = target->GetPositionX();
+        float y = target->GetPositionY();
+        float z = target->GetMapHeight(x, y, target->GetPositionZ());
+
+        GetCaster()->CastSpell(x, y, z, uint32(GetEffectValue()), TRIGGERED_NONE);
     }
 
     void Register() override

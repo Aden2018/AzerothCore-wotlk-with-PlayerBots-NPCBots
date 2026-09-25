@@ -446,12 +446,8 @@ bool StartDB()
     if (!loader.Load())
         return false;
 
-#ifdef MOD_PLAYERBOTS
-    if (!sScriptMgr->OnDatabasesLoading())
-    {
+    if (!sScriptMgr->OnModuleDatabasesLoading())
         return false;
-    }
-#endif
 
     ///- Get the realm Id from the configuration file
     realm.Id.Realm = sConfigMgr->GetOption<uint32>("RealmID", 1);
@@ -501,9 +497,7 @@ void StopDB()
     WorldDatabase.Close();
     LoginDatabase.Close();
 
-#ifdef MOD_PLAYERBOTS
-    sScriptMgr->OnDatabasesClosing();
-#endif
+    sScriptMgr->OnModuleDatabasesClosing();
 
     MySQL::Library_End();
 }

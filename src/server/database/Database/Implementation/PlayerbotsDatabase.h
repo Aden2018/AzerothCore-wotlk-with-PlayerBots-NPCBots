@@ -15,7 +15,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifdef MOD_PLAYERBOTS
+#ifdef MOD_PLAYERBOTS_
 
 #ifndef _PlayerbotsDatabase_H
 #define _PlayerbotsDatabase_H
