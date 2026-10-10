@@ -465,6 +465,14 @@ Unit::Unit() : WorldObject(),
 // Methods of class Unit
 Unit::~Unit()
 {
+    // Detach any AbstractFollowers still targeting this unit (e.g. a summoned pet/guardian/totem's
+    // FollowMovementGenerator) before it is destroyed. RemoveAllFollowers() is otherwise only called
+    // from RemoveFromWorld(), itself skipped entirely if this unit was already out of world -- so a
+    // unit destroyed without going through that path can leave a follower holding a dangling _target,
+    // crashing later in AbstractFollower::SetTarget when it tries to unregister itself. No-op/safe if
+    // m_followingMe is already empty.
+    RemoveAllFollowers();
+
     // set current spells as deletable
     for (uint8 i = 0; i < CURRENT_MAX_SPELL; ++i)
         if (m_currentSpells[i])
@@ -1154,6 +1162,7 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
             SpellInfo const* spell = (*i)->GetSpellInfo();
 
             uint32 shareDamage = CalculatePct(damage, (*i)->GetAmount());
+            bool const hasSharedDamage = shareDamage != 0;
 
             uint32 shareAbsorb = 0;
             uint32 shareResist = 0;
@@ -1177,6 +1186,10 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
             {
                 attacker->SendSpellNonMeleeDamageLog(shareDamageTarget, spell, shareDamage, damageSchoolMask, shareAbsorb, shareResist, damagetype == DIRECT_DAMAGE, 0, false, true);
             }
+
+            // Shared damage is a hostile interaction for its recipient too.
+            if (hasSharedDamage && attacker && !attacker->IsFriendlyTo(shareDamageTarget))
+                attacker->AtTargetAttacked(shareDamageTarget, !spellProto || spellProto->HasInitialAggro());
 
             Unit::DealDamage(attacker, shareDamageTarget, shareDamage, cleanDamage, NODAMAGE, damageSchoolMask, spellProto, false, false, damageSpell);
         }
@@ -1371,7 +1384,7 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
 
         if (!victim->IsPlayer())
         {
-            /// @fix: Hack to avoid premature leashing
+            // DoT ticks and passive damage (e.g. Thorns) do not reset leash timer
             if (damagetype != DOT && damage > 0 && !victim->GetOwnerGUID().IsPlayer() && (!spellProto || !spellProto->HasAura(SPELL_AURA_DAMAGE_SHIELD)))
                 victim->ToCreature()->UpdateLeashExtensionTime();
 
@@ -2792,6 +2805,7 @@ void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited, uint8 casterLevel
             if (!caster || (caster == victim) || !caster->IsInWorld() || !caster->IsAlive())
                 continue;
 
+            SpellInfo const* splitSpellInfo = (*itr)->GetSpellInfo();
             int32 splitDamage = (*itr)->GetAmount();
 
             // absorb must be smaller than the damage itself
@@ -2831,11 +2845,16 @@ void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited, uint8 casterLevel
 
             if (attacker)
             {
-                attacker->SendSpellNonMeleeDamageLog(caster, (*itr)->GetSpellInfo(), splitted, schoolMask, splitted_absorb, splitted_resist, false, 0, false, true);
+                attacker->SendSpellNonMeleeDamageLog(caster, splitSpellInfo, splitted, schoolMask, splitted_absorb, splitted_resist, false, 0, false, true);
             }
 
             CleanDamage cleanDamage = CleanDamage(splitted, 0, BASE_ATTACK, MELEE_HIT_NORMAL);
-            Unit::DealDamage(attacker, caster, splitted, &cleanDamage, DIRECT_DAMAGE, schoolMask, (*itr)->GetSpellInfo(), false);
+
+            // Split damage is a hostile interaction for its recipient too.
+            if (splitDamage && attacker && !attacker->IsFriendlyTo(caster))
+                attacker->AtTargetAttacked(caster, !spellInfo || spellInfo->HasInitialAggro());
+
+            Unit::DealDamage(attacker, caster, splitted, &cleanDamage, DIRECT_DAMAGE, schoolMask, splitSpellInfo, false);
         }
 
         // We're going to call functions which can modify content of the list during iteration over it's elements
@@ -2908,6 +2927,11 @@ void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited, uint8 casterLevel
             }
 
             CleanDamage cleanDamage = CleanDamage(splitted, 0, BASE_ATTACK, MELEE_HIT_NORMAL);
+
+            // Split damage is a hostile interaction for its recipient too.
+            if (splitDamage && attacker && !attacker->IsFriendlyTo(caster))
+                attacker->AtTargetAttacked(caster, !spellInfo || spellInfo->HasInitialAggro());
+
             Unit::DealDamage(attacker, caster, splitted, &cleanDamage, DIRECT_DAMAGE, splitSchoolMask, splitSpellInfo, false);
         }
     }
@@ -4688,6 +4712,18 @@ bool Unit::IsHighestExclusiveAuraEffect(SpellInfo const* spellInfo, AuraType aur
             if (!diff)
                 for (int32 i = 0; i < MAX_SPELL_EFFECTS; ++i)
                     diff += int32((auraEffectMask & (1 << i)) >> i) - int32((existingAurEff->GetBase()->GetEffectMask() & (1 << i)) >> i);
+
+            if (!diff && spellInfo->GetFirstRankSpell()->Id != existingAurEff->GetSpellInfo()->GetFirstRankSpell()->Id)
+            {
+                int32 newDuration = spellInfo->GetMaxDuration();
+                int32 existingDuration = existingAurEff->GetBase()->GetMaxDuration();
+                if (newDuration == -1 && existingDuration != -1)
+                    diff = 1;
+                else if (newDuration != -1 && existingDuration == -1)
+                    diff = -1;
+                else
+                    diff = newDuration - existingDuration;
+            }
 
             if (diff > 0)
             {
@@ -7092,7 +7128,7 @@ void Unit::SendAttackStateUpdate(CalcDamageInfo* damageInfo)
         data << uint32(0);
 
     //! Probably used for debugging purposes, as it is not known to appear on retail servers
-    if (damageInfo->HitInfo & HITINFO_UNK1)
+    if (damageInfo->HitInfo & HITINFO_DEBUG)
     {
         data << uint32(0);
         data << float(0);
@@ -7428,13 +7464,13 @@ ReputationRank Unit::GetFactionReactionTo(FactionTemplateEntry const* factionTem
     //end npcbot
 #endif
 
-#ifdef MOD_PLAYERBOTS
     return GetFactionReactionTo(factionTemplateEntry, targetFactionTemplateEntry);
 }
 
 ReputationRank Unit::GetFactionReactionTo(FactionTemplateEntry const* factionTemplateEntry, FactionTemplateEntry const* targetFactionTemplateEntry)
 {
-#endif
+    if (!factionTemplateEntry || !targetFactionTemplateEntry)
+        return REP_NEUTRAL;
     // common faction based check
     if (factionTemplateEntry->IsHostileTo(*targetFactionTemplateEntry))
         return REP_HOSTILE;
@@ -10356,9 +10392,12 @@ bool Unit::IsImmunedToSpell(SpellInfo const* spellInfo, Unit const* caster, Spel
     // Spells that don't have effectMechanics.
     if (uint32 mechanic = spellInfo->Mechanic)
     {
-        SpellImmuneContainer const& mechanicList = m_spellImmune[IMMUNITY_MECHANIC];
-        if (mechanicList.count(mechanic) > 0)
-            return true;
+        if (!spellInfo->HasAttribute(SPELL_ATTR0_CU_BYPASS_MECHANIC_IMMUNITY))
+        {
+            SpellImmuneContainer const& mechanicList = m_spellImmune[IMMUNITY_MECHANIC];
+            if (mechanicList.count(mechanic) > 0)
+                return true;
+        }
     }
 
     bool immuneToAllEffects = true;
@@ -10438,9 +10477,12 @@ bool Unit::IsImmunedToSpellEffect(SpellInfo const* spellInfo, uint32 index, Worl
 
     if (uint32 mechanic = spellInfo->Effects[index].Mechanic)
     {
-        auto const& mechanicList = m_spellImmune[IMMUNITY_MECHANIC];
-        if (mechanicList.count(mechanic) > 0)
-            return true;
+        if (!spellInfo->HasAttribute(SPELL_ATTR0_CU_BYPASS_MECHANIC_IMMUNITY))
+        {
+            auto const& mechanicList = m_spellImmune[IMMUNITY_MECHANIC];
+            if (mechanicList.count(mechanic) > 0)
+                return true;
+        }
     }
 
     if (!spellInfo->HasAttribute(SPELL_ATTR3_ALWAYS_HIT))
@@ -10761,29 +10803,33 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
     return uint32(std::max(tmpDamage, 0.0f));
 }
 
-class spellIdImmunityPredicate
-{
-public:
-    spellIdImmunityPredicate(uint32 type) : _type(type) {}
-    bool operator()(SpellImmune const& spellImmune) { return spellImmune.spellId == 0 && spellImmune.type == _type; }
-
-private:
-    uint32 _type;
-};
-
 void Unit::ApplySpellImmune(uint32 spellId, uint32 op, uint32 type, bool apply, SpellImmuneBlockType /*blockType*/)
 {
     if (apply)
+    {
+        // Immunities with spellId 0 are applied by scripts and are meant to exist only once per type.
+        if (!spellId)
+        {
+            auto bounds = m_spellImmune[op].equal_range(type);
+            for (auto itr = bounds.first; itr != bounds.second; ++itr)
+                if (!itr->second)
+                    return;
+        }
+
         m_spellImmune[op].emplace(type, spellId);
+    }
     else
     {
+        // Remove a single entry: the same spell can be applied by several casters at once (e.g. the four
+        // Magic Barrier channels on Lady Vashj), and each removal must drop only the application it belongs to.
         auto bounds = m_spellImmune[op].equal_range(type);
-        for (auto itr = bounds.first; itr != bounds.second;)
+        for (auto itr = bounds.first; itr != bounds.second; ++itr)
         {
             if (itr->second == spellId)
-                itr = m_spellImmune[op].erase(itr);
-            else
-                ++itr;
+            {
+                m_spellImmune[op].erase(itr);
+                break;
+            }
         }
     }
 }
@@ -11970,6 +12016,12 @@ void Unit::AtTargetAttacked(Unit* target, bool canInitialAggro)
 {
     if (!target->IsEngaged() && !canInitialAggro)
         return;
+
+    if (Creature* cTarget = target->ToCreature())
+    {
+        if (!cTarget->GetOwnerGUID().IsPlayer())
+            cTarget->UpdateLeashExtensionTime();
+    }
 
     target->EngageWithTarget(this);
     if (Unit* targetOwner = target->GetCharmerOrOwner())
@@ -14841,9 +14893,8 @@ void Unit::Kill(Unit* killer, Unit* victim, bool durabilityLoss, WeaponAttackTyp
             }
         }
 
-#ifdef MOD_PLAYERBOTS
-        sScriptMgr->OnPlayerbotCheckKillTask(player, victim);
-#endif
+        if (player)
+            sScriptMgr->OnPlayerCreatureKillCredit(player, creature);
 
         // Dungeon specific stuff, only applies to players killing creatures
         if (creature->GetInstanceId())
@@ -15888,27 +15939,11 @@ void Unit::SendPlaySpellVisual(uint32 id)
     SendMessageToSet(&data, true);
 }
 
-#ifdef MOD_PLAYERBOTS
-void Unit::SendPlaySpellVisual(ObjectGuid guid, uint32 id)
-{
-    WorldPacket data(SMSG_PLAY_SPELL_VISUAL, 8 + 4);
-    data << guid;
-    data << uint32(id); // SpellVisualKit.dbc index
-    SendMessageToSet(&data, true);
-}
-#endif
-
 void Unit::SendPlaySpellImpact(ObjectGuid guid, uint32 id)
 {
     WorldPacket data(SMSG_PLAY_SPELL_IMPACT, 8 + 4);
     data << guid;       // target
     data << uint32(id); // SpellVisualKit.dbc index
-
-#ifdef MOD_PLAYERBOTS
-    if (IsPlayer())
-        ToPlayer()->SendDirectMessage(&data);
-    else
-#endif
     SendMessageToSet(&data, true);
 }
 

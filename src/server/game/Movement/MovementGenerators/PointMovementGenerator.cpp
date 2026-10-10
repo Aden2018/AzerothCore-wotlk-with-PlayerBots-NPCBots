@@ -53,12 +53,8 @@ void PointMovementGenerator<T>::DoInitialize(T* unit)
     i_recalculateSpeed = false;
     Movement::MoveSplineInit init(unit);
 
-#ifdef MOD_PLAYERBOTS
-    // mod-playerbots
     if (_reverseOrientation)
         init.SetOrientationInversed();
-    /// End added
-#endif
 
     if (m_precomputedPath.size() > 2) // pussywizard: for charge
         init.MovebyPath(m_precomputedPath);
@@ -161,6 +157,10 @@ bool PointMovementGenerator<T>::DoUpdate(T* unit, uint32 diff)
     {
         i_recalculateSpeed = false;
         Movement::MoveSplineInit init(unit);
+
+        if (_reverseOrientation)
+            init.SetOrientationInversed();
+
         auto rebasePrecomputedPath = [this, unit](std::optional<uint32> offset = std::nullopt)
         {
             Movement::PointsArray rebasedPath;

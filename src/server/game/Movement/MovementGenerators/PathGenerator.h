@@ -89,7 +89,6 @@ class PathGenerator
         void SetUseStraightPath(bool useStraightPath) { _useStraightPath = useStraightPath; }
         void SetPathLengthLimit(float distance) { _pointPathLimit = std::min<uint32>(uint32(distance/SMOOTH_PATH_STEP_SIZE), MAX_POINT_PATH_LENGTH); }
         void SetUseRaycast(bool useRaycast) { _useRaycast = useRaycast; }
-#ifdef MOD_PLAYERBOTS
         // Adjust per-terrain Detour traversal cost on the active query
         // filter. Persists across CalculatePath calls until overwritten.
         void SetNavTerrainCost(NavTerrain terrain, float cost)
@@ -100,7 +99,7 @@ class PathGenerator
         // a single NavTerrain or an OR'd combination (NavTerrain values
         // implicitly convert through uint16).
         void SetExcludeFlags(uint16 flags) { _filter.setExcludeFlags(flags); }
-#endif
+
         // result getters
         [[nodiscard]] G3D::Vector3 const& GetStartPosition() const { return _startPosition; }
         [[nodiscard]] G3D::Vector3 const& GetEndPosition() const { return _endPosition; }

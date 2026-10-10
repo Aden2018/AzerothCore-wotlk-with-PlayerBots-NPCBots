@@ -30,10 +30,8 @@
 #include "DatabaseEnv.h"
 #include "Duration.h"
 #include "GossipDef.h"
-#ifdef MOD_PLAYERBOTS
-#include "QueryHolder.h"
-#endif
 #include "Packet.h"
+#include "QueryHolder.h"
 #include "SharedDefines.h"
 #include "World.h"
 #include <map>
@@ -44,9 +42,6 @@ class Creature;
 class GameObject;
 class InstanceSave;
 class Item;
-#ifndef MOD_PLAYERBOTS
-class LoginQueryHolder;
-#endif
 class LoadPetFromDBQueryHolder;
 class Object;
 class Pet;
@@ -295,21 +290,19 @@ enum CharterTypes
     ARENA_TEAM_CHARTER_5v5_TYPE                   = 5
 };
 
-#ifdef MOD_PLAYERBOTS
 class LoginQueryHolder : public CharacterDatabaseQueryHolder
 {
-    private:
-        uint32 m_accountId;
-        ObjectGuid m_guid;
+public:
+    LoginQueryHolder(uint32 accountId, ObjectGuid guid);
 
-    public:
-        LoginQueryHolder(uint32 accountId, ObjectGuid guid);
+    ObjectGuid GetGuid() const { return _guid; }
+    uint32 GetAccountId() const { return _accountId; }
+    bool Initialize();
 
-        ObjectGuid GetGuid() const { return m_guid; }
-        uint32 GetAccountId() const { return m_accountId; }
-        bool Initialize();
+private:
+    uint32 _accountId;
+    ObjectGuid _guid;
 };
-#endif
 
 constexpr Seconds PLAY_TIME_LIMIT_APPROACHING_PARTIAL = Hours(2) + Minutes(30);
 constexpr Seconds PLAY_TIME_LIMIT_PARTIAL             = Hours(3);
@@ -369,12 +362,12 @@ class CharacterCreateInfo
     friend class WorldSession;
     friend class Player;
 
-#ifdef MOD_PLAYERBOTS
 public:
-    CharacterCreateInfo(std::string const name = "", uint8 _race = 0, uint8 _class = 0, uint8 gender = 0, uint8 skin = 0, uint8 face = 0,
-        uint8 hairStyle = 0, uint8 hairColor = 0, uint8 facialHair = 0)
-        : Name(name), Race(_race), Class(_class), Gender(gender), Skin(skin), Face(face), HairStyle(hairStyle), HairColor(hairColor), FacialHair(facialHair) { }
-#endif
+    explicit CharacterCreateInfo(std::string name = "", uint8 race = 0, uint8 playerClass = 0,
+        uint8 gender = GENDER_NONE, uint8 skin = 0, uint8 face = 0, uint8 hairStyle = 0, uint8 hairColor = 0,
+        uint8 facialHair = 0)
+        : Name(std::move(name)), Race(race), Class(playerClass), Gender(gender), Skin(skin), Face(face),
+        HairStyle(hairStyle), HairColor(hairColor), FacialHair(facialHair) { }
 
 protected:
     /// User specified variables
@@ -436,11 +429,9 @@ struct PacketCounter
 class WorldSession
 {
 public:
-#ifdef MOD_PLAYERBOTS
-    WorldSession(uint32 id, std::string&& name, uint32 accountFlags, std::shared_ptr<WorldSocket> sock, AccountTypes sec, uint8 expansion, time_t mute_time, LocaleConstant locale, uint32 recruiter, bool isARecruiter, bool skipQueue, uint32 TotalTime, bool is_bot = false);
-#else
-    WorldSession(uint32 id, std::string&& name, uint32 accountFlags, std::shared_ptr<WorldSocket> sock, AccountTypes sec, uint8 expansion, time_t mute_time, LocaleConstant locale, uint32 recruiter, bool isARecruiter, bool skipQueue, uint32 TotalTime);
-#endif
+    WorldSession(uint32 id, std::string&& name, uint32 accountFlags, std::shared_ptr<WorldSocket> sock,
+        AccountTypes sec, uint8 expansion, time_t mute_time, LocaleConstant locale, uint32 recruiter, bool isARecruiter,
+        bool skipQueue, uint32 TotalTime);
     ~WorldSession();
 
     uint32 GetAccountFlags() const { return _accountFlags; }
@@ -1224,10 +1215,6 @@ public:                                                 // opcodes handlers
     void SetKicked(bool val) { _kicked = val; }
     bool IsSocketClosed() const;
 
-#ifdef MOD_PLAYERBOTS
-    void SetAddress(std::string const& address) { m_Address = address; }
-#endif
-
     /*
      * CALLBACKS
      */
@@ -1235,29 +1222,18 @@ public:                                                 // opcodes handlers
     QueryCallbackProcessor& GetQueryProcessor() { return _queryProcessor; }
     TransactionCallback& AddTransactionCallback(TransactionCallback&& callback);
     SQLQueryHolderCallback& AddQueryHolderCallback(SQLQueryHolderCallback&& callback);
+    void ProcessQueryCallbacks();
 
     void InitializeSession();
     void InitializeSessionCallback(CharacterDatabaseQueryHolder const& realmHolder, uint32 clientCacheVersion);
 
     void SetPacketLogging(bool state);
 
-#ifdef MOD_PLAYERBOTS
-    LockedQueue<WorldPacket*>& GetPacketQueue();
+    std::unique_ptr<WorldPacket> NextQueuedPacket();
 
-    [[nodiscard]] bool IsBot() const
-    {
-        return _isBot;
-    }
-#endif
-
-#ifndef DIY_ADEN2008
-    void SendTrainerList(ObjectGuid guid, uint32 npcspelli);
-    void SendTrainerList(ObjectGuid guid, std::string const& strTitle, uint32 npcspelli);
-#endif
+    [[nodiscard]] bool IsHeadless() const { return _headless; }
 
 private:
-    void ProcessQueryCallbacks();
-
     QueryCallbackProcessor _queryProcessor;
     AsyncCallbackProcessor<TransactionCallback> _transactionCallbacks;
     AsyncCallbackProcessor<SQLQueryHolderCallback> _queryHolderProcessor;
@@ -1371,9 +1347,7 @@ private:
 
     uint32 _orderCounter;
 
-#ifdef MOD_PLAYERBOTS
-    bool _isBot;
-#endif
+    bool const _headless;
 
     WorldSession(WorldSession const& right) = delete;
     WorldSession& operator=(WorldSession const& right) = delete;

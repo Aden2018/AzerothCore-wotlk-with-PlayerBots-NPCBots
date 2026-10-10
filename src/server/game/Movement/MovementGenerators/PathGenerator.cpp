@@ -23,10 +23,8 @@
 #include "MMapMgr.h"
 #include "Map.h"
 #include "Metric.h"
-#ifdef MOD_PLAYERBOTS
 #include "Player.h"
 #include "WorldSession.h"
-#endif
 
 // Blades Edge Arena Ropes normalization
 namespace
@@ -754,19 +752,13 @@ void PathGenerator::CreateFilter()
 {
     uint16 includeFlags = 0;
     uint16 excludeFlags = 0;
-#ifdef MOD_PLAYERBOTS
-    bool isBot = false;
-#endif
+    bool isHeadless = false;
 
     if (_source->IsCreature())
     {
         Creature* creature = (Creature*)_source;
         if (creature->CanWalk())
-#ifdef MOD_PLAYERBOTS
             includeFlags |= (NAV_GROUND | NAV_GROUND_STEEP);
-#else
-            includeFlags |= NAV_GROUND;          // walk
-#endif
 
         // creatures don't take environmental damage
         if (creature->CanEnterWater())
@@ -774,38 +766,31 @@ void PathGenerator::CreateFilter()
     }
     else // assume Player
     {
-#ifdef MOD_PLAYERBOTS
         // Bots navigate with a stricter filter: include ground + water but exclude lava/slime and
         // NAV_GROUND_STEEP (the 50-60deg slopes the extractor tags via modAlmostUnwalkableTriangles), so
         // they keep off steep mountainsides and follow gentle ground/roads. Real players are unchanged and
         // may still path across steep terrain.
         Player const* player = _source->ToPlayer();
-        if (player && player->GetSession() && player->GetSession()->IsBot())
+        if (player && player->GetSession() && player->GetSession()->IsHeadless())
         {
             includeFlags |= (NAV_GROUND | NAV_WATER);
             excludeFlags |= (NAV_MAGMA | NAV_SLIME | NAV_GROUND_STEEP);
-            isBot = true;
+            isHeadless = true;
         }
         else
         {
-            // Perfect support not possible, just stay 'safe'
+            // perfect support not possible, just stay 'safe'
             includeFlags |= (NAV_GROUND | NAV_GROUND_STEEP | NAV_WATER | NAV_MAGMA);
         }
-#else
-        // perfect support not possible, just stay 'safe'
-        includeFlags |= (NAV_GROUND | NAV_WATER | NAV_MAGMA);
-#endif
     }
 
     _filter.setIncludeFlags(includeFlags);
     _filter.setExcludeFlags(excludeFlags);
 
-#ifdef MOD_PLAYERBOTS
     // Bots bias their routes away from deep water (swim only when necessary). poly.area == poly.flags ==
     // NavTerrain, so NAV_WATER doubles as the water area index. Real players and creatures assign no cost.
-    if (isBot)
+    if (isHeadless)
         _filter.setAreaCost(NAV_WATER, 20.0f);
-#endif
 
     UpdateFilter();
 }

@@ -48,6 +48,7 @@ public:
         DATABASE_LOGIN      = 1,
         DATABASE_CHARACTER  = 2,
         DATABASE_WORLD      = 4,
+
         DATABASE_MASK_ALL   = DATABASE_LOGIN | DATABASE_CHARACTER | DATABASE_WORLD
     };
 
@@ -55,13 +56,6 @@ public:
     {
         return _updateFlags;
     }
-
-#ifdef MOD_PLAYERBOTS
-    void SetUpdateFlags(uint32 newUpdateFlags)
-    {
-        _updateFlags |= newUpdateFlags;
-    }
-#endif
 
 private:
     bool OpenDatabases();
@@ -79,11 +73,8 @@ private:
     std::string const _logger;
     std::string_view _modulesList;
     bool const _autoSetup;
-#ifdef MOD_PLAYERBOTS
-    uint32 _updateFlags;
-#else
     uint32 const _updateFlags;
-#endif
+
     std::queue<Predicate> _open, _populate, _update, _prepare;
     std::stack<Closer> _close;
 };

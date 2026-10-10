@@ -114,11 +114,7 @@ bool WorldSessionFilter::Process(WorldPacket* packet)
 
 /// WorldSession constructor
 WorldSession::WorldSession(uint32 id, std::string&& name, uint32 accountFlags, std::shared_ptr<WorldSocket> sock, AccountTypes sec, uint8 expansion,
-#ifdef MOD_PLAYERBOTS
-    time_t mute_time, LocaleConstant locale, uint32 recruiter, bool isARecruiter, bool skipQueue, uint32 TotalTime, bool isBot) :
-#else
     time_t mute_time, LocaleConstant locale, uint32 recruiter, bool isARecruiter, bool skipQueue, uint32 TotalTime) :
-#endif
     m_muteTime(mute_time),
     m_timeOutTime(0),
     AntiDOS(this),
@@ -154,12 +150,8 @@ WorldSession::WorldSession(uint32 id, std::string&& name, uint32 accountFlags, s
     _timeSyncClockDeltaQueue(6),
     _timeSyncClockDelta(0),
     _pendingTimeSyncRequests(),
-#ifdef MOD_PLAYERBOTS
     _orderCounter(0),
-    _isBot(isBot)
-#else
-    _orderCounter(0)
-#endif
+    _headless(!sock)
 {
     memset(m_Tutorials, 0, sizeof(m_Tutorials));
 
@@ -175,18 +167,15 @@ WorldSession::WorldSession(uint32 id, std::string&& name, uint32 accountFlags, s
         ResetTimeOutTime(false);
         LoginDatabase.Execute("UPDATE account SET online = 1 WHERE id = {};", GetAccountId()); // One-time query
     }
-#ifdef MOD_PLAYERBOTS
-    else if (isBot)
-    {
-        m_Address = "bot";
-    }
-#endif
+    else
+        m_Address = "headless";
 }
 
 /// WorldSession destructor
 WorldSession::~WorldSession()
 {
-    LoginDatabase.Execute("UPDATE account SET totaltime = {} WHERE id = {}", GetTotalTime(), GetAccountId());
+    if (!_headless)
+        LoginDatabase.Execute("UPDATE account SET totaltime = {} WHERE id = {}", GetTotalTime(), GetAccountId());
 
     ///- unload player if not unloaded
     if (_player)
@@ -206,7 +195,8 @@ WorldSession::~WorldSession()
     while (_recvQueue.next(packet))
         delete packet;
 
-    LoginDatabase.Execute("UPDATE account SET online = 0 WHERE id = {};", GetAccountId());     // One-time query
+    if (!_headless)
+        LoginDatabase.Execute("UPDATE account SET online = 0 WHERE id = {};", GetAccountId());     // One-time query
 }
 
 void WorldSession::UpdateAccountFlag(uint32 flag, bool remove /*= flase*/)
@@ -323,15 +313,7 @@ ObjectGuid::LowType WorldSession::GetGuidLow() const
 /// Send a packet to the client
 void WorldSession::SendPacket(WorldPacket const* packet)
 {
-#ifdef MOD_PLAYERBOTS
-    if (packet->GetOpcode() == NULL_OPCODE)
-    {
-        LOG_ERROR("network.opcode", "{} send NULL_OPCODE", GetPlayerInfo());
-        return;
-    }
-
-    sScriptMgr->OnPlayerbotPacketSent(GetPlayer(), packet);
-#endif
+    sScriptMgr->OnPacketSent(this, *packet);
 
     if (!m_Socket)
         return;
@@ -487,9 +469,6 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 
                         opHandle->Call(this, *packet);
                         LogUnprocessedTail(packet);
-#ifdef MOD_PLAYERBOTS
-                        sScriptMgr->OnPacketReceived(this, *packet);
-#endif
                     }
 
                     // lag can cause STATUS_LOGGEDIN opcodes to arrive after the player started a transfer
@@ -508,9 +487,6 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 
                         opHandle->Call(this, *packet);
                         LogUnprocessedTail(packet);
-#ifdef MOD_PLAYERBOTS
-                        sScriptMgr->OnPacketReceived(this, *packet);
-#endif
                     }
                     break;
                 case STATUS_TRANSFER:
@@ -521,9 +497,6 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 
                         opHandle->Call(this, *packet);
                         LogUnprocessedTail(packet);
-#ifdef MOD_PLAYERBOTS
-                        sScriptMgr->OnPacketReceived(this, *packet);
-#endif
                     }
                     break;
                 case STATUS_AUTHED:
@@ -540,9 +513,6 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 
                     opHandle->Call(this, *packet);
                     LogUnprocessedTail(packet);
-#ifdef MOD_PLAYERBOTS
-                    sScriptMgr->OnPacketReceived(this, *packet);
-#endif
                     break;
                 case STATUS_NEVER:
                     LOG_ERROR("network.opcode", "Received not allowed opcode {} from {}",
@@ -631,9 +601,7 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
     //logout procedure should happen only in World::UpdateSessions() method!!!
     if (updater.ProcessUnsafe())
     {
-#ifdef MOD_PLAYERBOTS
-        sScriptMgr->OnPlayerbotUpdateSessions(GetPlayer());
-#endif
+        sScriptMgr->OnSessionUpdate(this, diff);
 
         if (m_Socket && m_Socket->IsOpen() && _warden)
         {
@@ -745,10 +713,6 @@ void WorldSession::LogoutPlayer(bool save, bool redirecting)
 
         if (ObjectGuid lguid = _player->GetLootGUID())
             DoLootRelease(lguid);
-
-#ifdef MOD_PLAYERBOTS
-        sScriptMgr->OnPlayerbotLogout(_player);
-#endif
 
         ///- If the player just died before logging out, make him appear as a ghost
         //FIXME: logout must be delayed in case lost connection with client in time of combat
@@ -892,11 +856,7 @@ void WorldSession::LogoutPlayer(bool save, bool redirecting)
         LOG_INFO("entities.player", "Account: {} (IP: {}) Logout Character:[{}] ({}) Level: {}",
             GetAccountId(), GetRemoteAddress(), _player->GetName(), _player->GetGUID().ToString(), _player->GetLevel());
 
-#ifdef MOD_PLAYERBOTS
-        uint32 statementIndex = CHAR_UPD_ACCOUNT_ONLINE;
-        uint32 statementParam = GetAccountId();
-        sScriptMgr->OnDatabaseSelectIndexLogout(_player, statementIndex, statementParam);
-#endif
+        ObjectGuid const playerGuid = _player->GetGUID();
 
         //! Remove the player from the world
         // the player may not be in the world when logging out
@@ -916,16 +876,11 @@ void WorldSession::LogoutPlayer(bool save, bool redirecting)
         SendPacket(WorldPackets::Character::LogoutComplete().Write());
         LOG_DEBUG("network", "SESSION: Sent SMSG_LOGOUT_COMPLETE Message");
 
-        //! Since each account can only have one online character at any given time, ensure all characters for active account are marked as offline
-        if (!redirecting)
+        //! Mark all characters of the account offline, unless a script running several per account handles it instead
+        if (!redirecting && sScriptMgr->OnPlayerCanMarkAccountOffline(playerGuid, GetAccountId()))
         {
-#ifdef MOD_PLAYERBOTS
-            CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CharacterDatabaseStatements(statementIndex));
-            stmt->SetData(0, statementParam);
-#else
             CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_ACCOUNT_ONLINE);
             stmt->SetData(0, GetAccountId());
-#endif
             CharacterDatabase.Execute(stmt);
         }
     }
@@ -1714,12 +1669,14 @@ void WorldSession::SetPacketLogging(bool state)
         m_Socket->SetPacketLogging(state);
 }
 
-#ifdef MOD_PLAYERBOTS
-LockedQueue<WorldPacket*>& WorldSession::GetPacketQueue()
+std::unique_ptr<WorldPacket> WorldSession::NextQueuedPacket()
 {
-    return _recvQueue;
+    WorldPacket* packet = nullptr;
+    if (!_recvQueue.next(packet))
+        return nullptr;
+
+    return std::unique_ptr<WorldPacket>(packet);
 }
-#endif
 
 void WorldSession::LoadPermissions()
 {

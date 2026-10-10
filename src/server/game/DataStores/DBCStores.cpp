@@ -22,33 +22,20 @@
 #include "Errors.h"
 #include "LFGMgr.h"
 #include "Log.h"
-#include "RaceMgr.h"
 #include "SharedDefines.h"
 #include "SpellMgr.h"
 #include "TransportMgr.h"
 #include "World.h"
 #include <map>
 
-typedef std::map<uint16, uint32> AreaFlagByAreaID;
-typedef std::map<uint32, uint32> AreaFlagByMapID;
-
 typedef std::tuple<int16, int8, int32> WMOAreaTableKey;
 typedef std::map<WMOAreaTableKey, WMOAreaTableEntry const*> WMOAreaInfoByTripple;
-
-#ifdef MOD_PLAYERBOTS
-typedef std::multimap<uint32, CharSectionsEntry const*> CharSectionsMap;
-#endif
 
 DBCStorage <AreaTableEntry> sAreaTableStore(AreaTableEntryfmt);
 DBCStorage <AreaGroupEntry> sAreaGroupStore(AreaGroupEntryfmt);
 DBCStorage <AreaPOIEntry> sAreaPOIStore(AreaPOIEntryfmt);
 
 static WMOAreaInfoByTripple sWMOAreaInfoByTripple;
-#ifdef MOD_PLAYERBOTS
-static AreaFlagByAreaID sAreaFlagByAreaID;
-// for instances without generated *.map files
-static AreaFlagByMapID  sAreaFlagByMapID;
-#endif
 
 DBCStorage <AchievementEntry> sAchievementStore(Achievementfmt);
 DBCStorage <AchievementCategoryEntry> sAchievementCategoryStore(AchievementCategoryfmt);
@@ -60,10 +47,7 @@ DBCStorage <BarberShopStyleEntry> sBarberShopStyleStore(BarberShopStyleEntryfmt)
 DBCStorage <CharStartOutfitEntry> sCharStartOutfitStore(CharStartOutfitEntryfmt);
 std::map<uint32, CharStartOutfitEntry const*> sCharStartOutfitMap;
 
-#ifdef MOD_PLAYERBOTS
 DBCStorage <CharSectionsEntry> sCharSectionsStore(CharSectionsEntryfmt);
-CharSectionsMap sCharSectionMap;
-#endif
 
 DBCStorage <CharTitlesEntry> sCharTitlesStore(CharTitlesEntryfmt);
 DBCStorage <ChatChannelsEntry> sChatChannelsStore(ChatChannelsEntryfmt);
@@ -87,11 +71,9 @@ DBCStorage <DurabilityCostsEntry> sDurabilityCostsStore(DurabilityCostsfmt);
 DBCStorage <EmotesEntry> sEmotesStore(EmotesEntryfmt);
 DBCStorage <EmotesTextEntry> sEmotesTextStore(EmotesTextEntryfmt);
 
-#ifdef MOD_PLAYERBOTS
 typedef std::tuple<uint32, uint32, uint32> EmotesTextSoundKey;
 static std::map<EmotesTextSoundKey, EmotesTextSoundEntry const*> sEmotesTextSoundMap;
 DBCStorage <EmotesTextSoundEntry> sEmotesTextSoundStore(EmotesTextSoundEntryfmt);
-#endif
 
 typedef std::map<uint32, SimpleFactionsList> FactionTeamMap;
 static FactionTeamMap sFactionTeamMap;
@@ -302,9 +284,7 @@ void LoadDBCStores(std::string const& dataPath)
     LOAD_DBC(sBattlemasterListStore,                "BattlemasterList.dbc",                 "battlemasterlist_dbc");
     LOAD_DBC(sBarberShopStyleStore,                 "BarberShopStyle.dbc",                  "barbershopstyle_dbc");
     LOAD_DBC(sCharStartOutfitStore,                 "CharStartOutfit.dbc",                  "charstartoutfit_dbc");
-#ifdef MOD_PLAYERBOTS
     LOAD_DBC(sCharSectionsStore,                    "CharSections.dbc",                     "charsections_dbc");
-#endif
     LOAD_DBC(sCharTitlesStore,                      "CharTitles.dbc",                       "chartitles_dbc");
     LOAD_DBC(sChatChannelsStore,                    "ChatChannels.dbc",                     "chatchannels_dbc");
     LOAD_DBC(sChrClassesStore,                      "ChrClasses.dbc",                       "chrclasses_dbc");
@@ -324,9 +304,7 @@ void LoadDBCStores(std::string const& dataPath)
     LOAD_DBC(sDurabilityQualityStore,               "DurabilityQuality.dbc",                "durabilityquality_dbc");
     LOAD_DBC(sEmotesStore,                          "Emotes.dbc",                           "emotes_dbc");
     LOAD_DBC(sEmotesTextStore,                      "EmotesText.dbc",                       "emotestext_dbc");
-#ifndef MOD_PLAYERBOTS
-    LOAD_DBC(sEmotesTextSoundStore,                 "EmotesTextSound.dbc",                  "emotetextsound_dbc");
-#endif
+    LOAD_DBC(sEmotesTextSoundStore,                 "EmotesTextSound.dbc",                  "emotestextsound_dbc");
     LOAD_DBC(sFactionStore,                         "Faction.dbc",                          "faction_dbc");
     LOAD_DBC(sFactionTemplateStore,                 "FactionTemplate.dbc",                  "factiontemplate_dbc");
     LOAD_DBC(sGameObjectArtKitStore,                "GameObjectArtKit.dbc",                 "gameobjectartkit_dbc");
@@ -412,29 +390,8 @@ void LoadDBCStores(std::string const& dataPath)
 
 #undef LOAD_DBC
 
-#ifdef MOD_PLAYERBOTS
-    for (uint32 i = 0; i < sAreaTableStore.GetNumRows(); ++i)    // areaflag numbered from 0
-    {
-        if (AreaTableEntry const* area = sAreaTableStore.LookupEntry(i))
-        {
-            // fill AreaId->DBC records
-            sAreaFlagByAreaID.insert(AreaFlagByAreaID::value_type(uint16(area->ID), area->exploreFlag));
-
-            // fill MapId->DBC records ( skip sub zones and continents )
-            if (area->zone == 0 && area->mapid != 0 && area->mapid != 1 && area->mapid != 530)
-                sAreaFlagByMapID.insert(AreaFlagByMapID::value_type(area->mapid, area->exploreFlag));
-        }
-    }
-#endif
-
     for (CharStartOutfitEntry const* outfit : sCharStartOutfitStore)
         sCharStartOutfitMap[outfit->Race | (outfit->Class << 8) | (outfit->Gender << 16)] = outfit;
-
-#ifdef MOD_PLAYERBOTS
-    for (CharSectionsEntry const* charSection : sCharSectionsStore)
-        if (charSection->Race && ((1 << (charSection->Race - 1)) & sRaceMgr->GetPlayableRaceMask()) != 0) //ignore Nonplayable races
-            sCharSectionMap.insert({ charSection->GenType | (charSection->Gender << 8) | (charSection->Race << 16), charSection });
-#endif
 
     for (FactionEntry const* faction : sFactionStore)
     {
@@ -457,10 +414,11 @@ void LoadDBCStores(std::string const& dataPath)
             std::swap(*(float*)(&info->maxZ), *(float*)(&info->minZ));
     }
 
-#ifdef MOD_PLAYERBOTS
     for (EmotesTextSoundEntry const* emoteTextSound : sEmotesTextSoundStore)
-        sEmotesTextSoundMap[EmotesTextSoundKey(emoteTextSound->EmotesTextId, emoteTextSound->RaceId, emoteTextSound->SexId)] = emoteTextSound;
-#endif
+    {
+        EmotesTextSoundKey key(emoteTextSound->EmotesTextId, emoteTextSound->RaceId, emoteTextSound->SexId);
+        sEmotesTextSoundMap[key] = emoteTextSound;
+    }
 
     // fill data
     for (MapDifficultyEntry const* entry : sMapDifficultyStore)
@@ -902,20 +860,6 @@ CharStartOutfitEntry const* GetCharStartOutfitEntry(uint8 race, uint8 class_, ui
     return itr->second;
 }
 
-#ifdef MOD_PLAYERBOTS
-CharSectionsEntry const* GetCharSectionEntry(uint8 race, CharSectionType genType, uint8 gender, uint8 type, uint8 color)
-{
-    std::pair<CharSectionsMap::const_iterator, CharSectionsMap::const_iterator> eqr = sCharSectionMap.equal_range(uint32(genType) | uint32(gender << 8) | uint32(race << 16));
-    for (CharSectionsMap::const_iterator itr = eqr.first; itr != eqr.second; ++itr)
-    {
-        if (itr->second->Type == type && itr->second->Color == color)
-            return itr->second;
-    }
-
-    return nullptr;
-}
-#endif
-
 /// Returns LFGDungeonEntry for a specific map and difficulty. Will return first found entry if multiple dungeons use the same map (such as Scarlet Monastery)
 LFGDungeonEntry const* GetLFGDungeon(uint32 mapId, Difficulty difficulty)
 {
@@ -981,13 +925,11 @@ SkillRaceClassInfoEntry const* GetSkillRaceClassInfo(uint32 skill, uint8 race, u
     return nullptr;
 }
 
-#ifdef MOD_PLAYERBOTS
 EmotesTextSoundEntry const* FindTextSoundEmoteFor(uint32 emote, uint32 race, uint32 gender)
 {
     auto itr = sEmotesTextSoundMap.find(EmotesTextSoundKey(emote, race, gender));
     return itr != sEmotesTextSoundMap.end() ? itr->second : nullptr;
 }
-#endif
 
 std::vector<SkillLineAbilityEntry const*> const& GetSkillLineAbilitiesBySkillLine(uint32 skillLine)
 {
@@ -999,42 +941,3 @@ std::vector<SkillLineAbilityEntry const*> const& GetSkillLineAbilitiesBySkillLin
     }
     return it->second;
 }
-
-#ifdef MOD_PLAYERBOTS
-uint32 GetAreaFlagByMapId(uint32 mapid)
-{
-    AreaFlagByMapID::iterator i = sAreaFlagByMapID.find(mapid);
-    if (i == sAreaFlagByMapID.end())
-        return 0;
-    return i->second;
-}
-
-int32 GetAreaFlagByAreaID(uint32 area_id)
-{
-    AreaFlagByAreaID::iterator i = sAreaFlagByAreaID.find(area_id);
-    if (i == sAreaFlagByAreaID.end())
-        return -1;
-
-    return i->second;
-}
-
-AreaTableEntry const* GetAreaEntryByAreaID(uint32 area_id)
-{
-    int32 areaflag = GetAreaFlagByAreaID(area_id);
-    if (areaflag < 0)
-        return nullptr;
-
-    return sAreaTableStore.LookupEntry(areaflag);
-}
-
-AreaTableEntry const* GetAreaEntryByAreaFlagAndMap(uint32 area_flag, uint32 map_id)
-{
-    if (area_flag)
-        return sAreaTableStore.LookupEntry(area_flag);
-
-    if (MapEntry const* mapEntry = sMapStore.LookupEntry(map_id))
-        return GetAreaEntryByAreaID(mapEntry->linked_zone);
-
-    return nullptr;
-}
-#endif

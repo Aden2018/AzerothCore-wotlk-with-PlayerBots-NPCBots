@@ -217,6 +217,9 @@ struct BattlegroundABScore final : public BattlegroundScore
 {
     friend class BattlegroundAB;
 
+    [[nodiscard]] uint32 GetBasesAssaulted() const { return BasesAssaulted; }
+    [[nodiscard]] uint32 GetBasesDefended() const { return BasesDefended; }
+
 protected:
 
     explicit BattlegroundABScore(ObjectGuid playerGuid) : BattlegroundScore(playerGuid) { }
@@ -245,20 +248,6 @@ protected:
     uint32 BasesAssaulted = 0;
     uint32 BasesDefended = 0;
 };
-
-#ifdef MOD_PLAYERBOTS
-struct CaptureABPointInfo
-{
-    CaptureABPointInfo() : _ownerTeamId(TEAM_NEUTRAL), _iconNone(0), _iconCapture(0), _state(BG_AB_NODE_STATE_NEUTRAL), _captured(false) {}
-
-    TeamId _ownerTeamId;
-    uint32 _iconNone;
-    uint32 _iconCapture;
-    uint8  _state;
-
-    bool _captured;
-};
-#endif
 
 class AC_GAME_API BattlegroundAB : public Battleground
 {
@@ -298,11 +287,6 @@ public:
     bool IsTeamScores500Disadvantage(TeamId teamId) const { return _teamScores500Disadvantage[teamId]; }
 
     TeamId GetPrematureWinner() override;
-
-#ifdef MOD_PLAYERBOTS
-    [[nodiscard]] CaptureABPointInfo const& GetCapturePointInfo(uint32 node) const { return _capturePointInfo[node]; }
-#endif
-
 private:
     void PostUpdateImpl(uint32 diff) override;
 
@@ -312,9 +296,7 @@ private:
     void NodeOccupied(uint8 node);
     void NodeDeoccupied(uint8 node);
 
-#ifdef MOD_PLAYERBOTS
-    CaptureABPointInfo _capturePointInfo[BG_AB_DYNAMIC_NODES_COUNT];
-#else
+public:
     struct CapturePointInfo
     {
         CapturePointInfo() : _ownerTeamId(TEAM_NEUTRAL), _iconNone(0), _iconCapture(0), _state(BG_AB_NODE_STATE_NEUTRAL), _captured(false)
@@ -329,8 +311,14 @@ private:
         bool _captured;
     };
 
+    [[nodiscard]] CapturePointInfo const& GetCapturePointInfo(uint32 node) const
+    {
+        ASSERT(node < BG_AB_DYNAMIC_NODES_COUNT);
+        return _capturePointInfo[node];
+    }
+
+private:
     CapturePointInfo _capturePointInfo[BG_AB_DYNAMIC_NODES_COUNT];
-#endif
     EventMap _bgEvents;
     uint32 _honorTics;
     uint32 _reputationTics;

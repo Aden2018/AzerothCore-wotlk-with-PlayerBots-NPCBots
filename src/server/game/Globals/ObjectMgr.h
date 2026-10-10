@@ -892,9 +892,7 @@ public:
         return nullptr;
     }
 
-#ifdef MOD_PLAYERBOTS
     [[nodiscard]] AreaTriggerTeleportContainer const& GetAllAreaTriggerTeleports() const { return _areaTriggerTeleportStore; }
-#endif
     [[nodiscard]] AreaTriggerTeleport const* GetAreaTriggerTeleport(uint32 trigger) const
     {
         AreaTriggerTeleportContainer::const_iterator itr = _areaTriggerTeleportStore.find(trigger);

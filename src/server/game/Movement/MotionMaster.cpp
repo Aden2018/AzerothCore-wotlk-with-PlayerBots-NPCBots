@@ -617,10 +617,11 @@ void MotionMaster::MoveTakeoff(uint32 id, float x, float y, float z, float speed
     MoveTakeoff(id, pos, speed, skipAnimation);
 }
 
-void MotionMaster::MoveKnockbackFrom(float srcX, float srcY, float speedXY, float speedZ)
+void MotionMaster::MoveKnockbackFrom(float srcX, float srcY, float speedXY, float speedZ,
+    bool allowClientControlled /*= false*/)
 {
     //this function may make players fall below map
-    if (_owner->IsPlayer() && _owner->IsClientControlled())
+    if (!allowClientControlled && _owner->IsPlayer() && _owner->IsClientControlled())
         return;
 
     if (speedXY <= 0.1f)
@@ -712,6 +713,89 @@ void MotionMaster::MoveJump(float x, float y, float z, float speedXY, float spee
         init.SetFacing(target);
 
     Mutate(new EffectMovementGenerator(init, id), MOTION_SLOT_CONTROLLED);
+}
+
+/**
+ * @brief Makes the unit travel a closed, cyclic path around (x, y, z).
+ *
+ * The path starts at the unit's bearing from the centre. Flight state decides whether z pins to
+ * the argument or follows the terrain, raised by the unit's hover height, and which speed is
+ * used; forcedMovement overrides the walk/run choice, and FORCED_MOVEMENT_FLY flies a unit that
+ * is not fly-flagged.
+ *
+ * @param stepCount Number of points the path is built from, must be at least 2: a lower count
+ *                  yields an empty or single-point path, which Launch() refuses, leaving the unit
+ *                  idle with neither spline nor movement generator.
+ * @param speed     Fixed velocity; 0.0f keeps the speed the movement flags select.
+ */
+void MotionMaster::MoveCirclePath(float x, float y, float z, float radius, bool clockwise, uint8 stepCount,
+    ForcedMovement forcedMovement, float speed)
+{
+    if (stepCount < 2)
+    {
+        LOG_ERROR("movement.motionmaster", "MotionMaster::MoveCirclePath: stepCount {} for unit ({}), no path launched",
+            stepCount, _owner->GetGUID().ToString());
+        return;
+    }
+
+    // FORCED_MOVEMENT_FLY flies units that are not fly-flagged, so z and the spline flags have to
+    // key off the same value.
+    bool const flying = _owner->IsFlying() || forcedMovement == FORCED_MOVEMENT_FLY;
+
+    float step = 2 * float(M_PI) / stepCount * (clockwise ? -1.0f : 1.0f);
+    Position const pos = { x, y, z, 0.0f };
+    float angle = pos.GetAngle(_owner->GetPositionX(), _owner->GetPositionY());
+
+    Movement::MoveSplineInit init(_owner);
+
+    for (uint8 i = 0; i < stepCount; angle += step, ++i)
+    {
+        G3D::Vector3 point;
+        point.x = x + radius * cosf(angle);
+        point.y = y + radius * sinf(angle);
+
+        if (flying)
+            point.z = z;
+        else
+        {
+            point.z = _owner->GetMapHeight(point.x, point.y, z);
+
+            if (point.z <= INVALID_HEIGHT)
+            {
+                LOG_ERROR("movement.motionmaster",
+                    "MotionMaster::MoveCirclePath: no ground below ({}, {}) for unit ({}), no path launched",
+                    point.x, point.y, _owner->GetGUID().ToString());
+                return;
+            }
+
+            point.z += _owner->GetHoverHeight();
+        }
+
+        init.Path().push_back(point);
+    }
+
+    if (flying)
+    {
+        init.SetFly();
+        init.SetCyclic();
+        init.SetAnimation(AnimTier::Fly);
+    }
+    else
+    {
+        init.SetWalk(true);
+        init.SetSmooth();
+        init.SetCyclic();
+    }
+
+    if (forcedMovement == FORCED_MOVEMENT_WALK)
+        init.SetWalk(true);
+    else if (forcedMovement == FORCED_MOVEMENT_RUN)
+        init.SetWalk(false);
+
+    if (speed > 0.0f)
+        init.SetVelocity(speed);
+
+    init.Launch();
 }
 
 /**
@@ -977,47 +1061,28 @@ void MotionMaster::MoveRotate(uint32 time, RotateDirection direction)
     Mutate(new RotateMovementGenerator(time, direction), MOTION_SLOT_ACTIVE);
 }
 
-#ifdef MOD_PLAYERBOTS
-void MotionMaster::MoveKnockbackFromForPlayer(float srcX, float srcY, float speedXY, float speedZ)
-{
-    if (speedXY <= 0.1f)
-        return;
-
-    Position dest = _owner->GetPosition();
-    float moveTimeHalf = speedZ / Movement::gravity;
-    float dist = 2 * moveTimeHalf * speedXY;
-    float max_height = -Movement::computeFallElevation(moveTimeHalf, false, -speedZ);
-
-    // Use a mmap raycast to get a valid destination.
-    _owner->MovePositionToFirstCollision(dest, dist, _owner->GetRelativeAngle(srcX, srcY) + float(M_PI));
-
-    Movement::MoveSplineInit init(_owner);
-    init.MoveTo(dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ());
-    init.SetParabolic(max_height, 0);
-    init.SetOrientationFixed(true);
-    init.SetVelocity(speedXY);
-    Mutate(new EffectMovementGenerator(init, 0), MOTION_SLOT_CONTROLLED);
-}
-
-// Similar to MovePoint except setting orientationInversed
-void MotionMaster::MovePointBackwards(uint32 id, float x, float y, float z, bool generatePath, bool forceDestination, MovementSlot slot, float orientation /* = 0.0f*/)
+// Same as MovePoint, but the unit keeps facing away from the destination (walks backwards)
+void MotionMaster::MovePointBackwards(uint32 id, float x, float y, float z, bool generatePath, bool forceDestination,
+    MovementSlot slot, float orientation /* = 0.0f*/)
 {
     if (_owner->HasUnitFlag(UNIT_FLAG_DISABLE_MOVE))
         return;
 
     if (_owner->IsPlayer())
     {
-        LOG_DEBUG("movement.motionmaster", "Player ({}) targeted point (Id: {} X: {} Y: {} Z: {})", _owner->GetGUID().ToString(), id, x, y, z);
-        Mutate(new PointMovementGenerator<Player>(id, x, y, z, FORCED_MOVEMENT_NONE, 0.0f, orientation, nullptr, generatePath, forceDestination, std::nullopt, ObjectGuid::Empty, true), slot);
+        LOG_DEBUG("movement.motionmaster", "Player ({}) targeted point backwards (Id: {} X: {} Y: {} Z: {})",
+            _owner->GetGUID().ToString(), id, x, y, z);
+        Mutate(new PointMovementGenerator<Player>(id, x, y, z, FORCED_MOVEMENT_NONE, 0.0f, orientation, nullptr,
+            generatePath, forceDestination, std::nullopt, ObjectGuid::Empty, true), slot);
     }
     else
     {
-        LOG_DEBUG("movement.motionmaster", "Creature ({}) targeted point (ID: {} X: {} Y: {} Z: {})", _owner->GetGUID().ToString(), id, x, y, z);
-        Mutate(new PointMovementGenerator<Creature>(id, x, y, z, FORCED_MOVEMENT_NONE, 0.0f, orientation, nullptr, generatePath, forceDestination, std::nullopt, ObjectGuid::Empty, true), slot);
+        LOG_DEBUG("movement.motionmaster", "Creature ({}) targeted point backwards (ID: {} X: {} Y: {} Z: {})",
+            _owner->GetGUID().ToString(), id, x, y, z);
+        Mutate(new PointMovementGenerator<Creature>(id, x, y, z, FORCED_MOVEMENT_NONE, 0.0f, orientation, nullptr,
+            generatePath, forceDestination, std::nullopt, ObjectGuid::Empty, true), slot);
     }
 }
-
-#endif
 
 void MotionMaster::propagateSpeedChange()
 {

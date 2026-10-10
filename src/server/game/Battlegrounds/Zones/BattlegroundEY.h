@@ -323,6 +323,8 @@ struct BattlegroundEYScore final : public BattlegroundScore
 {
     friend class BattlegroundEY;
 
+    [[nodiscard]] uint32 GetFlagCaptures() const { return FlagCaptures; }
+
 protected:
     BattlegroundEYScore(ObjectGuid playerGuid) : BattlegroundScore(playerGuid) { }
 
@@ -345,31 +347,6 @@ protected:
 
     uint32 FlagCaptures = 0;
 };
-
-#ifdef MOD_PLAYERBOTS
-struct CaptureEYPointInfo
-{
-    CaptureEYPointInfo() : _ownerTeamId(TEAM_NEUTRAL), _barStatus(BG_EY_PROGRESS_BAR_STATE_MIDDLE), _areaTrigger(0)
-    {
-        _playersCount[TEAM_ALLIANCE] = 0;
-        _playersCount[TEAM_HORDE] = 0;
-    }
-
-    Player* player = nullptr;
-#ifdef MOD_NPCERBOTS    //npcbot
-    Creature* bot = nullptr;
-#endif    //end npcbot
-
-    TeamId _ownerTeamId;
-    int8 _barStatus;
-    uint32 _areaTrigger;
-    int8 _playersCount[PVP_TEAMS_COUNT];
-
-    bool IsUnderControl(TeamId teamId) const { return _ownerTeamId == teamId; }
-    bool IsUnderControl() const { return _ownerTeamId != TEAM_NEUTRAL; }
-    bool IsUncontrolled() const { return _ownerTeamId == TEAM_NEUTRAL; }
-};
-#endif
 
 class AC_GAME_API BattlegroundEY : public Battleground
 {
@@ -430,10 +407,6 @@ public:
     bool AllNodesConrolledByTeam(TeamId teamId) const override;
     TeamId GetPrematureWinner() override;
 
-#ifdef MOD_PLAYERBOTS
-    [[nodiscard]] CaptureEYPointInfo const& GetCapturePointInfo(uint32 node) const { return _capturePointInfo[node]; }
-#endif
-
 private:
     void PostUpdateImpl(uint32 diff) override;
 
@@ -449,9 +422,7 @@ private:
     /* Scorekeeping */
     void AddPoints(TeamId teamId, uint32 points);
 
-#ifdef MOD_PLAYERBOTS
-    CaptureEYPointInfo _capturePointInfo[EY_POINTS_MAX];
-#else
+public:
     struct CapturePointInfo
     {
         CapturePointInfo() : _ownerTeamId(TEAM_NEUTRAL), _barStatus(BG_EY_PROGRESS_BAR_STATE_MIDDLE), _areaTrigger(0)
@@ -464,7 +435,7 @@ private:
         int8 _barStatus;
         uint32 _areaTrigger;
         int8 _playersCount[PVP_TEAMS_COUNT];
-        Player* player = nullptr;
+        ObjectGuid _playerGuid;
 #ifdef MOD_NPCERBOTS
         //npcbot
         Creature* bot = nullptr;
@@ -476,8 +447,14 @@ private:
         bool IsUncontrolled() const { return _ownerTeamId == TEAM_NEUTRAL; }
     };
 
+    [[nodiscard]] CapturePointInfo const& GetCapturePointInfo(uint32 node) const
+    {
+        ASSERT(node < EY_POINTS_MAX);
+        return _capturePointInfo[node];
+    }
+
+private:
     CapturePointInfo _capturePointInfo[EY_POINTS_MAX];
-#endif
     EventMap _bgEvents;
     uint32 _honorTics;
     uint8 _ownedPointsCount[PVP_TEAMS_COUNT];

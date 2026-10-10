@@ -75,9 +75,6 @@ void LoginDatabaseConnection::DoPrepareStatements()
     PrepareStatement(LOGIN_DEL_IP_NOT_BANNED, "DELETE FROM ip_banned WHERE ip = ?", CONNECTION_ASYNC);
     PrepareStatement(LOGIN_INS_ACCOUNT_BANNED, "INSERT INTO account_banned VALUES (?, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()+?, ?, ?, 1)", CONNECTION_ASYNC);
     PrepareStatement(LOGIN_UPD_ACCOUNT_NOT_BANNED, "UPDATE account_banned SET active = 0 WHERE id = ? AND active != 0", CONNECTION_ASYNC);
-#ifdef MOD_PLAYERBOTS
-    PrepareStatement(LOGIN_DEL_REALM_CHARACTERS_BY_REALM, "DELETE FROM realmcharacters WHERE acctid = ? AND realmid = ?", CONNECTION_ASYNC);
-#endif
     PrepareStatement(LOGIN_DEL_REALM_CHARACTERS, "DELETE FROM realmcharacters WHERE acctid = ?", CONNECTION_ASYNC);
     PrepareStatement(LOGIN_REP_REALM_CHARACTERS, "REPLACE INTO realmcharacters (numchars, acctid, realmid) VALUES (?, ?, ?)", CONNECTION_ASYNC);
     PrepareStatement(LOGIN_SEL_SUM_REALM_CHARACTERS, "SELECT SUM(numchars) FROM realmcharacters WHERE acctid = ?", CONNECTION_ASYNC);
@@ -92,11 +89,7 @@ void LoginDatabaseConnection::DoPrepareStatements()
     PrepareStatement(LOGIN_UPD_MUTE_TIME_LOGIN, "UPDATE account SET mutetime = ? WHERE id = ?", CONNECTION_ASYNC);
     PrepareStatement(LOGIN_UPD_LAST_IP, "UPDATE account SET last_ip = ? WHERE username = ?", CONNECTION_ASYNC);
     PrepareStatement(LOGIN_UPD_LAST_ATTEMPT_IP, "UPDATE account SET last_attempt_ip = ? WHERE username = ?", CONNECTION_ASYNC);
-#ifdef MOD_PLAYERBOTS
-    PrepareStatement(LOGIN_UPD_ACCOUNT_ONLINE, "UPDATE account SET online = 1 WHERE id = ?", CONNECTION_ASYNC);
-#else
     PrepareStatement(LOGIN_UPD_ACCOUNT_ONLINE, "UPDATE account SET online = ? WHERE id = ?", CONNECTION_ASYNC);
-#endif
     PrepareStatement(LOGIN_UPD_UPTIME_PLAYERS, "UPDATE uptime SET uptime = ?, maxplayers = ? WHERE realmid = ? AND starttime = ?", CONNECTION_ASYNC);
     PrepareStatement(LOGIN_UPD_REALM_ONLINE, "UPDATE realmlist SET flag = flag & ~? WHERE id = ?", CONNECTION_ASYNC);
     PrepareStatement(LOGIN_DEL_OLD_LOGS, "DELETE FROM logs WHERE (time + ?) < ?", CONNECTION_ASYNC);
@@ -162,7 +155,10 @@ void LoginDatabaseConnection::DoPrepareStatements()
     PrepareStatement(LOGIN_SEL_ACCOUNT_TOTP_SECRET, "SELECT totp_secret FROM account WHERE id = ?", CONNECTION_SYNCH);
     PrepareStatement(LOGIN_UPD_ACCOUNT_TOTP_SECRET, "UPDATE account SET totp_secret = ? WHERE id = ?", CONNECTION_ASYNC);
 
-    PrepareStatement(LOGIN_INS_UPTIME, "INSERT INTO uptime (realmid, starttime, uptime, revision) VALUES (?, ?, 0, ?)", CONNECTION_ASYNC);
+    PrepareStatement(LOGIN_INS_UPTIME, "INSERT INTO uptime (realmid, starttime, uptime, revision) VALUES (?, ?, 0, ?)", CONNECTION_SYNCH);
+    PrepareStatement(LOGIN_UPD_UPTIME_SHUTDOWN, "UPDATE uptime SET uptime = ?, maxplayers = ?, EndTime = ?, ShutdownType = ?, ExitCode = ?, ShutdownReason = ? WHERE realmid = ? AND starttime = ?", CONNECTION_SYNCH);
+    PrepareStatement(LOGIN_SEL_UPTIME_PREVIOUS, "SELECT starttime, uptime, EndTime, ShutdownType, ShutdownReason FROM uptime WHERE realmid = ? ORDER BY starttime DESC LIMIT 1", CONNECTION_SYNCH);
+    PrepareStatement(LOGIN_SEL_UPTIME_MAXPLAYERS, "SELECT MAX(maxplayers) FROM uptime WHERE realmid = ?", CONNECTION_SYNCH);
 
     PrepareStatement(LOGIN_GET_EMAIL_BY_ID, "SELECT email FROM account WHERE id = ?", CONNECTION_SYNCH);
 

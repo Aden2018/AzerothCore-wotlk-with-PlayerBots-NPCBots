@@ -33,9 +33,7 @@ char constexpr BankBagSlotPricesEntryfmt[] = "ni";
 char constexpr BarberShopStyleEntryfmt[] = "nixxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxiii";
 char constexpr BattlemasterListEntryfmt[] = "niiiiiiiiixssssssssssssssssxiixx";
 char constexpr CharStartOutfitEntryfmt[] = "dbbbXiiiiiiiiiiiiiiiiiiiiiiiixxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
-#ifdef MOD_PLAYERBOTS
 char constexpr CharSectionsEntryfmt[] = "diiixxxiii";
-#endif
 char constexpr CharTitlesEntryfmt[] = "nxssssssssssssssssxssssssssssssssssxi";
 char constexpr ChatChannelsEntryfmt[] = "nixssssssssssssssssxxxxxxxxxxxxxxxxxx"; // ChatChannelsEntryfmt, index not used (more compact store)
 char constexpr ChrClassesEntryfmt[] = "nxixssssssssssssssssxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxixii";
@@ -55,9 +53,7 @@ char constexpr DurabilityCostsfmt[] = "niiiiiiiiiiiiiiiiiiiiiiiiiiiii";
 char constexpr DurabilityQualityfmt[] = "nf";
 char constexpr EmotesEntryfmt[] = "nxxiiix";
 char constexpr EmotesTextEntryfmt[] = "nxixxxxxxxxxxxxxxxx";
-#ifdef MOD_PLAYERBOTS
 char constexpr EmotesTextSoundEntryfmt[] = "niiii";
-#endif
 char constexpr FactionEntryfmt[] = "niiiiiiiiiiiiiiiiiiffixssssssssssssssssxxxxxxxxxxxxxxxxxx";
 char constexpr FactionTemplateEntryfmt[] = "niiiiiiiiiiiii";
 char constexpr GameObjectArtKitfmt[] = "nxxxxxxx";

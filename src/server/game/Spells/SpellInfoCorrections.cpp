@@ -133,6 +133,12 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->DurationEntry = sSpellDurationStore.LookupEntry(347); // 15 min
     });
 
+    // Headless Horseman's Mount - use the flying creature model for the flying variants
+    ApplySpellFix({ 48023, 51617 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->Effects[EFFECT_0].MiscValue = 27152;
+    });
+
     // Elixir of Minor Fortitude
     ApplySpellFix({ 2378 }, [](SpellInfo* spellInfo)
     {
@@ -664,13 +670,18 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->AttributesEx3 |= SPELL_ATTR3_SUPPRESS_TARGET_PROCS;
     });
 
-    ApplySpellFix({
-        54968,  // Glyph of Holy Light, Damage Class should be magic
-        53652,  // Beacon of Light heal, Damage Class should be magic
-        53654
-        }, [](SpellInfo* spellInfo)
+    // Glyph of Holy Light
+    ApplySpellFix({ 54968 }, [](SpellInfo* spellInfo)
     {
         spellInfo->AttributesEx3 |= SPELL_ATTR3_IGNORE_CASTER_MODIFIERS;
+        spellInfo->DmgClass = SPELL_DAMAGE_CLASS_MAGIC;
+    });
+
+    // Beacon of Light
+    ApplySpellFix({ 53652, 53653, 53654 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->AttributesEx3 |= SPELL_ATTR3_IGNORE_CASTER_MODIFIERS;
+        spellInfo->AttributesEx6 &= ~SPELL_ATTR6_IGNORE_HEALTH_MODIFIERS;
         spellInfo->DmgClass = SPELL_DAMAGE_CLASS_MAGIC;
     });
 
@@ -1965,6 +1976,13 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->Effects[EFFECT_0].TargetA = SpellImplicitTargetInfo(TARGET_DEST_CASTER);
     });
 
+    // Ulduar, Flame Leviathan, Flame Vents
+    // The channel carries no interrupt flags, so Electroshock and player interrupts could never stop it
+    ApplySpellFix({ 62396 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->ChannelInterruptFlags |= CHANNEL_INTERRUPT_FLAG_INTERRUPT;
+    });
+
     // Ulduar, Mimiron, bomb bot explosion
     ApplySpellFix({ 63801 }, [](SpellInfo* spellInfo)
     {
@@ -3013,6 +3031,13 @@ void SpellMgr::LoadSpellInfoCorrections()
     {
         // copied attributes from Green Ooze Channel
         spellInfo->Attributes |= SPELL_ATTR0_NO_IMMUNITIES;
+        spellInfo->AttributesEx3 |= SPELL_ATTR3_ALWAYS_HIT;
+    });
+
+    // Professor Putricide, Expunged Gas (Gas Cloud detonation)
+    ApplySpellFix({ 70701 }, [](SpellInfo* spellInfo)
+    {
+        // custom: the detonation is an unavoidable raid-wide hit, it must not be resisted away
         spellInfo->AttributesEx3 |= SPELL_ATTR3_ALWAYS_HIT;
     });
 
@@ -5284,6 +5309,7 @@ void SpellMgr::LoadSpellInfoCorrections()
     // 31930 Judgements of the Wise
     ApplySpellFix({ 31930 }, [](SpellInfo* spellInfo)
     {
+        spellInfo->SpellFamilyName = SPELLFAMILY_PALADIN;
         spellInfo->SpellFamilyFlags = flag96(0x200, 0, 0);
     });
 
@@ -5315,6 +5341,15 @@ void SpellMgr::LoadSpellInfoCorrections()
     ApplySpellFix({ 45008 }, [](SpellInfo* spellInfo)
     {
         spellInfo->AttributesEx3 |= SPELL_ATTR3_ALWAYS_HIT;
+    });
+
+    // Heroic Strike
+    ApplySpellFix({
+        45026,
+        29426
+        }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->SpellLevel = 10;
     });
 
     for (uint32 i = 0; i < GetSpellInfoStoreSize(); ++i)

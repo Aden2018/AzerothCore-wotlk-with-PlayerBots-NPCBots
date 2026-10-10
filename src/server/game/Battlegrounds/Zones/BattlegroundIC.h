@@ -859,6 +859,9 @@ struct BattlegroundICScore final : public BattlegroundScore
 {
     friend class BattlegroundIC;
 
+    [[nodiscard]] uint32 GetBasesAssaulted() const { return BasesAssaulted; }
+    [[nodiscard]] uint32 GetBasesDefended() const { return BasesDefended; }
+
 protected:
     BattlegroundICScore(ObjectGuid playerGuid) : BattlegroundScore(playerGuid) { }
 
@@ -923,9 +926,11 @@ public:
     bool IsResourceGlutAllowed(TeamId teamId) const;
     void DoAction(uint32 action, ObjectGuid guid) override;
 
-#ifdef MOD_PLAYERBOTS
-    [[nodiscard]] ICNodePoint const& GetICNodePoint(uint8 index) { return nodePoint[index]; }
-#endif
+    [[nodiscard]] ICNodePoint const& GetICNodePoint(uint8 index) const
+    {
+        ASSERT(index < MAX_NODE_TYPES);
+        return nodePoint[index];
+    }
 
 private:
     uint32 closeFortressDoorsTimer;

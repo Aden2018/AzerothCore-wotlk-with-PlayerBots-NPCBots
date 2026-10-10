@@ -494,9 +494,7 @@ void WorldSession::HandlePetitionSignOpcode(WorldPacket& recvData)
             break;
         }
 
-#ifdef MOD_PLAYERBOTS
-    sScriptMgr->OnPlayerbotCheckPetitionAccount(_player, found);
-#endif
+    sScriptMgr->OnPlayerBeforePetitionSign(_player, petitionGuid, found);
 
     if (found)
     {

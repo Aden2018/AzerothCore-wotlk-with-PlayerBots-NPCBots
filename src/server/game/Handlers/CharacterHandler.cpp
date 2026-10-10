@@ -63,32 +63,15 @@
 #include "WorldSession.h"
 #include "WorldSessionMgr.h"
 
-#ifdef MOD_PLAYERBOTS
-LoginQueryHolder::LoginQueryHolder(uint32 accountId, ObjectGuid guid) : m_accountId(accountId), m_guid(guid)
-{
-}
-#else
-class LoginQueryHolder : public CharacterDatabaseQueryHolder
-{
-private:
-    uint32 m_accountId;
-    ObjectGuid m_guid;
-public:
-    LoginQueryHolder(uint32 accountId, ObjectGuid guid)
-        : m_accountId(accountId), m_guid(guid) { }
-
-    ObjectGuid GetGuid() const { return m_guid; }
-    uint32 GetAccountId() const { return m_accountId; }
-    bool Initialize();
-};
-#endif
+LoginQueryHolder::LoginQueryHolder(uint32 accountId, ObjectGuid guid)
+    : _accountId(accountId), _guid(guid) { }
 
 bool LoginQueryHolder::Initialize()
 {
     SetSize(MAX_PLAYER_LOGIN_QUERY);
 
     bool res = true;
-    uint64 rawGUID = m_guid.GetRawValue();
+    uint64 rawGUID = _guid.GetRawValue();
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER);
     stmt->SetData(0, rawGUID);
@@ -211,7 +194,7 @@ bool LoginQueryHolder::Initialize()
     res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_BREW_OF_THE_MONTH, stmt);
 
     stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_ACCOUNT_INSTANCELOCKTIMES);
-    stmt->SetData(0, m_accountId);
+    stmt->SetData(0, _accountId);
     res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_INSTANCE_LOCK_TIMES, stmt);
 
     stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CORPSE_LOCATION);
@@ -593,16 +576,7 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
             newChar->SaveToDB(characterTransaction, true, false);
             createInfo->CharCount++;
 
-#ifdef MOD_PLAYERBOTS
-            LoginDatabasePreparedStatement* stmt = LoginDatabase.GetPreparedStatement(LOGIN_DEL_REALM_CHARACTERS_BY_REALM);
-            stmt->SetData(0, GetAccountId());
-            stmt->SetData(1, realm.Id.Realm);
-            trans->Append(stmt);
-
-            stmt = LoginDatabase.GetPreparedStatement(LOGIN_REP_REALM_CHARACTERS);
-#else
             LoginDatabasePreparedStatement* stmt = LoginDatabase.GetPreparedStatement(LOGIN_REP_REALM_CHARACTERS);
-#endif
             stmt->SetData(0, createInfo->CharCount);
             stmt->SetData(1, GetAccountId());
             stmt->SetData(2, realm.Id.Realm);
@@ -821,9 +795,7 @@ void WorldSession::HandlePlayerLoginOpcode(WorldPacket& recvData)
 
 void WorldSession::HandlePlayerLoginFromDB(LoginQueryHolder const& holder)
 {
-#ifdef MOD_PLAYERBOTS
-    m_playerLoading = true;
-#endif
+    m_playerLoading = true; // Set here for direct callers.
     ObjectGuid playerGuid = holder.GetGuid();
 
     Player* pCurrChar = new Player(this);
@@ -952,12 +924,8 @@ void WorldSession::HandlePlayerLoginFromDB(LoginQueryHolder const& holder)
     }
 
     LoginDatabasePreparedStatement* loginStmt = LoginDatabase.GetPreparedStatement(LOGIN_UPD_ACCOUNT_ONLINE);
-#ifdef MOD_PLAYERBOTS
-    loginStmt->SetData(0, GetAccountId());
-#else
     loginStmt->SetData(0, realm.Id.Realm);
     loginStmt->SetData(1, GetAccountId());
-#endif
     LoginDatabase.Execute(loginStmt);
 
     pCurrChar->SetInGameTime(GameTime::GetGameTimeMS().count());

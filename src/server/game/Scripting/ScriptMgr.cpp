@@ -85,10 +85,8 @@ namespace
         ScriptTypeInfo<OutdoorPvPScript,          0,                       true,      true>,
         ScriptTypeInfo<PetScript,                 PETHOOK_END,             false,     true>,
         ScriptTypeInfo<PlayerScript,              PLAYERHOOK_END,          false,     true>,
-#ifdef MOD_PLAYERBOTS
-		ScriptTypeInfo<PlayerbotScript,           0,                       false,     true>,
-#endif
         ScriptTypeInfo<ServerScript,              SERVERHOOK_END,          false,     true>,
+        ScriptTypeInfo<SessionScript,             SESSIONHOOK_END>,
         ScriptTypeInfo<SpellSC,                   ALLSPELLHOOK_END,        false,     true>,
         ScriptTypeInfo<SpellScriptLoader,         0,                       true,      true>,
         ScriptTypeInfo<TicketScript,              TICKETHOOK_END,          false,     true>,
@@ -103,18 +101,10 @@ namespace
     // These counts mirror the four hand-maintained lists this consolidation
     // replaced. If a flag is mistyped or a type is added without its metadata,
     // the build fails here instead of silently drifting.
-#ifdef MOD_PLAYERBOTS
     static_assert(Acore::size_v<ScriptRegistryTypes> == 49, "Update count when adding a script registry type");
-#else
-    static_assert(Acore::size_v<ScriptRegistryTypes> == 48, "Update count when adding a script registry type");
-#endif
-    static_assert(Acore::count_if<ScriptRegistryTypes>([]<typename Info>() { return Info::HasEnabledHooks; }) == 27, "Enabled-hook script type count changed");
+    static_assert(Acore::count_if<ScriptRegistryTypes>([]<typename Info>() { return Info::HasEnabledHooks; }) == 28, "Enabled-hook script type count changed");
     static_assert(Acore::count_if<ScriptRegistryTypes>([]<typename Info>() { return Info::PromotedAfterDbLoad; }) == 14, "After-load script type count changed");
-#ifdef MOD_PLAYERBOTS
-    static_assert(Acore::count_if<ScriptRegistryTypes>([]<typename Info>() { return Info::LegacyDbValidationCandidate; }) == 35, "Database-check script type count changed");
-#else
     static_assert(Acore::count_if<ScriptRegistryTypes>([]<typename Info>() { return Info::LegacyDbValidationCandidate; }) == 34, "Database-check script type count changed");
-#endif
 }
 
 struct TSpellSummary
@@ -136,13 +126,6 @@ ScriptMgr* ScriptMgr::instance()
     static ScriptMgr instance;
     return &instance;
 }
-
-#ifdef MOD_PLAYERBOTS
-PlayerbotScript::PlayerbotScript(const char* name) : ScriptObject(name)
-{
-    ScriptRegistry<PlayerbotScript>::AddScript(this);
-}
-#endif
 
 void ScriptMgr::Initialize()
 {

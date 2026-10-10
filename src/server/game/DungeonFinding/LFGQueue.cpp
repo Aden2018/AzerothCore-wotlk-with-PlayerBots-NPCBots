@@ -25,9 +25,7 @@
 #include "Log.h"
 #include "ObjectMgr.h"
 #include "Player.h"
-#ifdef MOD_PLAYERBOTS
 #include "ScriptMgr.h"
-#endif
 #include "World.h"
 
 namespace lfg
@@ -414,12 +412,8 @@ namespace lfg
         if (!sLFGMgr->AllQueued(check)) // can't create proposal
             return LFG_COMPATIBILITY_PENDING;
 
-#ifdef MOD_PLAYERBOTS
-        if (!sScriptMgr->OnPlayerbotCheckLFGQueue(proposal.queues))
-        {
-            return LFG_INCOMPATIBLES_HAS_IGNORES;
-        }
-#endif
+        if (!sScriptMgr->CanCreateLfgProposal(proposal.queues))
+            return LFG_INCOMPATIBLES_REJECTED_BY_SCRIPT;
 
         // Create a new proposal
         proposal.cancelTime = GameTime::GetGameTime().count() + LFG_TIME_PROPOSAL;

@@ -1091,11 +1091,7 @@ void Item::SendTimeUpdate(Player* owner)
     owner->SendDirectMessage(&data);
 }
 
-#ifdef MOD_PLAYERBOTS
-Item* Item::CreateItem(uint32 item, uint32 count, Player const* player, bool clone, uint32 randomPropertyId, bool temp)
-#else
 Item* Item::CreateItem(uint32 item, uint32 count, Player const* player, bool clone, uint32 randomPropertyId)
-#endif
 {
     if (count < 1)
         return nullptr;                                        //don't create item at zero count
@@ -1113,16 +1109,8 @@ Item* Item::CreateItem(uint32 item, uint32 count, Player const* player, bool clo
     if (sToCloud9Sidecar->IsCrossrealm() && player)
         realmId = player->GetGUID().GetRealmID();
 
-#ifdef MOD_PLAYERBOTS
-    // playerbots: temporary items get a sentinel guid instead of consuming one from the generator
-    uint32 guid = temp ? 0xFFFFFFFF : sObjectMgr->GetGenerator<HighGuid::Item>().Generate(realmId);
-
-    Item* pItem = NewItemOrBag(pProto);
-    if (!pItem->Create(guid, item, player))
-#else
     Item* pItem = NewItemOrBag(pProto);
     if (!pItem->Create(sObjectMgr->GetGenerator<HighGuid::Item>().Generate(realmId), item, player))
-#endif
     {
         delete pItem;
         return nullptr;
@@ -1298,19 +1286,6 @@ void Item::ClearSoulboundTradeable(Player* currentOwner)
 
 bool Item::CheckSoulboundTradeExpire()
 {
-#ifdef MOD_PLAYERBOTS
-    // we have to check the owner for mod_playerbots since bots programically call methods like DestroyItem, 
-    // MoveItemToMail, DestroyItemCount which do not handle soulboundTradeable clearing.
-    Player* owner = GetOwner();
-    if (!owner)
-        return true; // remove from tradeable list
-    
-    if (GetUInt32Value(ITEM_FIELD_CREATE_PLAYED_TIME) + 2 * HOUR < owner->GetTotalPlayedTime())
-    {
-        ClearSoulboundTradeable(owner);
-        return true; // remove from tradeable list
-    }
-#else
     Player* owner = GetOwner();
     if (!owner)
         return false; // retry later
@@ -1320,7 +1295,6 @@ bool Item::CheckSoulboundTradeExpire()
         ClearSoulboundTradeable(owner);
         return true; // remove from tradeable list
     }
-#endif
 
     return false;
 }

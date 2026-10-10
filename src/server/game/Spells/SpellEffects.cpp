@@ -1838,6 +1838,10 @@ void Spell::EffectHeal(SpellEffIndex effIndex)
 
             addhealth += tickheal * tickcount;
 
+            // Swiftmend spell mods (e.g. Druid T8 Restoration 2P Bonus)
+            if (Player* modOwner = caster->GetSpellModOwner())
+                modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_DAMAGE, addhealth);
+
             // Glyph of Swiftmend
             if (!caster->HasAura(54824))
                 unitTarget->RemoveAura(targetAura->GetId(), targetAura->GetCasterGUID());
@@ -6578,6 +6582,13 @@ void Spell::SummonGuardian(uint32 i, uint32 entry, SummonPropertiesEntry const* 
 
             switch (m_spellInfo->Id)
             {
+                // Target dummies use RequiredSkillRank/5, not player's current skill
+                case 4071:  // Target Dummy
+                case 4072:  // Advanced Target Dummy
+                case 19805: // Masterwork Target Dummy
+                    summonLevel = proto->RequiredSkillRank / 5;
+                    break;
+
                 // Dragon's Call
                 case 13049:
                     summonLevel = 55;
