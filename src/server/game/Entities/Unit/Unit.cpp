@@ -7584,6 +7584,8 @@ bool Unit::Attack(Unit* victim, bool meleeAttack)
     if (HasUnattackableAura())
         RemoveAurasByType(SPELL_AURA_MOD_UNATTACKABLE);
 
+    bool const isNewAttack = !m_attacking;
+
     if (m_attacking)
     {
         if (m_attacking == victim)
@@ -7678,8 +7680,10 @@ bool Unit::Attack(Unit* victim, bool meleeAttack)
         }
     }
 
-    // delay offhand weapon attack by 50% of the base attack time
-    if (HasOffhandWeaponForAttack() && isAttackReady(OFF_ATTACK))
+    // delay offhand weapon attack by 50% of the base attack time, on a new attack only
+    // unlike the timer writes this replaced, this runs once per attack start rather than once
+    // per swing, so it staggers the offhand without locking the two swing intervals together
+    if (isNewAttack && HasOffhandWeaponForAttack())
         setAttackTimer(OFF_ATTACK, std::max(getAttackTimer(OFF_ATTACK), getAttackTimer(BASE_ATTACK) + int32(CalculatePct(GetFloatValue(UNIT_FIELD_BASEATTACKTIME), 50))));
 
     if (meleeAttack)
@@ -7725,7 +7729,7 @@ bool Unit::AttackStop()
     return true;
 }
 
-void Unit::CombatStop(bool includingCast, bool mutualPvP)
+void Unit::CombatStop(bool includingCast, bool mutualPvP, bool keepPvPForOthers)
 {
     if (includingCast && IsNonMeleeSpellCast(false))
         InterruptNonMeleeSpells(false);
@@ -7738,7 +7742,7 @@ void Unit::CombatStop(bool includingCast, bool mutualPvP)
         pCreature->ClearLastLeashExtensionTimePtr();
 
     if (mutualPvP)
-        ClearInCombat();
+        ClearInCombat(keepPvPForOthers);
     else
     {
         GetCombatManager().EndAllPvECombat();
@@ -11070,12 +11074,18 @@ void Unit::SetImmuneToNPC(bool apply, bool keepCombat)
         RemoveUnitFlag(UNIT_FLAG_IMMUNE_TO_NPC);
 }
 
-void Unit::ClearInCombat()
+void Unit::ClearInCombat(bool keepPvPForOthers)
 {
     m_CombatTimer = 0;
     // Let CombatManager handle flag removal through UpdateOwnerCombatState
     // so that AtExitCombat/AtDisengage callbacks properly fire.
-    GetCombatManager().EndAllCombat();
+    if (keepPvPForOthers)
+    {
+        GetCombatManager().EndAllPvECombat();
+        GetCombatManager().SuppressPvPCombat();
+    }
+    else
+        GetCombatManager().EndAllCombat();
     // If flag is still set (e.g. set by old code path without CombatReference),
     // remove it directly.
     if (IsInCombat())
@@ -11930,13 +11940,18 @@ void Unit::SendSpeedToController(UnitMoveType mtype, Player* target) const
 
 void Unit::setDeathState(DeathState s, bool despawn)
 {
+    bool const wasAlive = IsAlive();
+
     // death state needs to be updated before RemoveAllAurasOnDeath() calls HandleChannelDeathItem(..) so that
     // it can be used to check creation of death items (such as soul shards).
     m_deathState = s;
 
     if (s != DeathState::Alive && s != DeathState::JustRespawned)
     {
-        CombatStop();
+        // restart our pvp timers so units fighting us get a full pvp timeout from our death (#27967)
+        if (wasAlive)
+            GetCombatManager().RestartPvPCombatTimers();
+        CombatStop(false, /*mutualPvP*/ true, /*keepPvPForOthers*/ true);
         ClearComboPointHolders();                           // any combo points pointed to unit lost at it death
 
         if (IsNonMeleeSpellCast(false))
@@ -14787,8 +14802,9 @@ void Unit::Kill(Unit* killer, Unit* victim, bool durabilityLoss, WeaponAttackTyp
                 //Remove all expected to remove at death auras (most important negative case like DoT or periodic triggers)
                 victim->RemoveAllAurasOnDeath();
 
-                // Stop attacks
-                victim->CombatStop();
+                // Stop attacks - units in pvp combat with us keep a full pvp timeout, as on a real death
+                victim->GetCombatManager().RestartPvPCombatTimers();
+                victim->CombatStop(false, /*mutualPvP*/ true, /*keepPvPForOthers*/ true);
 
                 // restore for use at real death
                 victim->SetUInt32Value(PLAYER_SELF_RES_SPELL, ressSpellId);
@@ -17214,7 +17230,10 @@ void Unit::OutDebugInfo() const
 class AuraMunchingQueue : public BasicEvent
 {
 public:
-    AuraMunchingQueue(Unit& owner, ObjectGuid targetGUID, int32 basePoints, uint32 spellId, AuraEffect* aurEff, AuraType auraType) : _owner(owner), _targetGUID(targetGUID), _basePoints(basePoints), _spellId(spellId), _aurEff(aurEff), _auraType(auraType) { }
+    AuraMunchingQueue(Unit& owner, ObjectGuid targetGUID, int32 basePoints, uint32 spellId, AuraEffect* aurEff,
+        AuraType auraType, TriggerCastFlags triggerFlags)
+        : _owner(owner), _targetGUID(targetGUID), _basePoints(basePoints), _spellId(spellId), _aurEff(aurEff),
+        _auraType(auraType), _triggerFlags(triggerFlags) { }
 
     bool Execute(uint64 /*e_time*/, uint32 /*p_time*/) override
     {
@@ -17230,7 +17249,8 @@ public:
                 if (!auraFound)
                     _aurEff = nullptr;
 
-                _owner.CastCustomSpell(_spellId, SPELLVALUE_BASE_POINT0, _basePoints, target, TriggerCastFlags(TRIGGERED_FULL_MASK & ~TRIGGERED_NO_PERIODIC_RESET), nullptr, _aurEff, _owner.GetGUID());
+                _owner.CastCustomSpell(_spellId, SPELLVALUE_BASE_POINT0, _basePoints, target, _triggerFlags, nullptr,
+                    _aurEff, _owner.GetGUID());
             }
 
         return true;
@@ -17243,9 +17263,11 @@ private:
     uint32 _spellId;
     AuraEffect* _aurEff;
     AuraType _auraType;
+    TriggerCastFlags _triggerFlags;
 };
 
-void Unit::CastDelayedSpellWithPeriodicAmount(Unit* caster, uint32 spellId, AuraType auraType, int32 addAmount, uint8 effectIndex)
+void Unit::CastDelayedSpellWithPeriodicAmount(Unit* caster, uint32 spellId, AuraType auraType, int32 addAmount,
+    uint8 effectIndex, TriggerCastFlags extraTriggerFlags)
 {
     AuraEffect* aurEff = nullptr;
     for (AuraEffectList::iterator i = m_modAuras[auraType].begin(); i != m_modAuras[auraType].end(); ++i)
@@ -17258,11 +17280,16 @@ void Unit::CastDelayedSpellWithPeriodicAmount(Unit* caster, uint32 spellId, Aura
         break;
     }
 
+    TriggerCastFlags triggerFlags =
+        TriggerCastFlags((TRIGGERED_FULL_MASK & ~TRIGGERED_NO_PERIODIC_RESET) | extraTriggerFlags);
+
     // xinef: delay only for casting on different unit
     if (this == caster || !sWorld->getBoolConfig(CONFIG_MUNCHING_BLIZZLIKE))
-        caster->CastCustomSpell(spellId, SPELLVALUE_BASE_POINT0, addAmount, this, TriggerCastFlags(TRIGGERED_FULL_MASK & ~TRIGGERED_NO_PERIODIC_RESET), nullptr, aurEff, caster->GetGUID());
+        caster->CastCustomSpell(spellId, SPELLVALUE_BASE_POINT0, addAmount, this, triggerFlags, nullptr, aurEff,
+            caster->GetGUID());
     else
-        caster->m_Events.AddEvent(new AuraMunchingQueue(*caster, GetGUID(), addAmount, spellId, aurEff, auraType), caster->m_Events.CalculateQueueTime(400));
+        caster->m_Events.AddEvent(new AuraMunchingQueue(*caster, GetGUID(), addAmount, spellId, aurEff, auraType,
+            triggerFlags), caster->m_Events.CalculateQueueTime(400));
 }
 
 void Unit::SendClearTarget()
