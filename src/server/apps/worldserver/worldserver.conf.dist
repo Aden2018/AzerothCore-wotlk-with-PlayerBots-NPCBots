@@ -2783,11 +2783,22 @@ ItemDelete.Method = 0
 
 #
 #    ItemDelete.Vendor
-#        Description: Saving items into database when the player sells items to vendor
+#        Description: Saving items into database when the player sells items to vendor.
+#                     Requires ItemDelete.Method = 1. ItemDelete.Quality and ItemDelete.ItemLevel also apply.
 #        Default:     0 (disabled)
 #                     1 (enabled)
 
 ItemDelete.Vendor = 0
+
+#
+#    ItemDelete.Disenchant
+#        Description: Saving items into database when the player disenchants them, along with
+#                     the materials looted from them.
+#                     Requires ItemDelete.Method = 1. ItemDelete.Quality and ItemDelete.ItemLevel also apply.
+#        Default:     0 (disabled)
+#                     1 (enabled)
+
+ItemDelete.Disenchant = 0
 
 #
 #    ItemDelete.Quality
@@ -3014,7 +3025,7 @@ CreatureLeashRadius = 30
 #
 #    CreatureFamilyAssistanceRadius
 #        Description: Distance for creatures calling for assistance from other creatures without
-#                     moving.
+#                     moving, centre to centre.
 #        Default:     10 - (Enabled)
 #                     0  - (Disabled)
 
@@ -3071,8 +3082,9 @@ Corpse.Decay.WORLDBOSS = 3600
 
 #
 #    Rate.Corpse.Decay.Looted
-#        Description: Multiplier for Corpse.Decay.* to configure how long creature corpses stay
-#                     after they have been looted.
+#        Description: Multiplier for the time a creature corpse has left (see Corpse.Decay.*) once
+#                     it has been looted, or when it dies with nothing to loot.
+#                     From 0 to 1: 1 keeps the full time, 0 removes the corpse at once.
 #         Default:    0.5
 
 Rate.Corpse.Decay.Looted = 0.5
@@ -4907,6 +4919,65 @@ Respawn.ForceCompatibilityMode = 0
 ###################################################################################################
 
 ###################################################################################################
+#                                                                                                 #
+# GAME SETTINGS END                                                                               #
+#                                                                                                 #
+###################################################################################################
+
+###################################################################################################
+#                                                                                                 #
+# CLUSTER SETTINGS BEGIN                                                                          #
+#                                                                                                 #
+###################################################################################################
+
+###################################################################################################
+# CLUSTER SETTINGS
+#
+# This feature is experimental and still under development. It enables cluster mode, allowing multiple
+# worldservers to run for a single realm, distributing the load between them. Alongside worldservers,
+# additional services are required for proper functionality. If you encounter any issues, please report
+# them to the ToCloud9 project: https://github.com/walkline/ToCloud9.
+#
+#    Cluster.Enabled
+#        Description: Enables/disables cluster mode.
+#                     SECURITY: in cluster mode the ToCloud9 gateway is the trusted
+#                     authentication boundary. This worldserver then skips session-key
+#                     digest verification, packet encryption, warden, IP/country locks,
+#                     ban and minimum-security-level enforcement, and the
+#                     character-ownership check on login. The worldserver port must
+#                     only be reachable by the gateway, never directly by players.
+#        Default: 0 - (Disabled)
+#                 1 - (Enabled)
+
+Cluster.Enabled=0
+
+#
+#    Cluster.AvailableMaps
+#        Description: List of available maps id on this server.
+#        Examples:    "" - (Can handle any map)
+#                     "0,1,573"
+
+Cluster.AvailableMaps=""
+
+#
+#    Cluster.IsCrossrealm
+#        Description: Enables cross-realm functionality for a cross-realm setup.
+#                     When enabled, a connection to a MySQL cross-realm reverse proxy is required.
+#        Default: 0 - (Disabled)
+#                 1 - (Enabled)
+
+Cluster.IsCrossrealm=0
+
+#
+###################################################################################################
+
+###################################################################################################
+#                                                                                                 #
+# CLUSTER SETTINGS END                                                                            #
+#                                                                                                 #
+###################################################################################################
+
+###################################################################################################
 # NPCBOT CONFIGURATION
 #
 #    NpcBot.Enable
@@ -5694,63 +5765,4 @@ NpcBot.HK.Rate.Honor = 1.0
 NpcBot.Premade.Enable = 0
 
 #
-###################################################################################################
-
-###################################################################################################
-#                                                                                                 #
-# GAME SETTINGS END                                                                               #
-#                                                                                                 #
-###################################################################################################
-
-###################################################################################################
-#                                                                                                 #
-# CLUSTER SETTINGS BEGIN                                                                          #
-#                                                                                                 #
-###################################################################################################
-
-###################################################################################################
-# CLUSTER SETTINGS
-#
-# This feature is experimental and still under development. It enables cluster mode, allowing multiple
-# worldservers to run for a single realm, distributing the load between them. Alongside worldservers,
-# additional services are required for proper functionality. If you encounter any issues, please report
-# them to the ToCloud9 project: https://github.com/walkline/ToCloud9.
-#
-#    Cluster.Enabled
-#        Description: Enables/disables cluster mode.
-#                     SECURITY: in cluster mode the ToCloud9 gateway is the trusted
-#                     authentication boundary. This worldserver then skips session-key
-#                     digest verification, packet encryption, warden, IP/country locks,
-#                     ban and minimum-security-level enforcement, and the
-#                     character-ownership check on login. The worldserver port must
-#                     only be reachable by the gateway, never directly by players.
-#        Default: 0 - (Disabled)
-#                 1 - (Enabled)
-
-Cluster.Enabled=0
-
-#
-#    Cluster.AvailableMaps
-#        Description: List of available maps id on this server.
-#        Examples:    "" - (Can handle any map)
-#                     "0,1,573"
-
-Cluster.AvailableMaps=""
-
-#
-#    Cluster.IsCrossrealm
-#        Description: Enables cross-realm functionality for a cross-realm setup.
-#                     When enabled, a connection to a MySQL cross-realm reverse proxy is required.
-#        Default: 0 - (Disabled)
-#                 1 - (Enabled)
-
-Cluster.IsCrossrealm=0
-
-#
-###################################################################################################
-
-###################################################################################################
-#                                                                                                 #
-# CLUSTER SETTINGS END                                                                            #
-#                                                                                                 #
 ###################################################################################################

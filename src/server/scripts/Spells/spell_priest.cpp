@@ -1010,13 +1010,6 @@ class spell_pri_shadowfiend_death : public AuraScript
         return ValidateSpellInfo({ SPELL_PRIEST_GLYPH_OF_SHADOWFIEND_MANA });
     }
 
-    bool AfterCheckProc(ProcEventInfo& eventInfo, bool isTriggeredAtSpellProcEvent)
-    {
-        if (!isTriggeredAtSpellProcEvent)
-            return false;
-        return eventInfo.GetTypeMask() & PROC_FLAG_KILLED;
-    }
-
     void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
     {
         PreventDefaultAction();
@@ -1027,7 +1020,6 @@ class spell_pri_shadowfiend_death : public AuraScript
 
     void Register() override
     {
-        DoAfterCheckProc += AuraAfterCheckProcFn(spell_pri_shadowfiend_death::AfterCheckProc);
         OnEffectProc += AuraEffectProcFn(spell_pri_shadowfiend_death::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
     }
 };

@@ -2713,6 +2713,11 @@ public:
     uint32 GetPendingFlightChange() const { return _pendingFlightChangeCounter; }
     void SetPendingFlightChange(uint32 counter) { _pendingFlightChangeCounter = counter; }
 
+    [[nodiscard]] Optional<bool> GetPendingCanFlyResync() const { return _pendingCanFlyResync; }
+    void SetPendingCanFlyResync(bool enable) { _pendingCanFlyResync = enable; }
+    void ClearPendingCanFlyResync() { _pendingCanFlyResync.reset(); }
+    void ResyncCanFlyToClient();
+
     void SetMapChangeOrderCounter() { _mapChangeOrderCounter = GetSession()->GetOrderCounter(); }
     uint32 GetMapChangeOrderCounter() { return _mapChangeOrderCounter; }
 
@@ -3129,6 +3134,7 @@ private:
 
     bool _expectingChangeTransport;
     uint32 _pendingFlightChangeCounter;
+    Optional<bool> _pendingCanFlyResync = { };
     uint32 _mapChangeOrderCounter;
 };
 
