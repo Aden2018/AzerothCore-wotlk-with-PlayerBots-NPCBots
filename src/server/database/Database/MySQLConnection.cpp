@@ -27,6 +27,7 @@
 #include "Timer.h"
 #include "Tokenize.h"
 #include "Transaction.h"
+#include <utility>
 #include <errmsg.h>
 #include <mysql.h>
 #include <mysqld_error.h>
