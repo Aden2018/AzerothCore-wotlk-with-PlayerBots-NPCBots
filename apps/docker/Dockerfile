@@ -62,13 +62,25 @@ ARG CCACHE_COMPRESSLEVEL="9"
 ARG CCACHE_COMPILERCHECK="content"
 ARG CCACHE_LOGFILE=""
 
-RUN apt-get update                                                     \
-    && apt-get install -y --no-install-recommends                         \
-        build-essential ccache libtool cmake-data ninja-build cmake clang    \
-        git lsb-base curl unzip default-mysql-client openssl                  \
-        default-libmysqlclient-dev libboost-all-dev libssl-dev libmysql++-dev \
-        libreadline-dev zlib1g-dev libbz2-dev libncurses5-dev liblzma-dev  \
-    && rm -rf /var/lib/apt/lists/*
+# The Ubuntu mirrors are intermittently unreachable from CI runners
+# ("Unable to connect to archive.ubuntu.com"), and apt-get does not retry
+# connection errors by itself. Retry the whole step, keeping the downloaded
+# .debs in a cache mount so a retry only fetches what is still missing.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    for attempt in 1 2 3 4 5; do                                                     \
+        if apt-get update -o Acquire::Retries=3                                      \
+           && apt-get install -y --no-install-recommends                             \
+                build-essential ccache libtool cmake-data ninja-build cmake clang   \
+                git lsb-base curl unzip default-mysql-client openssl                 \
+                default-libmysqlclient-dev libboost-all-dev libssl-dev libmysql++-dev \
+                libreadline-dev zlib1g-dev libbz2-dev libncurses5-dev liblzma-dev; then \
+            break;                                                                   \
+        fi;                                                                          \
+        echo "apt-get failed (attempt ${attempt}/5); retrying in 15s" >&2;           \
+        sleep 15;                                                                    \
+    done;                                                                            \
+    rm -rf /var/lib/apt/lists/*;                                                     \
+    dpkg -s cmake > /dev/null
 
 COPY CMakeLists.txt /azerothcore/CMakeLists.txt
 COPY conf /azerothcore/conf

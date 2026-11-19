@@ -28,38 +28,50 @@ ENV TZ=$TZ
 # set noninteractive mode so tzdata doesn't ask to set timezone on install
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        # Classic install
-        git \
-        clang lldb lld clang-format clang-tidy \
-        make cmake \
-        gcc g++ \
-        libmysqlclient-dev \
-        libssl-dev \
-        libbz2-dev \
-        libreadline-dev \
-        libncurses-dev \
-        mysql-server \
-        libboost-all-dev \
-        # Other
-        curl  \
-        unzip  \
-        sudo \
-        gdb gdbserver \
-        libtool \
-        build-essential \
-        cmake-data \
-        openssl \
-        google-perftools libgoogle-perftools-dev \
-        libmysql++-dev \
-        ccache \
-        tzdata \
-        # Utility for column command used by dashboard
-        util-linux \
-        # Certificates for downloading client data
-        ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+# The Ubuntu mirrors are intermittently unreachable from CI runners
+# ("Unable to connect to archive.ubuntu.com"), and apt-get does not retry
+# connection errors by itself. Retry the whole step, keeping the downloaded
+# .debs in a cache mount so a retry only fetches what is still missing.
+RUN --mount=type=cache,target=/var/cache/apt \
+    for attempt in 1 2 3 4 5; do \
+        if apt-get update -o Acquire::Retries=3 \
+           && apt-get install -y --no-install-recommends \
+                # Classic install
+                git \
+                clang lldb lld clang-format clang-tidy \
+                make cmake \
+                gcc g++ \
+                libmysqlclient-dev \
+                libssl-dev \
+                libbz2-dev \
+                libreadline-dev \
+                libncurses-dev \
+                mysql-server \
+                libboost-all-dev \
+                # Other
+                curl  \
+                unzip  \
+                sudo \
+                gdb gdbserver \
+                libtool \
+                build-essential \
+                cmake-data \
+                openssl \
+                google-perftools libgoogle-perftools-dev \
+                libmysql++-dev \
+                ccache \
+                tzdata \
+                # Utility for column command used by dashboard
+                util-linux \
+                # Certificates for downloading client data
+                ca-certificates; then \
+            break; \
+        fi; \
+        echo "apt-get failed (attempt ${attempt}/5); retrying in 15s" >&2; \
+        sleep 15; \
+    done; \
+    rm -rf /var/lib/apt/lists/*; \
+    dpkg -s cmake > /dev/null
 
 # Ensure git will work with the AzerothCore source directory
 RUN git config --global --add safe.directory /azerothcore
