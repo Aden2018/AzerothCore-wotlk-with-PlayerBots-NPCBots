@@ -60,6 +60,13 @@ jobs:
           repository: Aden2018/mod-ale
           path: modules/mod-ale
 
+      - name: Download PlayerBots
+        if: github.repository == 'Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots' && github.ref_name == 'Playerbot'
+        uses: actions/checkout@v7
+        with:
+          repository: Aden2018/mod-playerbots
+          path: modules/mod-playerbots
+
       - name: Login to GHCR
         if: github.repository == 'Aden2018/AzerothCore-wotlk-with-PlayerBots-NPCBots' && github.ref_name == 'Playerbot'
         uses: docker/login-action@v3
